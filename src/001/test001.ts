@@ -1,7 +1,5 @@
-import Game from "../../../phaser4/src/Game";
+import * as Phaser from 'phaser'
 
-let canvas:HTMLCanvasElement = document.createElement('canvas');
+let game = new Phaser.Game();
 
-document.body.appendChild(canvas);
-
-new Game(canvas);
+game.draw('Phaser 4');
