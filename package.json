@@ -1,0 +1,25 @@
+{
+  "name": "phaser4-dev",
+  "version": "1.0.0",
+  "description": "Phaser 4 R&amp;D Tests",
+  "main": "index.js",
+  "dependencies": {
+    "rollup": "^1.20.3",
+    "rollup-plugin-typescript2": "^0.24.0",
+    "typescript": "^3.6.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "001": "tsc --target es6 --module none src/001/test001.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/phaserjs/phaser4-dev.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/phaserjs/phaser4-dev/issues"
+  },
+  "homepage": "https://github.com/phaserjs/phaser4-dev#readme"
+}
