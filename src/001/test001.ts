@@ -5,7 +5,15 @@ let loader = new Phaser.Loader();
 
 game.draw('Loading ...');
 
-loader.image('logo', '../assets/logo.png').then(() =>
-{
-    game.draw('Loaded image!!!');
-});
+loader.image('logo', '../assets/logo.png')
+    .then((file) => {
+        console.log('done?!');
+        console.log(file);
+
+        game.drawImage(file.data);
+    })
+    .catch(() => {
+        console.log('failed');
+    });
+
+loader.start();
