@@ -1,9 +1,11 @@
-import * as Phaser from 'phaser/types';
+import * as Phaser from 'phaser';
 
 let game = new Phaser.Game();
 let loader = new Phaser.Loader.LoaderPlugin();
 
-game.draw('Phaser 4 Test 002');
+console.log(Phaser.VERSION);
+
+game.draw('Phaser 4 Test 003');
 
 loader.image('logo', '../assets/logo.png')
     .then((file) => {

@@ -25,4 +25,4 @@ function File(a,b,c){return {key:a,url:b,type:c,xhrLoader:void 0,xhrSettings:XHR
 
 function ImageFile(a,b){b||(b=a+".png");var c=File(a,b,"image");return c.xhrSettings.responseType="blob",c.onProcess=()=>{console.log("ImageFile.onProcess"),c.state=FileState.PROCESSING;var a=new Image;return c.data=a,new Promise((b,d)=>{a.onload=()=>{console.log("ImageFile.onload"),a.onload=null,a.onerror=null,c.state=FileState.COMPLETE,b(c);},a.onerror=()=>{console.log("ImageFile.onerror"),a.onload=null,a.onerror=null,c.state=FileState.FAILED,d(c);},console.log("ImageFile.set src",c.url),a.src=c.url,a.complete&&a.width&&a.height&&(console.log("ImageFile.instant"),a.onload=null,a.onerror=null,c.state=FileState.COMPLETE,b(c));})},c}
 
-var game=new Game;game.draw("Loading ..."),ImageFile("logo","../assets/logo.png").load().then(a=>{for(var d=0;10>d;d++){var b=700*Math.random(),c=500*Math.random();game.drawImage(a.data,b,c);}});
+var game=new Game;game.draw("Phaser 4 Test 001"),ImageFile("logo","../assets/logo.png").load().then(a=>{for(var d=0;10>d;d++){var b=700*Math.random(),c=500*Math.random();game.drawImage(a.data,b,c);}});

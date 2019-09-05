@@ -6,9 +6,14 @@
     "001c": "tsc --traceResolution --project src/001/",
     "001": "rollup -c src/001/rollup.config.js",
     "001w": "rollup --watch -c src/001/rollup.config.js",
+
     "002c": "tsc --traceResolution --project src/002/",
     "002": "rollup -c src/002/rollup.config.js",
-    "002w": "rollup --watch -c src/002/rollup.config.js"
+    "002w": "rollup --watch -c src/002/rollup.config.js",
+
+    "003c": "tsc --traceResolution --project src/003/",
+    "003": "rollup -c src/003/rollup.config.js",
+    "003w": "rollup --watch -c src/003/rollup.config.js"
   },
   "repository": {
     "type": "git",
