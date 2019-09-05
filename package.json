@@ -5,7 +5,10 @@
   "scripts": {
     "001c": "tsc --traceResolution --project src/001/",
     "001": "rollup -c src/001/rollup.config.js",
-    "001w": "rollup --watch -c src/001/rollup.config.js"
+    "001w": "rollup --watch -c src/001/rollup.config.js",
+    "002c": "tsc --traceResolution --project src/002/",
+    "002": "rollup -c src/002/rollup.config.js",
+    "002w": "rollup --watch -c src/002/rollup.config.js"
   },
   "repository": {
     "type": "git",
@@ -32,9 +35,7 @@
     "babel-preset-minify": "^0.5.1",
     "rollup": "^1.20.3",
     "rollup-plugin-babel": "^4.3.3",
-    "rollup-plugin-commonjs": "^10.1.0",
     "rollup-plugin-node-resolve": "^5.2.0",
-    "rollup-plugin-typescript2": "^0.24.0",
     "typescript": "^3.6.2"
   }
 }
