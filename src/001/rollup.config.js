@@ -1,27 +1,28 @@
+import commonjs from 'rollup-plugin-commonjs';
 import resolve from 'rollup-plugin-node-resolve';
-import typescript from 'rollup-plugin-typescript2';
+import babel from 'rollup-plugin-babel';
 
-let defaults = {
-    compilerOptions: {
-        target: 'esnext'
-    }
-};
+const extensions = [
+    '.js', '.jsx', '.ts', '.tsx'
+];
 
 export default {
+
     input: './src/001/test001.ts',
+
     output: {
         file: './src/001/test001.js',
-        //  Change to 'iife' to enable es5 output
-        //  plus also change tsconfig.json to export to es5 too
         format: 'es'
     },
+
     plugins: [
         resolve({
-            mainFields: [ 'module' ]
+            extensions
         }),
-        typescript({
-            "typescript": require('typescript'),
-            "tsconfigDefaults": defaults
-        })
+
+        commonjs(),
+
+        babel({ extensions, include: [ 'src/**/*' ]})
+
     ]
 };
