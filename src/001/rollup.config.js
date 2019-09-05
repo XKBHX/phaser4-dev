@@ -22,7 +22,7 @@ export default {
 
         commonjs(),
 
-        babel({ extensions, include: [ 'src/**/*' ]})
+        babel({ extensions, include: [ 'src/**/*', 'node_modules/phaser/**/*' ]})
 
     ]
 };
