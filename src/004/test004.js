@@ -54,13 +54,12 @@ class Game {
 
 }
 
-function Android() {
-  var ua = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : navigator.userAgent;
-  return /Android/.test(ua);
+function isAndroid() {
+  return /Android/.test(navigator.userAgent);
 }
 
-function iOS() {
-  var ua = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : navigator.userAgent;
+function isiOS() {
+  var ua = navigator.userAgent;
   var result = {
     iOS: false,
     iOSVersion: 0,
@@ -81,14 +80,14 @@ function iOS() {
 
 var game = new Game();
 var {
-  iOS: iOS$1,
+  iOS,
   iOSVersion,
   iPad,
   iPhone
-} = iOS();
+} = isiOS();
 game.text(10, 20, 'Phaser 4 Test 004');
-game.text(10, 60, 'Android: ' + Android());
-game.text(10, 160, 'iOS: ' + iOS$1);
+game.text(10, 60, 'Android: ' + isAndroid());
+game.text(10, 160, 'iOS: ' + iOS);
 game.text(10, 180, 'iOSVerion: ' + iOSVersion);
 game.text(10, 200, 'iPad: ' + iPad);
 game.text(10, 220, 'iPhone: ' + iPhone);

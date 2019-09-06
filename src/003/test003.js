@@ -47,51 +47,36 @@ var Game = function () {
   return Game;
 }();
 
-function Android(ua) {
-  if (ua === void 0) {
-    ua = navigator.userAgent;
-  }
-
-  return /Android/.test(ua);
+function isAndroid() {
+  return /Android/.test(navigator.userAgent);
 }
 
-function ChromeOS(ua) {
-  if (ua === void 0) {
-    ua = navigator.userAgent;
-  }
-
-  return /CrOS/.test(ua);
+function isChromeOS() {
+  return /CrOS/.test(navigator.userAgent);
 }
 
-function Cordova() {
+function isCordova() {
   return window.hasOwnProperty('cordova');
 }
 
-function Crosswalk(ua) {
-  if (ua === void 0) {
-    ua = navigator.userAgent;
-  }
-
-  return /Crosswalk/.test(ua);
+function isCrosswalk() {
+  return /Crosswalk/.test(navigator.userAgent);
 }
 
-function Ejecta() {
+function isEjecta() {
   return window.hasOwnProperty('ejecta');
 }
 
-function Node() {
+function isNode() {
   return typeof process !== 'undefined' && typeof process.versions === 'object' && process.versions.hasOwnProperty('node');
 }
 
-function Electron() {
-  return Node() && !!process.versions['electron'];
+function isElectron() {
+  return isNode() && !!process.versions['electron'];
 }
 
-function iOS(ua) {
-  if (ua === void 0) {
-    ua = navigator.userAgent;
-  }
-
+function isiOS() {
+  var ua = navigator.userAgent;
   var result = {
     iOS: false,
     iOSVersion: 0,
@@ -110,86 +95,67 @@ function iOS(ua) {
   return result;
 }
 
-function Kindle(ua) {
-  if (ua === void 0) {
-    ua = navigator.userAgent;
-  }
-
+function isKindle() {
+  var ua = navigator.userAgent;
   return /Kindle/.test(ua) || /\bKF[A-Z][A-Z]+/.test(ua) || /Silk.*Mobile Safari/.test(ua);
 }
 
-function Linux(ua) {
-  if (ua === void 0) {
-    ua = navigator.userAgent;
-  }
-
-  return /Linux/.test(ua);
+function isLinux() {
+  return /Linux/.test(navigator.userAgent);
 }
 
-function MacOS(ua) {
-  if (ua === void 0) {
-    ua = navigator.userAgent;
-  }
-
+function isMacOS() {
+  var ua = navigator.userAgent;
   return /Mac OS/.test(ua) && !/like Mac OS/.test(ua);
 }
 
-function NodeWebkit() {
-  return Node() && !!process.versions['node-webkit'];
+function isNodeWebkit() {
+  return isNode() && !!process.versions['node-webkit'];
 }
 
-function WebApp() {
+function isWebApp() {
   return navigator.hasOwnProperty('standalone');
 }
 
-function Windows(ua) {
-  if (ua === void 0) {
-    ua = navigator.userAgent;
-  }
-
-  return /Windows/.test(ua);
+function isWindows() {
+  return /Windows/.test(navigator.userAgent);
 }
 
-function WindowsPhone(ua) {
-  if (ua === void 0) {
-    ua = navigator.userAgent;
-  }
-
+function isWindowsPhone() {
+  var ua = navigator.userAgent;
   return /Windows Phone/i.test(ua) || /IEMobile/i.test(ua);
 }
 
-function GetOS(ua) {
-  if (ua === void 0) {
-    ua = navigator.userAgent;
-  }
+function GetOS() {
+  var ua = navigator.userAgent;
 
-  var _a = iOS(ua),
-      iOS$1 = _a.iOS,
+  var _a = isiOS(),
+      iOS = _a.iOS,
       iOSVersion = _a.iOSVersion,
       iPad = _a.iPad,
       iPhone = _a.iPhone;
 
   var result = {
-    android: Android(ua),
-    chromeOS: ChromeOS(ua),
-    cordova: Cordova(),
-    crosswalk: Crosswalk(ua),
+    android: isAndroid(),
+    chromeOS: isChromeOS(),
+    cordova: isCordova(),
+    crosswalk: isCrosswalk(),
     desktop: false,
-    ejecta: Ejecta(),
-    electron: Electron(),
-    iOS: iOS$1,
+    ejecta: isEjecta(),
+    electron: isElectron(),
+    iOS: iOS,
     iOSVersion: iOSVersion,
     iPad: iPad,
     iPhone: iPhone,
-    kindle: Kindle(ua),
-    linux: Linux(ua),
-    macOS: MacOS(ua),
-    node: Node(),
-    nodeWebkit: NodeWebkit(),
+    kindle: isKindle(),
+    linux: isLinux(),
+    macOS: isMacOS(),
+    node: isNode(),
+    nodeWebkit: isNodeWebkit(),
     pixelRatio: 1,
-    webApp: WebApp(),
-    windows: Windows(ua),
-    windowsPhone: WindowsPhone(ua)
+    webApp: isWebApp(),
+    windows: isWindows(),
+    windowsPhone: isWindowsPhone()
   };
 
   if (result.windowsPhone) {
@@ -213,22 +179,22 @@ function GetOS(ua) {
 }
 
 var OS = {
-  Android: Android,
-  ChromeOS: ChromeOS,
-  Cordova: Cordova,
-  Crosswalk: Crosswalk,
-  Ejecta: Ejecta,
-  Electron: Electron,
+  Android: isAndroid,
+  ChromeOS: isChromeOS,
+  Cordova: isCordova,
+  Crosswalk: isCrosswalk,
+  Ejecta: isEjecta,
+  Electron: isElectron,
   GetOS: GetOS,
-  iOS: iOS,
-  Kindle: Kindle,
-  Linux: Linux,
-  MacOS: MacOS,
-  Node: Node,
-  NodeWebkit: NodeWebkit,
-  WebApp: WebApp,
-  Windows: Windows,
-  WindowsPhone: WindowsPhone
+  iOS: isiOS,
+  Kindle: isKindle,
+  Linux: isLinux,
+  MacOS: isMacOS,
+  Node: isNode,
+  NodeWebkit: isNodeWebkit,
+  WebApp: isWebApp,
+  Windows: isWindows,
+  WindowsPhone: isWindowsPhone
 };
 var Device = {
   OS: OS,

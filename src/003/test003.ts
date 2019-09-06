@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 
 let game = new Phaser.Game();
-let os = Phaser.Device.GetOS();
+let os = Phaser.Device.OS;
 
 game.text(10, 20, 'Phaser 4 Test 003');
 
