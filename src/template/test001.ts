@@ -1,17 +1,6 @@
-import { Game } from 'phaser/src/Game';
-import { ImageFile } from 'phaser/src/loader/filetypes/ImageFile';
+import * as Phaser from 'phaser';
 
-let game = new Game();
+let game = new Phaser.Game();
 
-game.draw('Phaser 4 Test 001');
+game.text(10, 20, 'Phaser 4 Test');
 
-ImageFile('logo', '../assets/logo.png').load().then((file) => {
-
-    for (let i = 0; i < 10; i++)
-    {
-        let x = Math.random() * 700;
-        let y = Math.random() * 500;
-
-        game.drawImage(file.data, x, y);
-    }
-});

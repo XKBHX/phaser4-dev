@@ -1,12 +1,12 @@
 let fs = require('fs-extra');
 let parseArgs = require('minimist');
+let replace = require('replace-in-file');
 
 let source = './src/';
 let template = './src/template';
 let sourceHTML = 'index.html';
 let sourceRollupConfig = 'rollup.config.js';
 let sourceTS = 'test001.ts';
-let sourceTSConfig = 'tsconfig.json';
 
 // https://www.npmjs.com/package/minimist
 
@@ -49,13 +49,17 @@ if (!folder)
 
 let dest = source + folder + '/';
 
-console.log(dest);
-
 if (!fs.existsSync(dest))
 {
     fs.copySync(template, dest, { errorOnExist: true, overwrite: false });
 
     fs.moveSync(dest + sourceTS, dest + 'test' + folder + '.ts');
 
+    replace.sync({
+        files: [ dest + sourceRollupConfig, dest + sourceHTML ],
+        from: /001/g,
+        to: folder
+    });
 
+    console.log('Created ' + dest);
 }
