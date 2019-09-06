@@ -1,24 +1,27 @@
 import * as Phaser from 'phaser';
 
-let game = new Phaser.Game();
-let loader = new Phaser.Loader.LoaderPlugin();
+new Phaser.Game((game) => {
 
-game.draw('Phaser 4 Test 002');
+    let loader = new Phaser.Loader.LoaderPlugin();
 
-loader.image('logo', '../assets/logo.png')
-    .then((file) => {
+    game.draw('Phaser 4 Test 002');
 
-        for (let i = 0; i < 10; i++)
-        {
-            let x = Math.random() * 700;
-            let y = Math.random() * 500;
-    
-            game.drawImage(file.data, x, y);
-        }
+    loader.image('logo', '../assets/logo.png')
+        .then((file) => {
 
-    })
-    .catch(() => {
-        console.log('failed');
-    });
+            for (let i = 0; i < 10; i++)
+            {
+                let x = Math.random() * 700;
+                let y = Math.random() * 500;
+        
+                game.drawImage(file.data, x, y);
+            }
 
-loader.start();
+        })
+        .catch(() => {
+            console.log('failed');
+        });
+
+    loader.start();
+
+});

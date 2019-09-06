@@ -13,19 +13,85 @@ function _defineProperty(obj, key, value) {
   return obj;
 }
 
-class Game {
-  constructor() {
-    var width = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 800;
-    var height = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 600;
+function AddToDOM(element, parent) {
+  var target;
 
+  if (parent) {
+    if (typeof parent === 'string') {
+      target = document.getElementById(parent);
+    } else if (typeof parent === 'object' && parent.nodeType === 1) {
+      target = parent;
+    }
+  } else if (element.parentElement) {
+    return element;
+  }
+
+  if (!target) {
+    target = document.body;
+  }
+
+  target.appendChild(element);
+  return element;
+}
+
+function isCordova() {
+  return window.hasOwnProperty('cordova');
+}
+
+function DOMContentLoaded(callback) {
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    callback();
+    return;
+  }
+
+  var check = () => {
+    document.removeEventListener('deviceready', check, true);
+    document.removeEventListener('DOMContentLoaded', check, true);
+    window.removeEventListener('load', check, true);
+    callback();
+  };
+
+  if (!document.body) {
+    window.setTimeout(check, 20);
+  } else if (isCordova()) {
+    document.addEventListener('deviceready', check, true);
+  } else {
+    document.addEventListener('DOMContentLoaded', check, true);
+    window.addEventListener('load', check, true);
+  }
+}
+
+class Game {
+  constructor(init) {
     _defineProperty(this, "canvas", void 0);
 
     _defineProperty(this, "context", void 0);
 
+    _defineProperty(this, "isBooted", false);
+
+    _defineProperty(this, "isRunning", false);
+
+    _defineProperty(this, "_initCallback", void 0);
+
+    this._initCallback = init;
+    DOMContentLoaded(() => this.boot());
+  }
+
+  boot() {
+    console.log('Phaser 4.0.0-alpha.3');
+    this.isBooted = true;
+    this.createDebugCanvas();
+    AddToDOM(this.canvas);
+
+    this._initCallback(this);
+  }
+
+  createDebugCanvas() {
+    var width = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 800;
+    var height = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 600;
     this.canvas = document.createElement('canvas');
     this.canvas.width = width;
     this.canvas.height = height;
-    document.body.appendChild(this.canvas);
     this.context = this.canvas.getContext('2d');
     this.context.fillStyle = '#2d2d2d';
     this.context.fillRect(0, 0, width, height);
@@ -78,16 +144,17 @@ function isiOS() {
   return result;
 }
 
-var game = new Game();
-var {
-  iOS,
-  iOSVersion,
-  iPad,
-  iPhone
-} = isiOS();
-game.text(10, 20, 'Phaser 4 Test 004');
-game.text(10, 60, 'Android: ' + isAndroid());
-game.text(10, 160, 'iOS: ' + iOS);
-game.text(10, 180, 'iOSVerion: ' + iOSVersion);
-game.text(10, 200, 'iPad: ' + iPad);
-game.text(10, 220, 'iPhone: ' + iPhone);
+new Game(game => {
+  var {
+    iOS,
+    iOSVersion,
+    iPad,
+    iPhone
+  } = isiOS();
+  game.text(10, 20, 'Phaser 4 Test 004');
+  game.text(10, 60, 'Android: ' + isAndroid());
+  game.text(10, 160, 'iOS: ' + iOS);
+  game.text(10, 180, 'iOSVerion: ' + iOSVersion);
+  game.text(10, 200, 'iPad: ' + iPad);
+  game.text(10, 220, 'iPhone: ' + iPhone);
+});
