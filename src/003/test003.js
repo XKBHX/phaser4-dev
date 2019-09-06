@@ -1,3 +1,810 @@
-var Game=function(){function a(a,b){void 0===a&&(a=800),void 0===b&&(b=600),this.canvas=document.createElement("canvas"),this.canvas.width=a,this.canvas.height=b,document.body.appendChild(this.canvas),this.context=this.canvas.getContext("2d"),this.context.fillStyle="#2d2d2d",this.context.fillRect(0,0,a,b);}return a.prototype.drawImage=function(a,b,c){void 0===b&&(b=0),void 0===c&&(c=0),this.context.drawImage(a,b,c);},a.prototype.draw=function(a){this.context.fillStyle="#ff0000",this.context.fillText(a,10,40),this.context.fillStyle="#0000ff",this.context.fillText(a,10,20),this.context.fillStyle="#ffff00",this.context.fillText(a,10,60);},a.prototype.text=function(a,b,c){this.context.fillStyle="#00ff00",this.context.font="16px Courier",this.context.fillText(c,a,b);},a}();function Android(a){return void 0===a&&(a=navigator.userAgent),/Android/.test(a)}function ChromeOS(a){return void 0===a&&(a=navigator.userAgent),/CrOS/.test(a)}function Cordova(){return window.hasOwnProperty("cordova")}function Crosswalk(a){return void 0===a&&(a=navigator.userAgent),/Crosswalk/.test(a)}function Ejecta(){return window.hasOwnProperty("ejecta")}function Node(){return "undefined"!=typeof process&&"object"==typeof process.versions&&process.versions.hasOwnProperty("node")}function Electron(){return Node()&&!!process.versions.electron}function iOS(a){void 0===a&&(a=navigator.userAgent);var b={iOS:!1,iOSVersion:0,iPhone:!1,iPad:!1};return /iP[ao]d|iPhone/i.test(a)&&(navigator.appVersion.match(/OS (\d+)/),b.iOS=!0,b.iOSVersion=parseInt(RegExp.$1,10),b.iPhone=-1!==a.toLowerCase().indexOf("iphone"),b.iPad=-1!==a.toLowerCase().indexOf("ipad")),b}function Kindle(a){return void 0===a&&(a=navigator.userAgent),/Kindle/.test(a)||/\bKF[A-Z][A-Z]+/.test(a)||/Silk.*Mobile Safari/.test(a)}function Linux(a){return void 0===a&&(a=navigator.userAgent),/Linux/.test(a)}function MacOS(a){return void 0===a&&(a=navigator.userAgent),/Mac OS/.test(a)&&!/like Mac OS/.test(a)}function NodeWebkit(){return Node()&&!!process.versions["node-webkit"]}function WebApp(){return navigator.hasOwnProperty("standalone")}function Windows(a){return void 0===a&&(a=navigator.userAgent),/Windows/.test(a)}function WindowsPhone(a){return void 0===a&&(a=navigator.userAgent),/Windows Phone/i.test(a)||/IEMobile/i.test(a)}function GetOS(a){void 0===a&&(a=navigator.userAgent);var b=iOS(a),c=b.iOS,d=b.iOSVersion,e=b.iPad,f=b.iPhone,g={android:Android(a),chromeOS:ChromeOS(a),cordova:Cordova(),crosswalk:Crosswalk(a),desktop:!1,ejecta:Ejecta(),electron:Electron(),iOS:c,iOSVersion:d,iPad:e,iPhone:f,kindle:Kindle(a),linux:Linux(a),macOS:MacOS(a),node:Node(),nodeWebkit:NodeWebkit(),pixelRatio:1,webApp:WebApp(),windows:Windows(a),windowsPhone:WindowsPhone(a)};g.windowsPhone&&(g.android=!1,g.iOS=!1,g.macOS=!1,g.windows=!0);var h=/Silk/.test(a);return (g.windows||g.macOS||g.linux&&!h||g.chromeOS)&&(g.desktop=!0),(g.windowsPhone||/Windows NT/i.test(a)&&/Touch/i.test(a))&&(g.desktop=!1),g}var OS={Android:Android,ChromeOS:ChromeOS,Cordova:Cordova,Crosswalk:Crosswalk,Ejecta:Ejecta,Electron:Electron,GetOS:GetOS,iOS:iOS,Kindle:Kindle,Linux:Linux,MacOS:MacOS,Node:Node,NodeWebkit:NodeWebkit,WebApp:WebApp,Windows:Windows,WindowsPhone:WindowsPhone},Device={OS:OS,GetOS:GetOS};var _extendStatics=function extendStatics(a,c){return _extendStatics=Object.setPrototypeOf||{__proto__:[]}instanceof Array&&function(a,c){a.__proto__=c;}||function(a,c){for(var b in c)c.hasOwnProperty(b)&&(a[b]=c[b]);},_extendStatics(a,c)};function __extends(a,c){function b(){this.constructor=a;}_extendStatics(a,c),a.prototype=null===c?Object.create(c):(b.prototype=c.prototype,new b);}function __values(a){var b="function"==typeof Symbol&&a[Symbol.iterator],c=0;return b?b.call(a):{next:function next(){return a&&c>=a.length&&(a=void 0),{value:a&&a[c++],done:!a}}}}function __read(a,b){var c="function"==typeof Symbol&&a[Symbol.iterator];if(!c)return a;var d,f,g=c.call(a),h=[];try{for(;(void 0===b||0<b--)&&!(d=g.next()).done;)h.push(d.value);}catch(a){f={error:a};}finally{try{d&&!d.done&&(c=g["return"])&&c.call(g);}finally{if(f)throw f.error}}return h}var BaseLoaderState;(function(a){a[a.IDLE=0]="IDLE",a[a.LOADING=1]="LOADING",a[a.PROCESSING=2]="PROCESSING",a[a.COMPLETE=3]="COMPLETE",a[a.SHUTDOWN=4]="SHUTDOWN",a[a.DESTROYED=5]="DESTROYED";})(BaseLoaderState||(BaseLoaderState={}));var FileState;(function(a){a[a.PENDING=0]="PENDING",a[a.LOADING=1]="LOADING",a[a.LOADED=2]="LOADED",a[a.FAILED=3]="FAILED",a[a.PROCESSING=4]="PROCESSING",a[a.ERRORED=5]="ERRORED",a[a.COMPLETE=6]="COMPLETE",a[a.DESTROYED=7]="DESTROYED",a[a.POPULATED=8]="POPULATED",a[a.TIMED_OUT=9]="TIMED_OUT",a[a.ABORTED=10]="ABORTED";})(FileState||(FileState={}));var BaseLoader=function(){function a(){this.fileGroup="",this.prefix="",this.baseURL="",this.path="",this.maxParallelDownloads=32,this.crossOrigin="",this.state=BaseLoaderState.IDLE,this.progress=0,this.totalToLoad=0,this.totalFailed=0,this.totalComplete=0,this.list=new Set,this.inflight=new Set,this.queue=new Set,this._deleteQueue=new Set,this.state=BaseLoaderState.IDLE;}return a.prototype.setBaseURL=function(a){return void 0===a&&(a=""),""!==a&&"/"!==a.substr(-1)&&(a=a.concat("/")),this.baseURL=a,this},a.prototype.setPath=function(a){return void 0===a&&(a=""),""!==a&&"/"!==a.substr(-1)&&(a=a.concat("/")),this.path=a,this},a.prototype.setFileGroup=function(a){return void 0===a&&(a=""),this.fileGroup=a,this},a.prototype.isLoading=function(){return this.state===BaseLoaderState.LOADING||this.state===BaseLoaderState.PROCESSING},a.prototype.isReady=function(){return this.state===BaseLoaderState.IDLE||this.state===BaseLoaderState.COMPLETE},a.prototype.addFile=function(a){return console.log("addFile"),this.getURL(a),this.list.add(a),this.totalToLoad++,console.log(a),new Promise(function(b,c){a.fileResolve=b,a.fileReject=c;})},a.prototype.start=function(){this.isReady()&&(this.progress=0,this.totalFailed=0,this.totalComplete=0,this.totalToLoad=this.list.size,0===this.totalToLoad?this.loadComplete():(this.state=BaseLoaderState.LOADING,this.inflight.clear(),this.queue.clear(),this._deleteQueue.clear(),this.updateProgress(),this.checkLoadQueue()));},a.prototype.getURL=function(a){return a.url.match(/^(?:blob:|data:|http:\/\/|https:\/\/|\/\/)/)?a:void(a.url=this.baseURL+this.path+a.url)},a.prototype.updateProgress=function(){this.progress=1-(this.list.size+this.inflight.size)/this.totalToLoad;},a.prototype.checkLoadQueue=function(){var a,b,c=this;try{for(var d,e=__values(this.list),f=e.next();!f.done&&(d=f.value,(d.state===FileState.POPULATED||d.state===FileState.PENDING&&this.inflight.size<this.maxParallelDownloads)&&(this.inflight.add(d),this.list.delete(d),d.load().then(function(a){return c.nextFile(a,!0)}).catch(function(a){return c.nextFile(a,!1)})),this.inflight.size!==this.maxParallelDownloads);f=e.next());}catch(b){a={error:b};}finally{try{f&&!f.done&&(b=e.return)&&b.call(e);}finally{if(a)throw a.error}}},a.prototype.nextFile=function(a,b){console.log("nextFile",a,b),b?this.queue.add(a):this._deleteQueue.add(a),this.inflight.delete(a),0<this.list.size?(console.log("nextFile - still something in the list"),this.checkLoadQueue()):0===this.inflight.size&&(console.log("nextFile calling finishedLoading"),this.loadComplete());},a.prototype.loadComplete=function(){this.list.clear(),this.inflight.clear(),this.progress=1,this.state=BaseLoaderState.COMPLETE;},a}();function XHRLoader(a){var b,c,d=new XMLHttpRequest;a.xhrLoader=d;var e=a.xhrSettings;d.open("GET",a.url,e.async,e.username,e.password),d.responseType=e.responseType,d.timeout=e.timeout,d.setRequestHeader("X-Requested-With",e.requestedWith),e.header&&e.headerValue&&d.setRequestHeader(e.header,e.headerValue),e.overrideMimeType&&d.overrideMimeType(e.overrideMimeType);var f=new Map([["loadstart",function onLoadStart(b){return a.onLoadStart(b)}],["load",function onLoad(b){return a.onLoad(b)}],["loadend",function onLoadEnd(b){return a.onLoadEnd(b)}],["progress",function onProgress(b){return a.onProgress(b)}],["timeout",function onTimeout(b){return a.onTimeout(b)}],["abort",function onAbort(b){return a.onAbort(b)}],["error",function onError(b){return a.onError(b)}]]);try{for(var g=__values(f),h=g.next();!h.done;h=g.next()){var i=__read(h.value,2),j=i[0],k=i[1];d.addEventListener(j,k);}}catch(a){b={error:a};}finally{try{h&&!h.done&&(c=g.return)&&c.call(g);}finally{if(b)throw b.error}}a.resetXHR=function(){var a,b;try{for(var c=__values(f),e=c.next();!e.done;e=c.next()){var g=__read(e.value,2),h=g[0],i=g[1];d.removeEventListener(h,i);}}catch(b){a={error:b};}finally{try{e&&!e.done&&(b=c.return)&&b.call(c);}finally{if(a)throw a.error}}},d.send();}function XHRSettings(a){return void 0===a&&(a={responseType:"blob",async:!0,username:"",password:"",timeout:0}),{responseType:a.responseType,async:a.async,username:a.username,password:a.password,timeout:a.timeout,header:void 0,headerValue:void 0,requestedWith:"XMLHttpRequest",overrideMimeType:void 0}}function File(a,b,c){return {key:a,url:b,type:c,xhrLoader:void 0,xhrSettings:XHRSettings(),data:null,state:FileState.PENDING,bytesLoaded:0,bytesTotal:0,percentComplete:0,load:function load(){var a=this;return console.log("File.load",this.key),this.state=FileState.PENDING,XHRLoader(this),new Promise(function(b,c){a.loaderResolve=b,a.loaderReject=c;})},onLoadStart:function onLoadStart(){console.log("onLoadStart"),this.state=FileState.LOADING;},onLoad:function onLoad(a){var b=this;console.log("onLoad");var c=this.xhrLoader,d=c.responseURL&&0===c.responseURL.indexOf("file://")&&0===c.status,e=!(a.target&&200!==c.status)||d;4===c.readyState&&400<=c.status&&599>=c.status&&(e=!1),this.onProcess().then(function(){return b.onComplete()}).catch(function(){return b.onError()});},onLoadEnd:function onLoadEnd(){console.log("onLoadEnd"),this.resetXHR(),this.state=FileState.LOADED;},onTimeout:function onTimeout(){console.log("onTimeout"),this.state=FileState.TIMED_OUT;},onAbort:function onAbort(){console.log("onAbort"),this.state=FileState.ABORTED;},onError:function onError(){console.log("onError"),this.state=FileState.ERRORED,this.fileReject&&this.fileReject(this);},onProgress:function onProgress(a){console.log("onProgress"),a.lengthComputable&&(this.bytesLoaded=a.loaded,this.bytesTotal=a.total,this.percentComplete=Math.min(a.loaded/a.total,1),console.log(this.percentComplete,"%"));},onProcess:function onProcess(){return console.log("File.onProcess"),this.state=FileState.PROCESSING,new Promise(function(a){a();})},onComplete:function onComplete(){console.log("onComplete!"),this.state=FileState.COMPLETE,this.fileResolve?this.fileResolve(this):this.loaderResolve&&this.loaderResolve(this);},onDestroy:function onDestroy(){this.state=FileState.DESTROYED;}}}function ImageFile(a,b){b||(b=a+".png");var c=File(a,b,"image");return c.xhrSettings.responseType="blob",c.onProcess=function(){console.log("ImageFile.onProcess"),c.state=FileState.PROCESSING;var a=new Image;return c.data=a,new Promise(function(b,d){a.onload=function(){console.log("ImageFile.onload"),a.onload=null,a.onerror=null,c.state=FileState.COMPLETE,b(c);},a.onerror=function(){console.log("ImageFile.onerror"),a.onload=null,a.onerror=null,c.state=FileState.FAILED,d(c);},console.log("ImageFile.set src",c.url),a.src=c.url,a.complete&&a.width&&a.height&&(console.log("ImageFile.instant"),a.onload=null,a.onerror=null,c.state=FileState.COMPLETE,b(c));})},c}var LoaderPlugin=function(a){function b(){return a.call(this)||this}return __extends(b,a),b.prototype.image=function(a,b){return void 0===b&&(b=""),this.addFile(ImageFile(a,b))},b}(BaseLoader);
+var Game = function () {
+  function Game(width, height) {
+    if (width === void 0) {
+      width = 800;
+    }
 
-var game=new Game,bob=Device.GetOS();console.log("hello?"),console.log(bob),game.text(100,100,"Phaser 4 Test 003");
+    if (height === void 0) {
+      height = 600;
+    }
+
+    this.canvas = document.createElement('canvas');
+    this.canvas.width = width;
+    this.canvas.height = height;
+    document.body.appendChild(this.canvas);
+    this.context = this.canvas.getContext('2d');
+    this.context.fillStyle = '#2d2d2d';
+    this.context.fillRect(0, 0, width, height);
+  }
+
+  Game.prototype.drawImage = function (image, x, y) {
+    if (x === void 0) {
+      x = 0;
+    }
+
+    if (y === void 0) {
+      y = 0;
+    }
+
+    this.context.drawImage(image, x, y);
+  };
+
+  Game.prototype.draw = function (text) {
+    this.context.fillStyle = '#ff0000';
+    this.context.fillText(text, 10, 40);
+    this.context.fillStyle = '#0000ff';
+    this.context.fillText(text, 10, 20);
+    this.context.fillStyle = '#ffff00';
+    this.context.fillText(text, 10, 60);
+  };
+
+  Game.prototype.text = function (x, y, text) {
+    this.context.fillStyle = '#00ff00';
+    this.context.font = '16px Courier';
+    this.context.fillText(text, x, y);
+  };
+
+  return Game;
+}();
+
+function Android(ua) {
+  if (ua === void 0) {
+    ua = navigator.userAgent;
+  }
+
+  return /Android/.test(ua);
+}
+
+function ChromeOS(ua) {
+  if (ua === void 0) {
+    ua = navigator.userAgent;
+  }
+
+  return /CrOS/.test(ua);
+}
+
+function Cordova() {
+  return window.hasOwnProperty('cordova');
+}
+
+function Crosswalk(ua) {
+  if (ua === void 0) {
+    ua = navigator.userAgent;
+  }
+
+  return /Crosswalk/.test(ua);
+}
+
+function Ejecta() {
+  return window.hasOwnProperty('ejecta');
+}
+
+function Node() {
+  return typeof process !== 'undefined' && typeof process.versions === 'object' && process.versions.hasOwnProperty('node');
+}
+
+function Electron() {
+  return Node() && !!process.versions['electron'];
+}
+
+function iOS(ua) {
+  if (ua === void 0) {
+    ua = navigator.userAgent;
+  }
+
+  var result = {
+    iOS: false,
+    iOSVersion: 0,
+    iPhone: false,
+    iPad: false
+  };
+
+  if (/iP[ao]d|iPhone/i.test(ua)) {
+    navigator.appVersion.match(/OS (\d+)/);
+    result.iOS = true;
+    result.iOSVersion = parseInt(RegExp.$1, 10);
+    result.iPhone = ua.toLowerCase().indexOf('iphone') !== -1;
+    result.iPad = ua.toLowerCase().indexOf('ipad') !== -1;
+  }
+
+  return result;
+}
+
+function Kindle(ua) {
+  if (ua === void 0) {
+    ua = navigator.userAgent;
+  }
+
+  return /Kindle/.test(ua) || /\bKF[A-Z][A-Z]+/.test(ua) || /Silk.*Mobile Safari/.test(ua);
+}
+
+function Linux(ua) {
+  if (ua === void 0) {
+    ua = navigator.userAgent;
+  }
+
+  return /Linux/.test(ua);
+}
+
+function MacOS(ua) {
+  if (ua === void 0) {
+    ua = navigator.userAgent;
+  }
+
+  return /Mac OS/.test(ua) && !/like Mac OS/.test(ua);
+}
+
+function NodeWebkit() {
+  return Node() && !!process.versions['node-webkit'];
+}
+
+function WebApp() {
+  return navigator.hasOwnProperty('standalone');
+}
+
+function Windows(ua) {
+  if (ua === void 0) {
+    ua = navigator.userAgent;
+  }
+
+  return /Windows/.test(ua);
+}
+
+function WindowsPhone(ua) {
+  if (ua === void 0) {
+    ua = navigator.userAgent;
+  }
+
+  return /Windows Phone/i.test(ua) || /IEMobile/i.test(ua);
+}
+
+function GetOS(ua) {
+  if (ua === void 0) {
+    ua = navigator.userAgent;
+  }
+
+  var _a = iOS(ua),
+      iOS$1 = _a.iOS,
+      iOSVersion = _a.iOSVersion,
+      iPad = _a.iPad,
+      iPhone = _a.iPhone;
+
+  var result = {
+    android: Android(ua),
+    chromeOS: ChromeOS(ua),
+    cordova: Cordova(),
+    crosswalk: Crosswalk(ua),
+    desktop: false,
+    ejecta: Ejecta(),
+    electron: Electron(),
+    iOS: iOS$1,
+    iOSVersion: iOSVersion,
+    iPad: iPad,
+    iPhone: iPhone,
+    kindle: Kindle(ua),
+    linux: Linux(ua),
+    macOS: MacOS(ua),
+    node: Node(),
+    nodeWebkit: NodeWebkit(),
+    pixelRatio: 1,
+    webApp: WebApp(),
+    windows: Windows(ua),
+    windowsPhone: WindowsPhone(ua)
+  };
+
+  if (result.windowsPhone) {
+    result.android = false;
+    result.iOS = false;
+    result.macOS = false;
+    result.windows = true;
+  }
+
+  var silk = /Silk/.test(ua);
+
+  if (result.windows || result.macOS || result.linux && !silk || result.chromeOS) {
+    result.desktop = true;
+  }
+
+  if (result.windowsPhone || /Windows NT/i.test(ua) && /Touch/i.test(ua)) {
+    result.desktop = false;
+  }
+
+  return result;
+}
+
+var OS = {
+  Android: Android,
+  ChromeOS: ChromeOS,
+  Cordova: Cordova,
+  Crosswalk: Crosswalk,
+  Ejecta: Ejecta,
+  Electron: Electron,
+  GetOS: GetOS,
+  iOS: iOS,
+  Kindle: Kindle,
+  Linux: Linux,
+  MacOS: MacOS,
+  Node: Node,
+  NodeWebkit: NodeWebkit,
+  WebApp: WebApp,
+  Windows: Windows,
+  WindowsPhone: WindowsPhone
+};
+var Device = {
+  OS: OS,
+  GetOS: GetOS
+};
+
+var _extendStatics = function extendStatics(d, b) {
+  _extendStatics = Object.setPrototypeOf || {
+    __proto__: []
+  } instanceof Array && function (d, b) {
+    d.__proto__ = b;
+  } || function (d, b) {
+    for (var p in b) {
+      if (b.hasOwnProperty(p)) d[p] = b[p];
+    }
+  };
+
+  return _extendStatics(d, b);
+};
+
+function __extends(d, b) {
+  _extendStatics(d, b);
+
+  function __() {
+    this.constructor = d;
+  }
+
+  d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+}
+
+function __values(o) {
+  var m = typeof Symbol === "function" && o[Symbol.iterator],
+      i = 0;
+  if (m) return m.call(o);
+  return {
+    next: function next() {
+      if (o && i >= o.length) o = void 0;
+      return {
+        value: o && o[i++],
+        done: !o
+      };
+    }
+  };
+}
+
+function __read(o, n) {
+  var m = typeof Symbol === "function" && o[Symbol.iterator];
+  if (!m) return o;
+  var i = m.call(o),
+      r,
+      ar = [],
+      e;
+
+  try {
+    while ((n === void 0 || n-- > 0) && !(r = i.next()).done) {
+      ar.push(r.value);
+    }
+  } catch (error) {
+    e = {
+      error: error
+    };
+  } finally {
+    try {
+      if (r && !r.done && (m = i["return"])) m.call(i);
+    } finally {
+      if (e) throw e.error;
+    }
+  }
+
+  return ar;
+}
+
+var BaseLoaderState;
+
+(function (BaseLoaderState) {
+  BaseLoaderState[BaseLoaderState["IDLE"] = 0] = "IDLE";
+  BaseLoaderState[BaseLoaderState["LOADING"] = 1] = "LOADING";
+  BaseLoaderState[BaseLoaderState["PROCESSING"] = 2] = "PROCESSING";
+  BaseLoaderState[BaseLoaderState["COMPLETE"] = 3] = "COMPLETE";
+  BaseLoaderState[BaseLoaderState["SHUTDOWN"] = 4] = "SHUTDOWN";
+  BaseLoaderState[BaseLoaderState["DESTROYED"] = 5] = "DESTROYED";
+})(BaseLoaderState || (BaseLoaderState = {}));
+
+var FileState;
+
+(function (FileState) {
+  FileState[FileState["PENDING"] = 0] = "PENDING";
+  FileState[FileState["LOADING"] = 1] = "LOADING";
+  FileState[FileState["LOADED"] = 2] = "LOADED";
+  FileState[FileState["FAILED"] = 3] = "FAILED";
+  FileState[FileState["PROCESSING"] = 4] = "PROCESSING";
+  FileState[FileState["ERRORED"] = 5] = "ERRORED";
+  FileState[FileState["COMPLETE"] = 6] = "COMPLETE";
+  FileState[FileState["DESTROYED"] = 7] = "DESTROYED";
+  FileState[FileState["POPULATED"] = 8] = "POPULATED";
+  FileState[FileState["TIMED_OUT"] = 9] = "TIMED_OUT";
+  FileState[FileState["ABORTED"] = 10] = "ABORTED";
+})(FileState || (FileState = {}));
+
+var BaseLoader = function () {
+  function BaseLoader() {
+    this.fileGroup = '';
+    this.prefix = '';
+    this.baseURL = '';
+    this.path = '';
+    this.maxParallelDownloads = 32;
+    this.crossOrigin = '';
+    this.state = BaseLoaderState.IDLE;
+    this.progress = 0;
+    this.totalToLoad = 0;
+    this.totalFailed = 0;
+    this.totalComplete = 0;
+    this.list = new Set();
+    this.inflight = new Set();
+    this.queue = new Set();
+    this._deleteQueue = new Set();
+    this.state = BaseLoaderState.IDLE;
+  }
+
+  BaseLoader.prototype.setBaseURL = function (value) {
+    if (value === void 0) {
+      value = '';
+    }
+
+    if (value !== '' && value.substr(-1) !== '/') {
+      value = value.concat('/');
+    }
+
+    this.baseURL = value;
+    return this;
+  };
+
+  BaseLoader.prototype.setPath = function (value) {
+    if (value === void 0) {
+      value = '';
+    }
+
+    if (value !== '' && value.substr(-1) !== '/') {
+      value = value.concat('/');
+    }
+
+    this.path = value;
+    return this;
+  };
+
+  BaseLoader.prototype.setFileGroup = function (name) {
+    if (name === void 0) {
+      name = '';
+    }
+
+    this.fileGroup = name;
+    return this;
+  };
+
+  BaseLoader.prototype.isLoading = function () {
+    return this.state === BaseLoaderState.LOADING || this.state === BaseLoaderState.PROCESSING;
+  };
+
+  BaseLoader.prototype.isReady = function () {
+    return this.state === BaseLoaderState.IDLE || this.state === BaseLoaderState.COMPLETE;
+  };
+
+  BaseLoader.prototype.addFile = function (file) {
+    console.log('addFile');
+    this.getURL(file);
+    this.list.add(file);
+    this.totalToLoad++;
+    console.log(file);
+    return new Promise(function (resolve, reject) {
+      file.fileResolve = resolve;
+      file.fileReject = reject;
+    });
+  };
+
+  BaseLoader.prototype.start = function () {
+    if (!this.isReady()) {
+      return;
+    }
+
+    this.progress = 0;
+    this.totalFailed = 0;
+    this.totalComplete = 0;
+    this.totalToLoad = this.list.size;
+
+    if (this.totalToLoad === 0) {
+      this.loadComplete();
+    } else {
+      this.state = BaseLoaderState.LOADING;
+      this.inflight.clear();
+      this.queue.clear();
+
+      this._deleteQueue.clear();
+
+      this.updateProgress();
+      this.checkLoadQueue();
+    }
+  };
+
+  BaseLoader.prototype.getURL = function (file) {
+    if (file.url.match(/^(?:blob:|data:|http:\/\/|https:\/\/|\/\/)/)) {
+      return file;
+    } else {
+      file.url = this.baseURL + this.path + file.url;
+    }
+  };
+
+  BaseLoader.prototype.updateProgress = function () {
+    this.progress = 1 - (this.list.size + this.inflight.size) / this.totalToLoad;
+  };
+
+  BaseLoader.prototype.checkLoadQueue = function () {
+    var e_1, _a;
+
+    var _this = this;
+
+    try {
+      for (var _b = __values(this.list), _c = _b.next(); !_c.done; _c = _b.next()) {
+        var entry = _c.value;
+
+        if (entry.state === FileState.POPULATED || entry.state === FileState.PENDING && this.inflight.size < this.maxParallelDownloads) {
+          this.inflight.add(entry);
+          this.list.delete(entry);
+          entry.load().then(function (file) {
+            return _this.nextFile(file, true);
+          }).catch(function (file) {
+            return _this.nextFile(file, false);
+          });
+        }
+
+        if (this.inflight.size === this.maxParallelDownloads) {
+          break;
+        }
+      }
+    } catch (e_1_1) {
+      e_1 = {
+        error: e_1_1
+      };
+    } finally {
+      try {
+        if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+      } finally {
+        if (e_1) throw e_1.error;
+      }
+    }
+  };
+
+  BaseLoader.prototype.nextFile = function (previousFile, success) {
+    console.log('nextFile', previousFile, success);
+
+    if (success) {
+      this.queue.add(previousFile);
+    } else {
+      this._deleteQueue.add(previousFile);
+    }
+
+    this.inflight.delete(previousFile);
+
+    if (this.list.size > 0) {
+      console.log('nextFile - still something in the list');
+      this.checkLoadQueue();
+    } else if (this.inflight.size === 0) {
+      console.log('nextFile calling finishedLoading');
+      this.loadComplete();
+    }
+  };
+
+  BaseLoader.prototype.loadComplete = function () {
+    this.list.clear();
+    this.inflight.clear();
+    this.progress = 1;
+    this.state = BaseLoaderState.COMPLETE;
+  };
+
+  return BaseLoader;
+}();
+
+function XHRLoader(file) {
+  var e_1, _a;
+
+  var xhr = new XMLHttpRequest();
+  file.xhrLoader = xhr;
+  var config = file.xhrSettings;
+  xhr.open('GET', file.url, config.async, config.username, config.password);
+  xhr.responseType = config.responseType;
+  xhr.timeout = config.timeout;
+  xhr.setRequestHeader('X-Requested-With', config.requestedWith);
+
+  if (config.header && config.headerValue) {
+    xhr.setRequestHeader(config.header, config.headerValue);
+  }
+
+  if (config.overrideMimeType) {
+    xhr.overrideMimeType(config.overrideMimeType);
+  }
+
+  var onLoadStart = function onLoadStart(event) {
+    return file.onLoadStart(event);
+  };
+
+  var onLoad = function onLoad(event) {
+    return file.onLoad(event);
+  };
+
+  var onLoadEnd = function onLoadEnd(event) {
+    return file.onLoadEnd(event);
+  };
+
+  var onProgress = function onProgress(event) {
+    return file.onProgress(event);
+  };
+
+  var onTimeout = function onTimeout(event) {
+    return file.onTimeout(event);
+  };
+
+  var onAbort = function onAbort(event) {
+    return file.onAbort(event);
+  };
+
+  var onError = function onError(event) {
+    return file.onError(event);
+  };
+
+  var eventMap = new Map([['loadstart', onLoadStart], ['load', onLoad], ['loadend', onLoadEnd], ['progress', onProgress], ['timeout', onTimeout], ['abort', onAbort], ['error', onError]]);
+
+  try {
+    for (var eventMap_1 = __values(eventMap), eventMap_1_1 = eventMap_1.next(); !eventMap_1_1.done; eventMap_1_1 = eventMap_1.next()) {
+      var _b = __read(eventMap_1_1.value, 2),
+          key = _b[0],
+          value = _b[1];
+
+      xhr.addEventListener(key, value);
+    }
+  } catch (e_1_1) {
+    e_1 = {
+      error: e_1_1
+    };
+  } finally {
+    try {
+      if (eventMap_1_1 && !eventMap_1_1.done && (_a = eventMap_1.return)) _a.call(eventMap_1);
+    } finally {
+      if (e_1) throw e_1.error;
+    }
+  }
+
+  file.resetXHR = function () {
+    var e_2, _a;
+
+    try {
+      for (var eventMap_2 = __values(eventMap), eventMap_2_1 = eventMap_2.next(); !eventMap_2_1.done; eventMap_2_1 = eventMap_2.next()) {
+        var _b = __read(eventMap_2_1.value, 2),
+            key = _b[0],
+            value = _b[1];
+
+        xhr.removeEventListener(key, value);
+      }
+    } catch (e_2_1) {
+      e_2 = {
+        error: e_2_1
+      };
+    } finally {
+      try {
+        if (eventMap_2_1 && !eventMap_2_1.done && (_a = eventMap_2.return)) _a.call(eventMap_2);
+      } finally {
+        if (e_2) throw e_2.error;
+      }
+    }
+  };
+
+  xhr.send();
+}
+
+function XHRSettings(config) {
+  if (config === void 0) {
+    config = {
+      responseType: 'blob',
+      async: true,
+      username: '',
+      password: '',
+      timeout: 0
+    };
+  }
+
+  return {
+    responseType: config.responseType,
+    async: config.async,
+    username: config.username,
+    password: config.password,
+    timeout: config.timeout,
+    header: undefined,
+    headerValue: undefined,
+    requestedWith: 'XMLHttpRequest',
+    overrideMimeType: undefined
+  };
+}
+
+function File(key, url, type) {
+  return {
+    key: key,
+    url: url,
+    type: type,
+    xhrLoader: undefined,
+    xhrSettings: XHRSettings(),
+    data: null,
+    state: FileState.PENDING,
+    bytesLoaded: 0,
+    bytesTotal: 0,
+    percentComplete: 0,
+    load: function load() {
+      var _this = this;
+
+      console.log('File.load', this.key);
+      this.state = FileState.PENDING;
+      XHRLoader(this);
+      return new Promise(function (resolve, reject) {
+        _this.loaderResolve = resolve;
+        _this.loaderReject = reject;
+      });
+    },
+    onLoadStart: function onLoadStart(event) {
+      console.log('onLoadStart');
+      this.state = FileState.LOADING;
+    },
+    onLoad: function onLoad(event) {
+      var _this = this;
+
+      console.log('onLoad');
+      var xhr = this.xhrLoader;
+      var localFileOk = xhr.responseURL && xhr.responseURL.indexOf('file://') === 0 && xhr.status === 0;
+      var success = !(event.target && xhr.status !== 200) || localFileOk;
+
+      if (xhr.readyState === 4 && xhr.status >= 400 && xhr.status <= 599) {
+        success = false;
+      }
+
+      this.onProcess().then(function () {
+        return _this.onComplete();
+      }).catch(function () {
+        return _this.onError();
+      });
+    },
+    onLoadEnd: function onLoadEnd(event) {
+      console.log('onLoadEnd');
+      this.resetXHR();
+      this.state = FileState.LOADED;
+    },
+    onTimeout: function onTimeout(event) {
+      console.log('onTimeout');
+      this.state = FileState.TIMED_OUT;
+    },
+    onAbort: function onAbort(event) {
+      console.log('onAbort');
+      this.state = FileState.ABORTED;
+    },
+    onError: function onError(event) {
+      console.log('onError');
+      this.state = FileState.ERRORED;
+
+      if (this.fileReject) {
+        this.fileReject(this);
+      }
+    },
+    onProgress: function onProgress(event) {
+      console.log('onProgress');
+
+      if (event.lengthComputable) {
+        this.bytesLoaded = event.loaded;
+        this.bytesTotal = event.total;
+        this.percentComplete = Math.min(event.loaded / event.total, 1);
+        console.log(this.percentComplete, '%');
+      }
+    },
+    onProcess: function onProcess() {
+      console.log('File.onProcess');
+      this.state = FileState.PROCESSING;
+      return new Promise(function (resolve, reject) {
+        resolve();
+      });
+    },
+    onComplete: function onComplete() {
+      console.log('onComplete!');
+      this.state = FileState.COMPLETE;
+
+      if (this.fileResolve) {
+        this.fileResolve(this);
+      } else if (this.loaderResolve) {
+        this.loaderResolve(this);
+      }
+    },
+    onDestroy: function onDestroy() {
+      this.state = FileState.DESTROYED;
+    }
+  };
+}
+
+function ImageFile(key, url) {
+  if (!url) {
+    url = key + '.png';
+  }
+
+  var file = File(key, url, 'image');
+  file.xhrSettings.responseType = 'blob';
+
+  file.onProcess = function () {
+    console.log('ImageFile.onProcess');
+    file.state = FileState.PROCESSING;
+    var image = new Image();
+    file.data = image;
+    return new Promise(function (resolve, reject) {
+      image.onload = function () {
+        console.log('ImageFile.onload');
+        image.onload = null;
+        image.onerror = null;
+        file.state = FileState.COMPLETE;
+        resolve(file);
+      };
+
+      image.onerror = function (event) {
+        console.log('ImageFile.onerror');
+        image.onload = null;
+        image.onerror = null;
+        file.state = FileState.FAILED;
+        reject(file);
+      };
+
+      console.log('ImageFile.set src', file.url);
+      image.src = file.url;
+
+      if (image.complete && image.width && image.height) {
+        console.log('ImageFile.instant');
+        image.onload = null;
+        image.onerror = null;
+        file.state = FileState.COMPLETE;
+        resolve(file);
+      }
+    });
+  };
+
+  return file;
+}
+
+var LoaderPlugin = function (_super) {
+  __extends(LoaderPlugin, _super);
+
+  function LoaderPlugin() {
+    return _super.call(this) || this;
+  }
+
+  LoaderPlugin.prototype.image = function (key, url) {
+    if (url === void 0) {
+      url = '';
+    }
+
+    return this.addFile(ImageFile(key, url));
+  };
+
+  return LoaderPlugin;
+}(BaseLoader);
+
+var game = new Game();
+var os = Device.GetOS();
+game.text(10, 20, 'Phaser 4 Test 003');
+game.text(10, 60, 'Android: ' + os.android);
+game.text(10, 80, 'ChromeOS: ' + os.chromeOS);
+game.text(10, 100, 'Cordova: ' + os.cordova);
+game.text(10, 120, 'Crosswalk: ' + os.crosswalk);
+game.text(10, 140, 'Ejecta: ' + os.ejecta);
+game.text(10, 160, 'iOS: ' + os.iOS);
+game.text(10, 180, 'iOSVerion: ' + os.iOSVersion);
+game.text(10, 200, 'iPad: ' + os.iPad);
+game.text(10, 220, 'iPhone: ' + os.iPhone);
+game.text(10, 240, 'Kindle: ' + os.kindle);
+game.text(10, 260, 'MacOS: ' + os.macOS);
+game.text(10, 280, 'Node: ' + os.node);
+game.text(10, 300, 'NodeWebkit: ' + os.nodeWebkit);
+game.text(10, 320, 'WebApp: ' + os.webApp);
+game.text(10, 340, 'Windows: ' + os.windows);
+game.text(10, 360, 'Windows Phone: ' + os.windowsPhone);
+game.text(400, 60, 'Desktop?: ' + os.desktop);
