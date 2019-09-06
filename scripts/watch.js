@@ -33,8 +33,10 @@ if (!folder)
         }
     }
 
-    folder = maxDir.toString().padStart(3, '0');
+    folder = maxDir;
 }
+
+folder = folder.toString().padStart(3, '0');
 
 let dest = source + folder;
 
