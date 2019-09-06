@@ -1030,13 +1030,11 @@ var LoaderPlugin = function (_super) {
 }(BaseLoader);
 
 var game = new Game();
-var audio = Device.GetAudio();
-game.text(10, 20, 'Phaser.Device.Audio');
-game.text(10, 60, 'Has Audio: ' + audio.audioData);
-game.text(10, 80, 'Has WebAudio: ' + audio.webAudio);
-game.text(10, 120, 'Can Play M4A: ' + audio.m4a);
-game.text(10, 140, 'Can Play MP3: ' + audio.mp3);
-game.text(10, 160, 'Can Play OGG: ' + audio.ogg);
-game.text(10, 180, 'Can Play Opus: ' + audio.opus);
-game.text(10, 200, 'Can Play WAV: ' + audio.wav);
-game.text(10, 220, 'Can Play WebM: ' + audio.webm);
+var video = Device.Video;
+game.text(10, 20, 'Phaser.Device.Video');
+game.text(10, 60, 'Can Play h264 Video: ' + video.h264Video);
+game.text(10, 80, 'Can Play hls Video: ' + video.hlsVideo);
+game.text(10, 100, 'Can Play mp3 Video: ' + video.mp4Video);
+game.text(10, 120, 'Can Play ogg Video: ' + video.oggVideo);
+game.text(10, 140, 'Can Play vp9 Video: ' + video.vp9Video);
+game.text(10, 160, 'Can Play webM Video: ' + video.webmVideo);
