@@ -1,4 +1,4 @@
-import * as Phaser from 'phaser/types';
+import * as Phaser from 'phaser';
 
 let game = new Phaser.Game();
 let loader = new Phaser.Loader.LoaderPlugin();
