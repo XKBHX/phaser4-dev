@@ -1,11 +1,3 @@
-function isCordova() {
-  return window.hasOwnProperty('cordova');
-}
-
-function isWindows() {
-  return /Windows/.test(navigator.userAgent);
-}
-
 function AddToDOM(element, parent) {
   var target;
 
@@ -25,6 +17,10 @@ function AddToDOM(element, parent) {
 
   target.appendChild(element);
   return element;
+}
+
+function isCordova() {
+  return window.hasOwnProperty('cordova');
 }
 
 function DOMContentLoaded(callback) {
@@ -101,33 +97,11 @@ class Game {
 
 }
 
-var BaseLoaderState;
-
-(function (BaseLoaderState) {
-  BaseLoaderState[BaseLoaderState["IDLE"] = 0] = "IDLE";
-  BaseLoaderState[BaseLoaderState["LOADING"] = 1] = "LOADING";
-  BaseLoaderState[BaseLoaderState["PROCESSING"] = 2] = "PROCESSING";
-  BaseLoaderState[BaseLoaderState["COMPLETE"] = 3] = "COMPLETE";
-  BaseLoaderState[BaseLoaderState["SHUTDOWN"] = 4] = "SHUTDOWN";
-  BaseLoaderState[BaseLoaderState["DESTROYED"] = 5] = "DESTROYED";
-})(BaseLoaderState || (BaseLoaderState = {}));
-
-var FileState;
-
-(function (FileState) {
-  FileState[FileState["PENDING"] = 0] = "PENDING";
-  FileState[FileState["LOADING"] = 1] = "LOADING";
-  FileState[FileState["LOADED"] = 2] = "LOADED";
-  FileState[FileState["FAILED"] = 3] = "FAILED";
-  FileState[FileState["PROCESSING"] = 4] = "PROCESSING";
-  FileState[FileState["ERRORED"] = 5] = "ERRORED";
-  FileState[FileState["COMPLETE"] = 6] = "COMPLETE";
-  FileState[FileState["DESTROYED"] = 7] = "DESTROYED";
-  FileState[FileState["POPULATED"] = 8] = "POPULATED";
-  FileState[FileState["TIMED_OUT"] = 9] = "TIMED_OUT";
-  FileState[FileState["ABORTED"] = 10] = "ABORTED";
-})(FileState || (FileState = {}));
+function isMacOS() {
+  var ua = navigator.userAgent;
+  return /Mac OS/.test(ua) && !/like Mac OS/.test(ua);
+}
 
 new Game(game => {
-  game.text(10, 10, 'Phaser 4 Test 008 - ' + isWindows());
+  game.text(10, 20, 'Phaser 4 Test 008 - ' + isMacOS());
 });
