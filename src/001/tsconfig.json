@@ -1,14 +1,20 @@
 {
     "compilerOptions": {
-        "target": "esnext",
-        "moduleResolution": "node",
-        "allowSyntheticDefaultImports": true,
-        "baseUrl": ".",
-        "paths": {
-            "phaser": [ "node_modules/phaser/" ]
-        }
-    },
-    "include": [
-        "**/*"
-    ]
+        // "target": "esnext",
+        // "moduleResolution": "node"
+        // "typeRoots": [
+        //     "./node_modules/phaser/types"
+        // ]
+        // "types": [
+        //     "phaser"
+        // ],
+        // "allowSyntheticDefaultImports": true,
+        // "baseUrl": ".",
+        // "paths": {
+        //     "phaser": [ "node_modules/phaser/" ]
+        // }
+    }
+    // "include": [
+    //     "**/*"
+    // ]
 }

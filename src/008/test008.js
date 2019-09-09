@@ -1,24 +1,27 @@
-import { Game, Loader } from '../../node_modules/phaser/dist/phaser.es.js';
+// import { Game, Loader } from 'phaser';
+// import { Browser } from 'phaser/dist/device';
 
-new Game((game) => {
+import * as Phaser from 'phaser';
 
-    let loader = new Loader.LoaderPlugin();
+new Phaser.Game((game) => {
 
-    game.draw('Phaser 4 Test 008');
+    // let loader = new Phaser.Loader.LoaderPlugin();
 
-    loader.image('logo', '../assets/logo.png')
-        .then((file) => {
+    game.text(10, 10, 'Phaser 4 Test 008 - ' + Phaser.Device.OS.isWindows());
 
-            for (let i = 0; i < 10; i++)
-            {
-                let x = Math.random() * 700;
-                let y = Math.random() * 500;
+    // loader.image('logo', '../assets/logo.png')
+    //     .then((file) => {
+
+    //         for (let i = 0; i < 10; i++)
+    //         {
+    //             let x = Math.random() * 700;
+    //             let y = Math.random() * 500;
         
-                game.drawImage(file.data, x, y);
-            }
+    //             game.drawImage(file.data, x, y);
+    //         }
 
-        });
+    //     });
 
-    loader.start();
+    // loader.start();
 
 });

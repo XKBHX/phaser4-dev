@@ -2,7 +2,7 @@ import resolve from 'rollup-plugin-node-resolve';
 import babel from 'rollup-plugin-babel';
 
 const extensions = [
-    '.js', '.jsx', '.ts', '.tsx'
+    '.js', '.jsx', '.ts', '.tsx', '.d.ts'
 ];
 
 export default {
