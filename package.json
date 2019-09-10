@@ -21,7 +21,13 @@
   },
   "homepage": "https://github.com/phaserjs/phaser4-dev#readme",
   "dependencies": {
-    "@phaserjs/phaser4": "0.0.4",
+    "@phaserjs/core": "0.0.3",
+    "@phaserjs/device": "0.0.3",
+    "@phaserjs/dom": "0.0.4",
+    "@phaserjs/loader": "0.0.5",
+    "@phaserjs/loader-filetypes": "0.0.5",
+    "@phaserjs/phaser": "0.0.2",
+    "@phaserjs/plugin-loader": "0.0.3",
     "replace-in-file": "^4.1.3"
   },
   "devDependencies": {

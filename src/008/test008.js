@@ -1,32 +1,25 @@
-// import { Game, Loader } from 'phaser';
-// import { Browser } from 'phaser/dist/device';
+//  For those who like it a bit more modern:
 
-// import * as Phaser from 'phaser';
-
-// import { Game, Device } from '@phaserjs/phaser4/';
-
-import { Game } from '@phaserjs/phaser4/Game';
-import * as OS from '@phaserjs/phaser4/device/os';
+import { Game } from '@phaserjs/core';
+import { ImageFile } from '@phaserjs/loader-filetypes';
 
 new Game((game) => {
 
-    // let loader = new Phaser.Loader.LoaderPlugin();
+    game.text(10, 20, 'Phaser Test 3');
 
-    game.text(10, 20, 'Phaser 4 Test 008 - ' + OS.isMacOS());
+    ImageFile('logo', '../assets/logo.png').load().then((file) => {
 
-    // loader.image('logo', '../assets/logo.png')
-    //     .then((file) => {
+        let x = 50;
+        let y = 50;
 
-    //         for (let i = 0; i < 10; i++)
-    //         {
-    //             let x = Math.random() * 700;
-    //             let y = Math.random() * 500;
-        
-    //             game.drawImage(file.data, x, y);
-    //         }
+        for (let i = 0; i < 10; i++)
+        {
+            game.drawImage(file.data, x, y);
 
-    //     });
+            x += 80;
+            y += 40;
+        }
 
-    // loader.start();
+    });
 
 });
