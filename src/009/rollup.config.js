@@ -7,10 +7,10 @@ const extensions = [
 
 export default {
 
-    input: './src/008/test008.js',
+    input: './src/009/test009.ts',
 
     output: {
-        file: './src/008/bundle.js',
+        file: './src/009/test009.js',
         format: 'es'
     },
 
@@ -29,10 +29,9 @@ export default {
                         esmodules: true
                     }
                 }],
-                [ "minify", {
-                    builtIns: false,
-                    removeConsole: false,
-                }],
+                // [ "minify", {
+                //     removeConsole: false,
+                // }],
                 "@babel/preset-typescript"
             ],
             plugins: [

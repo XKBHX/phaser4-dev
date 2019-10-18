@@ -1,5 +1,3 @@
-//  For those who like it a bit more modern:
-
 import { Game } from '@phaserjs/core';
 import { ImageFile } from '@phaserjs/loader-filetypes';
 
