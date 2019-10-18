@@ -29,6 +29,7 @@
     "@phaserjs/geom-line": "0.0.1",
     "@phaserjs/loader": "^0.0.5",
     "@phaserjs/loader-filetypes": "^0.0.5",
+    "@phaserjs/math-matrix2d": "0.0.1",
     "@phaserjs/phaser": "^0.0.2",
     "@phaserjs/plugin-loader": "^0.0.3",
     "replace-in-file": "^4.1.3"
