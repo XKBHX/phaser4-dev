@@ -1580,18 +1580,29 @@ function ImageFile(key, url) {
   return file;
 }
 
-var vs = "#version 300 es\n\nlayout(location=0) in vec4 position;\n\nout vec2 uv;\n\nvoid main() {\n    uv = position.xy + 0.5;\n    gl_Position = position;\n}\n";
+var vs = "#version 300 es\n\nin vec4 position;\nin vec2 tUv;\n\nout vec2 uv;\n\nvoid main() {\n    uv = tUv;\n    gl_Position = position;\n}\n";
 var fs = "#version 300 es\nprecision highp float;\n\nin vec2 uv;\nuniform sampler2D tex;\n\nout vec4 fragColor;\n\nvoid main() {\n    fragColor = texture(tex, uv);\n}\n";
 var app = new WebGL2Renderer(document.getElementById('game'));
 app.clearColor(0.2, 0.4, 0, 1);
 var program = app.createProgram(vs, fs);
-var positions = app.createVertexBuffer(app.gl.FLOAT, 2, new Float32Array([-0.5, -0.5, 0.5, -0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5, 0.5]));
-var triangleArray = app.createVertexArray().vertexAttributeBuffer(0, positions);
+
+function getX(pos, app) {
+  return pos / app.width * 2 - 1;
+}
+
+function getY(pos, app) {
+  return pos / app.height * -2 + 1;
+}
+
+function getQuadPosition(app, x, y, width, height) {
+  return new Float32Array([getX(x, app), getY(y, app), getX(x + width, app), getY(y, app), getX(x, app), getY(y + height, app), getX(x, app), getY(y + height, app), getX(x + width, app), getY(y, app), getX(x + width, app), getY(y + height, app)]);
+}
+
+var positions = app.createVertexBuffer(app.gl.FLOAT, 2, getQuadPosition(app, 0, 0, 313, 512));
+var uvs = app.createVertexBuffer(app.gl.FLOAT, 2, new Float32Array([0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0]));
+var triangleArray = app.createVertexArray().vertexAttributeBuffer(0, positions).vertexAttributeBuffer(0, uvs);
 ImageFile('stone', '/100-phaser3-snippets/public/assets/patchouli.png').load().then(file => {
-  var t = app.createTexture2D(file.data, 0, 0, {
-    flipY: true,
-    premultiplyAlpha: true
-  });
+  var t = app.createTexture2D(file.data);
   var drawCall = app.createDrawCall(program, triangleArray).texture('tex', t);
   app.clear();
   drawCall.draw();

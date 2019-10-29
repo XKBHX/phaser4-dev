@@ -31,6 +31,7 @@ export default {
                 }],
                 // [ "minify", {
                 //     removeConsole: false,
+                //     builtIns: false
                 // }],
                 "@babel/preset-typescript"
             ],
