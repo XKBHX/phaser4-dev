@@ -2026,50 +2026,33 @@ function ImageFile(key, url) {
   return file;
 }
 
-var vs = "#version 300 es\n\nlayout(location=0) in vec4 position;\nlayout(location=1) in vec2 tUv;\n\nout vec2 uv;\n\nvoid main() {\n    uv = tUv;\n    gl_Position = position;\n}\n";
-var fs = "#version 300 es\nprecision highp float;\n\nin vec2 uv;\nuniform sampler2D tex;\n\nout vec4 fragColor;\n\nvoid main() {\n    fragColor = texture(tex, uv);\n}\n";
+var vs = "#version 300 es\n\nlayout(location=0) in vec4 inPosition;\n\nvoid main() {\n    gl_Position = inPosition;\n}\n";
+var fs = "#version 300 es\nprecision highp float;\n\nout vec4 fragColor;\n\nvoid main() {\n    fragColor = vec4(1.0, 0.0, 1.0, 1.0);\n}\n";
 var app = new WebGL2Renderer(document.getElementById('game'));
-app.resize(window.innerWidth, window.innerHeight);
-app.setClearColor(0.0, 0.0, 0.2, 1);
+app.setClearColor(0.1, 0.1, 0.1, 1);
 var program = app.createProgram(vs, fs);
-
-var w = 32;
-var h = 32;
-var vbo = [];
-var uvo = [];
-var batchSize = 40000;
-var max = 960000;
-console.log(max, 'sprites');
-
-for (var i = 0; i < max; i++) {
-  var x = Math.abs(Math.random() * app.width);
-  var y = Math.abs(Math.random() * app.height);
-  var TL = app.getXY(x, y);
-  var TR = app.getXY(x + w, y);
-  var BL = app.getXY(x, y + h);
-  var BR = app.getXY(x + w, y + h);
-  vbo.push(TL.x, TL.y, TR.x, TR.y, BL.x, BL.y, BL.x, BL.y, TR.x, TR.y, BR.x, BR.y);
-  uvo.push(0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0);
-}
-
-var positions = app.createVertexBuffer(app.gl.FLOAT, 2, new Float32Array(vbo));
-var uvs = app.createVertexBuffer(app.gl.FLOAT, 2, new Float32Array(uvo));
-var vao = app.createVertexArray().vertexAttributeBuffer(0, positions).vertexAttributeBuffer(1, uvs);
-ImageFile('stone', '/100-phaser3-snippets/public/assets/babyface.png').load().then(file => {
-  var t = app.createTexture2D(file.data);
-  var drawCall = app.createDrawCall(program, vao).texture('tex', t);
+var x = 64;
+var y = 64;
+var width = 96;
+var height = 128;
+var TL = app.getXY(x, y);
+var TR = app.getXY(x + width, y);
+var BL = app.getXY(x, y + height);
+var BR = app.getXY(x + width, y + height);
+var vertices = app.createVertexBuffer(app.gl.FLOAT, 2, new Float32Array([TL.x, TL.y, BL.x, BL.y, BR.x, BR.y, TR.x, TR.y]));
+var indices = app.createIndexBuffer(app.gl.UNSIGNED_SHORT, 3, new Uint16Array([0, 1, 2, 2, 3, 0]));
+var vertexArray = app.createVertexArray().vertexAttributeBuffer(0, vertices).indexBuffer(indices);
+ImageFile('stone', '/100-phaser3-snippets/public/assets/poop.png').load().then(file => {
+  var texture = app.createTexture2D(file.data);
+  var drawCall = app.createDrawCall(program, vertexArray);
+  console.log(vertexArray);
   console.log(drawCall);
 
   function render() {
     app.clear();
-
-    for (var _i = 0; _i < max / batchSize; _i++) {
-      drawCall.drawRanges([_i * (batchSize - 1), batchSize]);
-      drawCall.draw();
-    }
-
+    drawCall.draw();
     requestAnimationFrame(render);
   }
 
-  requestAnimationFrame(render);
+  render();
 });
