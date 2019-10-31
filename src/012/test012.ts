@@ -55,12 +55,14 @@ let w = 32;
 let h = 32;
 let vbo = [];
 let uvo = [];
-let batchSize = 40000;
-// let batchSize = 80000;
+// let batchSize = 10000;
+// let batchSize = 20000;
+// let batchSize = 40000;
+let batchSize = 80000;
 
 // let max = 240000;
-// let max = 480000;
-let max = 960000;
+let max = 480000;
+// let max = 960000;
 // let max = 1920000;
 
 console.log(max, 'sprites');

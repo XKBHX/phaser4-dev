@@ -1548,6 +1548,11 @@ class WebGL2Renderer {
     var gl = canvas.getContext('webgl2', contextAttributes);
     this.gl = gl;
     this.canvas = canvas;
+    gl.cullFace(gl.BACK);
+    gl.frontFace(gl.CCW);
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.CULL_FACE);
+    gl.depthFunc(gl.LEQUAL);
     this.setState();
     this.initExtensions();
     this.width = gl.drawingBufferWidth;
@@ -2026,25 +2031,47 @@ function ImageFile(key, url) {
   return file;
 }
 
-var vs = "#version 300 es\n\nlayout(location=0) in vec4 inPosition;\n\nvoid main() {\n    gl_Position = inPosition;\n}\n";
-var fs = "#version 300 es\nprecision highp float;\n\nout vec4 fragColor;\n\nvoid main() {\n    fragColor = vec4(1.0, 0.0, 1.0, 1.0);\n}\n";
+var xvs = "#version 300 es\n\nlayout(location=0) in vec4 inPosition;\nlayout(location=1) in vec2 inUV;\n\nout vec2 uv;\n\nvoid main() {\n    uv = inUV;\n    gl_Position = inPosition;\n}\n";
+var xfs = "#version 300 es\nprecision highp float;\n\nin vec2 uv;\n\nuniform sampler2D tex;\n\nout vec4 fragColor;\n\nvoid main() {\n    fragColor = texture(tex, uv);\n}\n";
 var app = new WebGL2Renderer(document.getElementById('game'));
 app.setClearColor(0.1, 0.1, 0.1, 1);
-var program = app.createProgram(vs, fs);
+var program = app.createProgram(xvs, xfs);
 var x = 64;
 var y = 64;
-var width = 96;
-var height = 128;
+var width = 512;
+var height = 353;
 var TL = app.getXY(x, y);
 var TR = app.getXY(x + width, y);
 var BL = app.getXY(x, y + height);
 var BR = app.getXY(x + width, y + height);
+var UV0 = {
+  x: 0,
+  y: 0
+};
+var UV1 = {
+  x: 0,
+  y: 1
+};
+var UV2 = {
+  x: 1,
+  y: 1
+};
+var UV3 = {
+  x: 1,
+  y: 0
+};
 var vertices = app.createVertexBuffer(app.gl.FLOAT, 2, new Float32Array([TL.x, TL.y, BL.x, BL.y, BR.x, BR.y, TR.x, TR.y]));
+var uvs = app.createVertexBuffer(app.gl.FLOAT, 2, new Float32Array([UV0.x, UV0.y, UV1.x, UV1.y, UV2.x, UV2.y, UV3.x, UV3.y]));
 var indices = app.createIndexBuffer(app.gl.UNSIGNED_SHORT, 3, new Uint16Array([0, 1, 2, 2, 3, 0]));
-var vertexArray = app.createVertexArray().vertexAttributeBuffer(0, vertices).indexBuffer(indices);
-ImageFile('stone', '/100-phaser3-snippets/public/assets/poop.png').load().then(file => {
-  var texture = app.createTexture2D(file.data);
-  var drawCall = app.createDrawCall(program, vertexArray);
+var vertexArray = app.createVertexArray();
+vertexArray.vertexAttributeBuffer(0, vertices);
+vertexArray.vertexAttributeBuffer(1, uvs);
+vertexArray.indexBuffer(indices);
+ImageFile('stone', '/100-phaser3-snippets/public/assets/chihuahua.png').load().then(file => {
+  var texture = app.createTexture2D(file.data, 256, 353, {
+    flipY: false
+  });
+  var drawCall = app.createDrawCall(program, vertexArray).texture('tex', texture);
   console.log(vertexArray);
   console.log(drawCall);
 
