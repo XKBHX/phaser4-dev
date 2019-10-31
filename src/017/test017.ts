@@ -39,18 +39,42 @@ app.setClearColor(0.2, 0.2, 0.2, 1);
 
 let program = app.createProgram(vs, fs);
 
-//  512 per row
-//  512 * 128 = 65536
-//  512 * 256 = 131072
-//  512 * 512 = 262144
+//  1024 per row
+//  1024 * 128 = 131072
+//  1024 * 256 = 262144
+//  1024 * 512 = 524288
+//  1024 * 768 = 786432
+//  1024 * 1024 = 1048576
 
-const row = 512;
-const max = row * 512;
+//  2048 per row (overdraw = 2)
+//  2048 * 128 = 262144
+//  2048 * 256 = 524288
+//  2048 * 512 = 1048576
+//  2048 * 768 = 1572864
+//  2048 * 1024 = 2097152
 
-console.log(max, 'sprites');
+//  4096 per row (overdraw = 4)
+//  4096 * 128 = 524288
+//  4096 * 256 = 1048576
+//  4096 * 512 = 2097152
+//  4096 * 768 = 3145728
+//  4096 * 896 = 3670016
+//  4096 * 1024 = 4,194,304
 
-let width = 2;
-let height = 2;
+//  8192 per row (overdraw = 8)
+//  8192 * 128 = 1048576
+//  8192 * 256 = 2097152
+//  8192 * 512 = 4,194,304
+//  8192 * 768 = 6,291,456
+//  8192 * 896 = 7,340,032
+//  8192 * 1024 = 8,388,608
+
+const row = 1024;
+const overdraw = 4;
+const max = (row * overdraw) * 1024;
+
+let width = 1;
+let height = 1;
 
 const UV0 = { x: 0, y: 0 };
 const UV1 = { x: 0, y: 1 };
@@ -58,17 +82,13 @@ const UV2 = { x: 1, y: 1 };
 const UV3 = { x: 1, y: 0 };
 
 const data = [];
-const ibo = [];
 
-let offset = 0;
 let x = 0;
 let y = 0;
+let d = 0;
 
 for (let i = 0; i < max; i++)
 {
-    // let x = Math.abs(Math.random() * (app.width - width));
-    // let y = Math.abs(Math.random() * (app.height - height));
-    
     let TL = app.getXY(x, y);
     let TR = app.getXY(x + width, y);
     let BL = app.getXY(x, y + height);
@@ -94,18 +114,19 @@ for (let i = 0; i < max; i++)
         UV0.x, UV0.y
     );
 
-    // ibo.push(
-    //     offset, offset + 1, offset + 2, offset + 2, offset + 3, offset
-    // );
-
-    offset += 4;
-
     x += width;
 
-    if (x === (app.width))
+    if (x === app.width)
     {
         x = 0;
-        y += height;
+
+        d++;
+
+        if (d === overdraw)
+        {
+            y += height;
+            d = 0;
+        }
     }
 }
 
@@ -113,9 +134,13 @@ const size = 4;
 
 //  Interleaved Buffer Test + Index Buffer
 
-let buffer = app.createInterleavedBuffer(size * 4, new Float32Array(data));
+const dataTA = new Float32Array(data);
 
-// let indices = app.createIndexBuffer(app.gl.UNSIGNED_SHORT, 3, new Uint32Array(ibo));
+console.log(max, 'sprites', dataTA.byteLength, 'bytes', dataTA.byteLength / 1e+6, 'MB');
+
+let buffer = app.createInterleavedBuffer(size * 4, dataTA); 
+
+console.log(buffer);
 
 let vertexArray = app.createVertexArray();
 
@@ -132,8 +157,6 @@ vertexArray.vertexAttributeBuffer(1, buffer, {
     offset: size * 2,
     stride: size * 4
 });
-
-// vertexArray.indexBuffer(indices);
 
 ImageFile('stone', '../assets/2x2.png').load().then((file) => {
 

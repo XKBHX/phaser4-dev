@@ -2030,72 +2030,112 @@ var vs = "#version 300 es\n\nlayout(location=0) in vec2 inPosition;\nlayout(loca
 var fs = "#version 300 es\nprecision highp float;\n\nin vec2 uv;\nin vec2 pos;\n\nuniform sampler2D tex;\n\nout vec4 fragColor;\n\nvoid main() {\n    // fragColor = texture(tex, uv);\n    // fragColor = vec4(0.5, 1.0, 0.0, 1.0);\n    fragColor = vec4((pos.x * 0.5 + 0.5), (pos.y * 0.5 + 0.5), 0.2, 1.0);\n}\n";
 var app = new WebGL2Renderer(document.getElementById('game'));
 app.setClearColor(0.2, 0.2, 0.2, 1);
+app.state.multiDrawInstanced = false;
 var program = app.createProgram(vs, fs);
-var row = 512;
-var max = row * 512;
-console.log(max, 'sprites');
-var width = 2;
-var height = 2;
-var UV0 = {
-  x: 0,
-  y: 0
-};
-var UV1 = {
-  x: 0,
-  y: 1
-};
-var UV2 = {
-  x: 1,
-  y: 1
-};
-var UV3 = {
-  x: 1,
-  y: 0
-};
-var data = [];
-var x = 0;
-var y = 0;
+var width = 1;
+var height = 1;
+var total = 0;
 
-for (var i = 0; i < max; i++) {
-  var TL = app.getXY(x, y);
-  var TR = app.getXY(x + width, y);
-  var BL = app.getXY(x, y + height);
-  var BR = app.getXY(x + width, y + height);
-  data.push(TL.x, TL.y, UV0.x, UV0.y, BL.x, BL.y, UV1.x, UV1.y, BR.x, BR.y, UV2.x, UV2.y, BR.x, BR.y, UV2.x, UV2.y, TR.x, TR.y, UV3.x, UV3.y, TL.x, TL.y, UV0.x, UV0.y);
-  x += width;
+function buildDraw(texture) {
+  var row = 1024;
+  var overdraw = 2;
+  var max = row * overdraw * 1024;
+  total += max;
+  var width = 1;
+  var height = 1;
+  var UV0 = {
+    x: 0,
+    y: 0
+  };
+  var UV1 = {
+    x: 0,
+    y: 1
+  };
+  var UV2 = {
+    x: 1,
+    y: 1
+  };
+  var UV3 = {
+    x: 1,
+    y: 0
+  };
+  var data = [];
+  var x = 0;
+  var y = 0;
+  var d = 0;
 
-  if (x === app.width) {
-    x = 0;
-    y += height;
+  for (var i = 0; i < max; i++) {
+    var TL = app.getXY(x, y);
+    var TR = app.getXY(x + width, y);
+    var BL = app.getXY(x, y + height);
+    var BR = app.getXY(x + width, y + height);
+    data.push(TL.x, TL.y, UV0.x, UV0.y, BL.x, BL.y, UV1.x, UV1.y, BR.x, BR.y, UV2.x, UV2.y, BR.x, BR.y, UV2.x, UV2.y, TR.x, TR.y, UV3.x, UV3.y, TL.x, TL.y, UV0.x, UV0.y);
+    x += width;
+
+    if (x === app.width) {
+      x = 0;
+      d++;
+
+      if (d === overdraw) {
+        y += height;
+        d = 0;
+      }
+    }
   }
+
+  var size = 4;
+  var dataTA = new Float32Array(data);
+  data.length = 0;
+  console.log(max, 'sprites', dataTA.byteLength, 'bytes', dataTA.byteLength / 1e+6, 'MB');
+  var buffer = app.createInterleavedBuffer(size * 4, dataTA);
+  var vertexArray = app.createVertexArray();
+  vertexArray.vertexAttributeBuffer(0, buffer, {
+    type: app.gl.FLOAT,
+    size: 2,
+    offset: 0,
+    stride: size * 4
+  });
+  vertexArray.vertexAttributeBuffer(1, buffer, {
+    type: app.gl.FLOAT,
+    size: 2,
+    offset: size * 2,
+    stride: size * 4
+  });
+  return app.createDrawCall(program, vertexArray).texture('tex', texture);
 }
 
-var size = 4;
-var buffer = app.createInterleavedBuffer(size * 4, new Float32Array(data));
-var vertexArray = app.createVertexArray();
-vertexArray.vertexAttributeBuffer(0, buffer, {
-  type: app.gl.FLOAT,
-  size: 2,
-  offset: 0,
-  stride: size * 4
-});
-vertexArray.vertexAttributeBuffer(1, buffer, {
-  type: app.gl.FLOAT,
-  size: 2,
-  offset: size * 2,
-  stride: size * 4
-});
-ImageFile('stone', '../assets/2x2.png').load().then(file => {
+ImageFile('stone', '../assets/8x8.png').load().then(file => {
   var texture = app.createTexture2D(file.data, width, height, {
     flipY: false
   });
-  var drawCall = app.createDrawCall(program, vertexArray).texture('tex', texture);
-  console.log(vertexArray);
-  console.log(drawCall);
+  var drawCall1 = buildDraw(texture);
+  var drawCall2 = buildDraw(texture);
+  var drawCall3 = buildDraw(texture);
+  var drawCall4 = buildDraw(texture);
+  var drawCall5 = buildDraw(texture);
+  var drawCall6 = buildDraw(texture);
+  var drawCall7 = buildDraw(texture);
+  var drawCall8 = buildDraw(texture);
+  var drawCall9 = buildDraw(texture);
+  var drawCall10 = buildDraw(texture);
+  var drawCall11 = buildDraw(texture);
+  var drawCall12 = buildDraw(texture);
+  console.log(total, 'total sprites');
 
   function render() {
     app.clear();
-    drawCall.draw();
+    drawCall1.draw();
+    drawCall2.draw();
+    drawCall3.draw();
+    drawCall4.draw();
+    drawCall5.draw();
+    drawCall6.draw();
+    drawCall7.draw();
+    drawCall8.draw();
+    drawCall9.draw();
+    drawCall10.draw();
+    drawCall11.draw();
+    drawCall12.draw();
     requestAnimationFrame(render);
   }
 

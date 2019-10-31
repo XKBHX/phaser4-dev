@@ -2031,11 +2031,11 @@ var fs = "#version 300 es\nprecision highp float;\n\nin vec2 uv;\nin vec2 pos;\n
 var app = new WebGL2Renderer(document.getElementById('game'));
 app.setClearColor(0.2, 0.2, 0.2, 1);
 var program = app.createProgram(vs, fs);
-var row = 512;
-var max = row * 512;
-console.log(max, 'sprites');
-var width = 2;
-var height = 2;
+var row = 1024;
+var overdraw = 4;
+var max = row * overdraw * 1024;
+var width = 1;
+var height = 1;
 var UV0 = {
   x: 0,
   y: 0
@@ -2055,6 +2055,7 @@ var UV3 = {
 var data = [];
 var x = 0;
 var y = 0;
+var d = 0;
 
 for (var i = 0; i < max; i++) {
   var TL = app.getXY(x, y);
@@ -2066,12 +2067,20 @@ for (var i = 0; i < max; i++) {
 
   if (x === app.width) {
     x = 0;
-    y += height;
+    d++;
+
+    if (d === overdraw) {
+      y += height;
+      d = 0;
+    }
   }
 }
 
 var size = 4;
-var buffer = app.createInterleavedBuffer(size * 4, new Float32Array(data));
+var dataTA = new Float32Array(data);
+console.log(max, 'sprites', dataTA.byteLength, 'bytes', dataTA.byteLength / 1e+6, 'MB');
+var buffer = app.createInterleavedBuffer(size * 4, dataTA);
+console.log(buffer);
 var vertexArray = app.createVertexArray();
 vertexArray.vertexAttributeBuffer(0, buffer, {
   type: app.gl.FLOAT,
