@@ -41,7 +41,7 @@
     "@babel/plugin-proposal-class-properties": "^7.7.0",
     "@babel/plugin-proposal-numeric-separator": "^7.2.0",
     "@babel/plugin-proposal-object-rest-spread": "^7.6.2",
-    "@babel/preset-env": "^7.7.0",
+    "@babel/preset-env": "^7.7.1",
     "@babel/preset-typescript": "^7.7.0",
     "babel-preset-minify": "^0.5.1",
     "directory-tree": "^2.2.4",
@@ -50,6 +50,6 @@
     "rollup": "^1.26.3",
     "rollup-plugin-babel": "^4.3.3",
     "rollup-plugin-node-resolve": "^5.2.0",
-    "typescript": "^3.6.4"
+    "typescript": "^3.7.2"
   }
 }
