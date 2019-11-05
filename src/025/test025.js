@@ -2033,50 +2033,88 @@ function ImageFile(key, url) {
   return file;
 }
 
-var vs = "#version 300 es\n\nlayout(location=0) in vec4 position;\nlayout(location=1) in vec2 tUv;\n\nout vec2 uv;\n\nvoid main() {\n    uv = tUv;\n    gl_Position = position;\n}\n";
-var fs = "#version 300 es\nprecision highp float;\n\nin vec2 uv;\nuniform sampler2D tex;\n\nout vec4 fragColor;\n\nvoid main() {\n    fragColor = texture(tex, uv);\n}\n";
+var vs = "#version 300 es\n\nlayout(std140, column_major) uniform;\n\nlayout(location=0) in vec4 position;\nlayout(location=1) in vec2 uv;\nlayout(location=2) in vec4 normal;\nlayout(location=3) in mat4 model;\n\nuniform SceneUniforms {\n    mat4 viewProj;\n    vec4 eyePosition;\n    vec4 lightPosition;\n};\n\n\nout vec3 vPosition;\nout vec2 vUV;\nout vec3 vNormal;\n\nvoid main() {\n    vec4 worldPosition = model * position;\n    vPosition = worldPosition.xyz;\n    vUV = uv;\n    vNormal = (model * vec4(normal.xyz, 0.0)).xyz;\n    gl_Position = viewProj * worldPosition;\n}\n";
+var fs = "#version 300 es\nprecision highp float;\n\nlayout(std140, column_major) uniform;\n\nuniform SceneUniforms {\n    mat4 viewProj;\n    vec4 eyePosition;\n    vec4 lightPosition;\n};\n\nuniform sampler2D uTexture;\n\nin vec3 vPosition;\nin vec2 vUV;\nin vec3 vNormal;\n\nout vec4 fragColor;\nvoid main() {\n    vec3 color = texture(uTexture, vUV).rgb;\n\n    vec3 normal = normalize(vNormal);\n    vec3 eyeVec = normalize(eyePosition.xyz - vPosition);\n    vec3 incidentVec = normalize(vPosition - lightPosition.xyz);\n    vec3 lightVec = -incidentVec;\n    float diffuse = max(dot(lightVec, normal), 0.0);\n    float highlight = pow(max(dot(eyeVec, reflect(incidentVec, normal)), 0.0), 100.0);\n    float ambient = 0.1;\n    fragColor = vec4(color * (diffuse + highlight + ambient), 1.0);\n}\n";
+var BOX_GRID_DIM = 40;
+var NUM_BOXES = BOX_GRID_DIM * BOX_GRID_DIM * BOX_GRID_DIM;
+var NEAR = 0.1;
+var FAR = 100.0;
 var app = new WebGL2Renderer(document.getElementById('game'));
-app.resize(window.innerWidth, window.innerHeight);
-app.setClearColor(0.0, 0.0, 0.2, 1);
+app.setClearColor(0, 0, 0, 1);
+app.setDepthTest();
+app.gl.enable(app.gl.CULL_FACE);
 var program = app.createProgram(vs, fs);
+var mat4 = window.glMatrix.mat4;
+var vec3 = window.glMatrix.vec3;
+var box = window.utils.createBox({
+  dimensions: [0.5, 0.5, 0.5]
+});
+var positions = app.createVertexBuffer(app.gl.FLOAT, 3, box.positions);
+var uv = app.createVertexBuffer(app.gl.FLOAT, 2, box.uvs);
+var normals = app.createVertexBuffer(app.gl.FLOAT, 3, box.normals);
+var modelMatrixData = new Float32Array(NUM_BOXES * 16);
+var modelMatrices = app.createMatrixBuffer(app.gl.FLOAT_MAT4, modelMatrixData);
+var boxArray = app.createVertexArray().vertexAttributeBuffer(0, positions).vertexAttributeBuffer(1, uv).vertexAttributeBuffer(2, normals).instanceAttributeBuffer(3, modelMatrices);
+var projMatrix = mat4.create();
+mat4.perspective(projMatrix, Math.PI / 2, 1024 / 768, NEAR, FAR);
+var viewMatrix = mat4.create();
+var eyePosition = vec3.fromValues(0, 22, 0);
+var viewProjMatrix = mat4.create();
+var lightPosition = vec3.create();
+var sceneUniformBuffer = app.createUniformBuffer([app.gl.FLOAT_MAT4, app.gl.FLOAT_VEC4, app.gl.FLOAT_VEC4]);
+ImageFile('logo', '../assets/512x512.png').load().then(file => {
+  var texture = app.createTexture2D(file.data, 512, 512, {
+    flipY: true,
+    maxAnisotropy: app.state.maxTextureAnisotropy
+  });
+  var boxes = new Array(NUM_BOXES);
+  var boxesDrawCall = app.createDrawCall(program, boxArray).uniformBlock("SceneUniforms", sceneUniformBuffer).texture("uTexture", texture);
+  var rotationAxis = vec3.fromValues(1, 1, 1);
+  vec3.normalize(rotationAxis, rotationAxis);
+  var boxI = 0;
+  var offset = -Math.floor(BOX_GRID_DIM / 2);
 
-var w = 32;
-var h = 32;
-var vbo = [];
-var uvo = [];
-var batchSize = 80000;
-var max = 480000;
-console.log(max, 'sprites');
+  for (var i = 0; i < BOX_GRID_DIM; ++i) {
+    for (var j = 0; j < BOX_GRID_DIM; ++j) {
+      for (var k = 0; k < BOX_GRID_DIM; ++k) {
+        boxes[boxI] = {
+          rotate: boxI / Math.PI,
+          rotationMatrix: mat4.create(),
+          translationMatrix: mat4.create(),
+          modelMatrix: new Float32Array(modelMatrixData.buffer, boxI * 64, 16)
+        };
+        mat4.fromRotation(boxes[boxI].rotationMatrix, boxes[boxI].rotate, rotationAxis);
+        mat4.fromTranslation(boxes[boxI].translationMatrix, [i + offset, j + offset, k + offset]);
+        ++boxI;
+      }
+    }
+  }
 
-for (var i = 0; i < max; i++) {
-  var x = Math.abs(Math.random() * app.width);
-  var y = Math.abs(Math.random() * app.height);
-  var TL = app.getXY(x, y);
-  var TR = app.getXY(x + w, y);
-  var BL = app.getXY(x, y + h);
-  var BR = app.getXY(x + w, y + h);
-  vbo.push(TL.x, TL.y, TR.x, TR.y, BL.x, BL.y, BL.x, BL.y, TR.x, TR.y, BR.x, BR.y);
-  uvo.push(0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0);
-}
-
-var positions = app.createVertexBuffer(app.gl.FLOAT, 2, new Float32Array(vbo));
-var uvs = app.createVertexBuffer(app.gl.FLOAT, 2, new Float32Array(uvo));
-var vao = app.createVertexArray().vertexAttributeBuffer(0, positions).vertexAttributeBuffer(1, uvs);
-ImageFile('stone', '/100-phaser3-snippets/public/assets/babyface.png').load().then(file => {
-  var t = app.createTexture2D(file.data);
-  var drawCall = app.createDrawCall(program, vao).texture('tex', t);
-  console.log(drawCall);
+  var eyeRadius = 30;
+  var eyeRotation = 0;
 
   function render() {
-    app.clear();
+    eyeRotation += 0.002;
+    eyePosition[0] = Math.sin(eyeRotation) * eyeRadius;
+    eyePosition[2] = Math.cos(eyeRotation) * eyeRadius;
+    lightPosition.set(eyePosition);
+    lightPosition[0] += 5;
+    mat4.lookAt(viewMatrix, eyePosition, vec3.fromValues(0, -5, 0), vec3.fromValues(0, 1, 0));
+    mat4.multiply(viewProjMatrix, projMatrix, viewMatrix);
+    sceneUniformBuffer.set(0, viewProjMatrix).set(1, eyePosition).set(2, lightPosition).update();
 
-    for (var _i = 0; _i < max / batchSize; _i++) {
-      drawCall.drawRanges([_i * (batchSize - 1), batchSize]);
-      drawCall.draw();
+    for (var _i = 0, len = boxes.length; _i < len; ++_i) {
+      var _box = boxes[_i];
+      mat4.rotate(_box.rotationMatrix, _box.rotationMatrix, 0.02, rotationAxis);
+      mat4.multiply(_box.modelMatrix, _box.translationMatrix, _box.rotationMatrix);
     }
 
+    modelMatrices.data(modelMatrixData);
+    app.clear();
+    boxesDrawCall.draw();
     requestAnimationFrame(render);
   }
 
-  requestAnimationFrame(render);
+  render();
 });
+//# sourceMappingURL=test025.js.map

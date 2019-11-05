@@ -71,8 +71,6 @@ const app = new WebGL2Renderer(document.getElementById('game') as HTMLCanvasElem
 app.setClearColor(0, 0, 0, 1);
 app.setDepthTest();
 
-// app.depthTest();
-
 const program = app.createProgram(vs, fs);
 
 let mat4 = window.glMatrix.mat4;
