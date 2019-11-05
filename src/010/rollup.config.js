@@ -29,9 +29,10 @@ export default {
                         esmodules: true
                     }
                 }],
-                // [ "minify", {
-                //     removeConsole: false,
-                // }],
+                [ "minify", {
+                    removeConsole: false,
+                    builtIns: false
+                }],
                 "@babel/preset-typescript"
             ],
             plugins: [

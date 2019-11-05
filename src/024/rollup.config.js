@@ -7,10 +7,10 @@ const extensions = [
 
 export default {
 
-    input: './src/001/test001.ts',
+    input: './src/024/test024.ts',
 
     output: {
-        file: './src/001/test001.js',
+        file: './src/024/test024.js',
         format: 'es',
         sourcemap: true
     },

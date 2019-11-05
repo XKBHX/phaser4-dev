@@ -45,7 +45,7 @@ const colors = app.createVertexBuffer(app.gl.UNSIGNED_BYTE, 3, new Uint8Array([
 
 const vertexArray = app.createVertexArray();
 
-vertexArray.vertexAttributeBuffer(0, positions, {});
+vertexArray.vertexAttributeBuffer(0, positions);
 vertexArray.vertexAttributeBuffer(1, colors, { normalized: true });
 
 const drawCall = app.createDrawCall(program, vertexArray);
