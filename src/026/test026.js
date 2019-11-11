@@ -2113,28 +2113,10 @@ class Matrix4 {
 
 }
 
-function Ortho(target, left, right, bottom, top, near, far) {
-  var lr = 1 / (left - right);
-  var bt = 1 / (bottom - top);
-  var nf = 1 / (near - far);
-  var m00 = -2 * lr;
-  var m11 = -2 * bt;
-  var m22 = 2 * nf;
-  var m30 = (left + right) * lr;
-  var m31 = (top + bottom) * bt;
-  var m32 = (far + near) * nf;
-  return target.set(m00, 0, 0, 0, 0, m11, 0, 0, 0, 0, m22, 0, m30, m31, m32, 1);
-}
-
-function Translate(target) {
-  var x = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-  var y = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-  var z = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
+function RotateX(target, angle) {
+  var s = Math.sin(angle);
+  var c = Math.cos(angle);
   var {
-    m00,
-    m01,
-    m02,
-    m03,
     m10,
     m11,
     m12,
@@ -2142,286 +2124,131 @@ function Translate(target) {
     m20,
     m21,
     m22,
-    m23,
-    m30,
-    m31,
-    m32,
-    m33
+    m23
   } = target;
-  target.m30 = m00 * x + m10 * y + m20 * z + m30;
-  target.m31 = m01 * x + m11 * y + m21 * z + m31;
-  target.m32 = m02 * x + m12 * y + m22 * z + m32;
-  target.m33 = m03 * x + m13 * y + m23 * z + m33;
+  target.m10 = m10 * c + m20 * s;
+  target.m11 = m11 * c + m21 * s;
+  target.m12 = m12 * c + m22 * s;
+  target.m13 = m13 * c + m23 * s;
+  target.m20 = m20 * c - m10 * s;
+  target.m21 = m21 * c - m11 * s;
+  target.m22 = m22 * c - m12 * s;
+  target.m23 = m23 * c - m13 * s;
   return target;
 }
 
-class Matrix4$1 {
-  constructor() {
-    var m00 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
-    var m01 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-    var m02 = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-    var m03 = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
-    var m10 = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0;
-    var m11 = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 1;
-    var m12 = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 0;
-    var m13 = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : 0;
-    var m20 = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : 0;
-    var m21 = arguments.length > 9 && arguments[9] !== undefined ? arguments[9] : 0;
-    var m22 = arguments.length > 10 && arguments[10] !== undefined ? arguments[10] : 1;
-    var m23 = arguments.length > 11 && arguments[11] !== undefined ? arguments[11] : 0;
-    var m30 = arguments.length > 12 && arguments[12] !== undefined ? arguments[12] : 0;
-    var m31 = arguments.length > 13 && arguments[13] !== undefined ? arguments[13] : 0;
-    var m32 = arguments.length > 14 && arguments[14] !== undefined ? arguments[14] : 0;
-    var m33 = arguments.length > 15 && arguments[15] !== undefined ? arguments[15] : 1;
-    this.set(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33);
-  }
-
-  set() {
-    var m00 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
-    var m01 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-    var m02 = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-    var m03 = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
-    var m10 = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0;
-    var m11 = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 1;
-    var m12 = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 0;
-    var m13 = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : 0;
-    var m20 = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : 0;
-    var m21 = arguments.length > 9 && arguments[9] !== undefined ? arguments[9] : 0;
-    var m22 = arguments.length > 10 && arguments[10] !== undefined ? arguments[10] : 1;
-    var m23 = arguments.length > 11 && arguments[11] !== undefined ? arguments[11] : 0;
-    var m30 = arguments.length > 12 && arguments[12] !== undefined ? arguments[12] : 0;
-    var m31 = arguments.length > 13 && arguments[13] !== undefined ? arguments[13] : 0;
-    var m32 = arguments.length > 14 && arguments[14] !== undefined ? arguments[14] : 0;
-    var m33 = arguments.length > 15 && arguments[15] !== undefined ? arguments[15] : 1;
-    this.m00 = m00;
-    this.m01 = m01;
-    this.m02 = m02;
-    this.m03 = m03;
-    this.m10 = m10;
-    this.m11 = m11;
-    this.m12 = m12;
-    this.m13 = m13;
-    this.m20 = m20;
-    this.m21 = m21;
-    this.m22 = m22;
-    this.m23 = m23;
-    this.m30 = m30;
-    this.m31 = m31;
-    this.m32 = m32;
-    this.m33 = m33;
-    return this;
-  }
-
-  zero() {
-    return this.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-  }
-
-  identity() {
-    return this.set();
-  }
-
-  getArray() {
-    return [this.m00, this.m01, this.m02, this.m03, this.m10, this.m11, this.m12, this.m13, this.m20, this.m21, this.m22, this.m23, this.m30, this.m31, this.m32, this.m33];
-  }
-
-  fromArray(src) {
-    return this.set(src[0], src[1], src[2], src[3], src[4], src[5], src[6], src[7], src[8], src[9], src[10], src[11], src[12], src[13], src[14], src[15]);
-  }
-
-  [Symbol.iterator]() {
-    var data = this.getArray();
-    return data[Symbol.iterator]();
-  }
-
+function RotateY(target, angle) {
+  var s = Math.sin(angle);
+  var c = Math.cos(angle);
+  var {
+    m00,
+    m01,
+    m02,
+    m03,
+    m20,
+    m21,
+    m22,
+    m23
+  } = target;
+  target.m00 = m00 * c - m20 * s;
+  target.m01 = m01 * c - m21 * s;
+  target.m02 = m02 * c - m22 * s;
+  target.m03 = m03 * c - m23 * s;
+  target.m20 = m00 * s + m20 * c;
+  target.m21 = m01 * s + m21 * c;
+  target.m22 = m02 * s + m22 * c;
+  target.m23 = m03 * s + m23 * c;
+  return target;
 }
 
-function LookAt(eye, center, up) {
-  var epsilon = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0.000001;
-  var {
-    x: eyex,
-    y: eyey,
-    z: eyez
-  } = eye;
-  var {
-    x: upx,
-    y: upy,
-    z: upz
-  } = up;
-  var {
-    x: centerx,
-    y: centery,
-    z: centerz
-  } = center;
-
-  if (Math.abs(eyex - centerx) < epsilon && Math.abs(eyey - centery) < epsilon && Math.abs(eyez - centerz) < epsilon) {
-    return new Matrix4$1();
-  }
-
-  var z0 = eyex - centerx;
-  var z1 = eyey - centery;
-  var z2 = eyez - centerz;
-  var len = 1 / Math.hypot(z0, z1, z2);
-  z0 *= len;
-  z1 *= len;
-  z2 *= len;
-  var x0 = upy * z2 - upz * z1;
-  var x1 = upz * z0 - upx * z2;
-  var x2 = upx * z1 - upy * z0;
-  len = Math.hypot(x0, x1, x2);
-
-  if (!len) {
-    x0 = 0;
-    x1 = 0;
-    x2 = 0;
-  } else {
-    len = 1 / len;
-    x0 *= len;
-    x1 *= len;
-    x2 *= len;
-  }
-
-  var y0 = z1 * x2 - z2 * x1;
-  var y1 = z2 * x0 - z0 * x2;
-  var y2 = z0 * x1 - z1 * x0;
-  len = Math.hypot(y0, y1, y2);
-
-  if (!len) {
-    y0 = 0;
-    y1 = 0;
-    y2 = 0;
-  } else {
-    len = 1 / len;
-    y0 *= len;
-    y1 *= len;
-    y2 *= len;
-  }
-
-  return new Matrix4$1(x0, y0, z0, 0, x1, y1, z1, 0, x2, y2, z2, 0, -(x0 * eyex + x1 * eyey + x2 * eyez), -(y0 * eyex + y1 * eyey + y2 * eyez), -(z0 * eyex + z1 * eyey + z2 * eyez), 1);
+function createBox(options) {
+  options = options || {};
+  var dimensions = options.dimensions || [1, 1, 1];
+  var position = options.position || [-dimensions[0] / 2, -dimensions[1] / 2, -dimensions[2] / 2];
+  var x = position[0];
+  var y = position[1];
+  var z = position[2];
+  var width = dimensions[0];
+  var height = dimensions[1];
+  var depth = dimensions[2];
+  var fbl = {
+    x: x,
+    y: y,
+    z: z + depth
+  };
+  var fbr = {
+    x: x + width,
+    y: y,
+    z: z + depth
+  };
+  var ftl = {
+    x: x,
+    y: y + height,
+    z: z + depth
+  };
+  var ftr = {
+    x: x + width,
+    y: y + height,
+    z: z + depth
+  };
+  var bbl = {
+    x: x,
+    y: y,
+    z: z
+  };
+  var bbr = {
+    x: x + width,
+    y: y,
+    z: z
+  };
+  var btl = {
+    x: x,
+    y: y + height,
+    z: z
+  };
+  var btr = {
+    x: x + width,
+    y: y + height,
+    z: z
+  };
+  var positions = new Float32Array([fbl.x, fbl.y, fbl.z, fbr.x, fbr.y, fbr.z, ftl.x, ftl.y, ftl.z, ftl.x, ftl.y, ftl.z, fbr.x, fbr.y, fbr.z, ftr.x, ftr.y, ftr.z, fbr.x, fbr.y, fbr.z, bbr.x, bbr.y, bbr.z, ftr.x, ftr.y, ftr.z, ftr.x, ftr.y, ftr.z, bbr.x, bbr.y, bbr.z, btr.x, btr.y, btr.z, fbr.x, bbr.y, bbr.z, bbl.x, bbl.y, bbl.z, btr.x, btr.y, btr.z, btr.x, btr.y, btr.z, bbl.x, bbl.y, bbl.z, btl.x, btl.y, btl.z, bbl.x, bbl.y, bbl.z, fbl.x, fbl.y, fbl.z, btl.x, btl.y, btl.z, btl.x, btl.y, btl.z, fbl.x, fbl.y, fbl.z, ftl.x, ftl.y, ftl.z, ftl.x, ftl.y, ftl.z, ftr.x, ftr.y, ftr.z, btl.x, btl.y, btl.z, btl.x, btl.y, btl.z, ftr.x, ftr.y, ftr.z, btr.x, btr.y, btr.z, bbl.x, bbl.y, bbl.z, bbr.x, bbr.y, bbr.z, fbl.x, fbl.y, fbl.z, fbl.x, fbl.y, fbl.z, bbr.x, bbr.y, bbr.z, fbr.x, fbr.y, fbr.z]);
+  var uvs = new Float32Array([0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1]);
+  var normals = new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0]);
+  return {
+    positions: positions,
+    normals: normals,
+    uvs: uvs
+  };
 }
-
-function Multiply(a, b) {
-  var {
-    m00: a00,
-    m01: a01,
-    m02: a02,
-    m03: a03,
-    m10: a10,
-    m11: a11,
-    m12: a12,
-    m13: a13,
-    m20: a20,
-    m21: a21,
-    m22: a22,
-    m23: a23,
-    m30: a30,
-    m31: a31,
-    m32: a32,
-    m33: a33
-  } = a;
-  var {
-    m00: b00,
-    m01: b01,
-    m02: b02,
-    m03: b03,
-    m10: b10,
-    m11: b11,
-    m12: b12,
-    m13: b13,
-    m20: b20,
-    m21: b21,
-    m22: b22,
-    m23: b23,
-    m30: b30,
-    m31: b31,
-    m32: b32,
-    m33: b33
-  } = b;
-  var m00 = b00 * a00 + b01 * a10 + b02 * a20 + b03 * a30;
-  var m01 = b00 * a01 + b01 * a11 + b02 * a21 + b03 * a31;
-  var m02 = b00 * a02 + b01 * a12 + b02 * a22 + b03 * a32;
-  var m03 = b00 * a03 + b01 * a13 + b02 * a23 + b03 * a33;
-  var m10 = b10 * a00 + b11 * a10 + b12 * a20 + b13 * a30;
-  var m11 = b10 * a01 + b11 * a11 + b12 * a21 + b13 * a31;
-  var m12 = b10 * a02 + b11 * a12 + b12 * a22 + b13 * a32;
-  var m13 = b10 * a03 + b11 * a13 + b12 * a23 + b13 * a33;
-  var m20 = b20 * a00 + b21 * a10 + b22 * a20 + b23 * a30;
-  var m21 = b20 * a01 + b21 * a11 + b22 * a21 + b23 * a31;
-  var m22 = b20 * a02 + b21 * a12 + b22 * a22 + b23 * a32;
-  var m23 = b20 * a03 + b21 * a13 + b22 * a23 + b23 * a33;
-  var m30 = b30 * a00 + b31 * a10 + b32 * a20 + b33 * a30;
-  var m31 = b30 * a01 + b31 * a11 + b32 * a21 + b33 * a31;
-  var m32 = b30 * a02 + b31 * a12 + b32 * a22 + b33 * a32;
-  var m33 = b30 * a03 + b31 * a13 + b32 * a23 + b33 * a33;
-  return new Matrix4$1(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33);
-}
-
-class Vec3 {
-  constructor() {
-    var x = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
-    var y = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-    var z = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-    this.set(x, y, z);
-  }
-
-  set() {
-    var x = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
-    var y = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-    var z = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-    this.x = x;
-    this.y = y;
-    this.z = z;
-    return this;
-  }
-
-  zero() {
-    return this.set();
-  }
-
-  getArray() {
-    return [this.x, this.y, this.z];
-  }
-
-  fromArray(src) {
-    return this.set(src[0], src[1], src[2]);
-  }
-
-  [Symbol.iterator]() {
-    var data = this.getArray();
-    return data[Symbol.iterator]();
-  }
-
-}
-
-var vs = "#version 300 es\n\nlayout(location=0) in vec2 position;\nlayout(location=1) in vec2 uv;\n\n// layout(std140, column_major) uniform;\n\n// uniform SceneUniforms {\n    // mat4 viewProj;\n// };\n\nuniform mat4 uModel;\n\nconst vec2 proj = vec2(512.0, -512.0);\nconst vec2 center = vec2(-1.0, 1.0);\n\nout vec2 vUV;\n\nvoid main()\n{\n    vUV = uv;\n    gl_Position = vec4((position / proj) + center, 0.0, 1.0);\n    //gl_Position = viewProj * uModel * vec4(position, 1.0, 1.0);\n}\n";
-var fs = "#version 300 es\nprecision highp float;\n\n// layout(std140, column_major) uniform;\n\n// uniform SceneUniforms {\n    // mat4 viewProj;\n// };\n\nuniform sampler2D tex;\n\nin vec2 vUV;\n\nout vec4 fragColor;\n\nvoid main() {\n    fragColor = texture(tex, vUV);\n    // fragColor = vec4(1.0, 1.0, 1.0, 1.0);\n}\n";
+var vs = "#version 300 es\nprecision mediump float;\n\nuniform mat4 uModelViewMatrix;\nuniform mat4 uProjectionMatrix;\n\nlayout(location=0) in vec3 aVertexPosition;\nlayout(location=1) in vec2 aVertexNormal;\n\n// uniform SceneUniforms {\n//     mat4 viewProj;\n// };\n\nout vec2 outUV;\n\nvoid main()\n{\n    outUV = aVertexNormal;\n\n    //  Transformed vertex position\n    vec4 vertex = uModelViewMatrix * vec4(aVertexPosition, 1.0);\n\n    //  Final vertex position\n    gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(aVertexPosition, 1.0);\n}\n";
+var fs = "#version 300 es\nprecision highp float;\n\n// layout(std140, column_major) uniform;\n\n// uniform SceneUniforms {\n//     mat4 viewProj;\n// };\n\nuniform sampler2D tex;\n\nin vec2 outUV;\n\nout vec4 fragColor;\n\nvoid main() {\n    fragColor = texture(tex, outUV);\n    // fragColor = vec4(1.0, 1.0, 1.0, 1.0);\n}\n";
 var app = new WebGL2Renderer(document.getElementById('game'));
 app.setClearColor(0.2, 0.4, 0, 1);
-app.gl.disable(app.gl.CULL_FACE);
-app.gl.disable(app.gl.DEPTH_TEST);
+app.gl.enable(app.gl.CULL_FACE);
+app.gl.enable(app.gl.DEPTH_TEST);
 var program = app.createProgram(vs, fs);
-var positions = app.createVertexBuffer(app.gl.FLOAT, 2, app.getQuadPosition(0, 0, 313, 512));
-var uvs = app.createVertexBuffer(app.gl.FLOAT, 2, new Float32Array([0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0]));
+var box = createBox({});
+var positions = app.createVertexBuffer(app.gl.FLOAT, 3, box.positions);
+var uvs = app.createVertexBuffer(app.gl.FLOAT, 2, box.uvs);
 var triangleArray = app.createVertexArray().vertexAttributeBuffer(0, positions).vertexAttributeBuffer(1, uvs);
-var cameraPosition = new Vec3(512, 512, 10);
-var lookPosition = new Vec3(512, -512, 0);
-var orientation = new Vec3(0, 1, 0);
-var viewMatrix = LookAt(cameraPosition, lookPosition, orientation);
-var projMatrix = new Matrix4();
-Ortho(projMatrix, 0, app.width, app.height, 0, -1000, 1000);
-var mvpMatrix = Multiply(projMatrix, viewMatrix);
-var modelMatrix = new Matrix4();
-var x = 0;
-var y = 0;
-var z = 0;
-ImageFile('stone', '/100-phaser3-snippets/public/assets/patchouli.png').load().then(file => {
+var modelViewMatrix = new Matrix4();
+var projectionMatrix = new Matrix4();
+var rx = 0;
+var ry = 0;
+ImageFile('stone', '../assets/512x512.png').load().then(file => {
   var t = app.createTexture2D(file.data);
   var drawCall = app.createDrawCall(program, triangleArray);
+  drawCall.uniform('uModelViewMatrix', modelViewMatrix.getArray());
+  drawCall.uniform('uProjectionMatrix', projectionMatrix.getArray());
   drawCall.texture('tex', t);
 
   function render() {
-    modelMatrix.identity();
-    Translate(modelMatrix, x, y, z);
-    drawCall.uniform('uModel', modelMatrix.getArray());
+    modelViewMatrix.identity();
+    RotateX(modelViewMatrix, rx);
+    RotateY(modelViewMatrix, ry);
+    rx += 0.01;
+    ry += 0.015;
+    drawCall.uniform('uModelViewMatrix', modelViewMatrix.getArray());
     app.clear();
     drawCall.draw();
     requestAnimationFrame(render);
