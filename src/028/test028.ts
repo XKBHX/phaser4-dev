@@ -124,7 +124,7 @@ RotateZ(projectionMatrix, 0.1);
 Scale(projectionMatrix, 1, 1, 1);
 
 console.log(projectionMatrix.getArray());
-// (16) [0.001943367510308644, -0.000259982855851115, 0, 0, -0.00019498714188833624, -0.002591156680411525, 0, 0, 0, 0, -0.002, 0, -0.99609375, 0.9921875, -1, 1]
+// (16) [0.9950041652780257, 0.09983341664682815, 0, 0, -0.09983341664682815, 0.9950041652780257, 0, 0, 0, 0, 1, 0, 2, 3, 0, 1]
 
 // console.log(modelViewMatrix.getArray());
 // console.log(spriteMatrix.getArray());
