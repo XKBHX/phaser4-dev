@@ -2244,17 +2244,20 @@ function createQuad(x, y, width, height) {
   };
 }
 
-var vs = "#version 300 es\nprecision mediump float;\n\nuniform mat4 uModelViewMatrix;\nuniform mat4 uProjectionMatrix;\n\nlayout(location=0) in vec3 aVertexPosition;\nlayout(location=1) in vec2 aVertexNormal;\n\n// uniform SceneUniforms {\n//     mat4 viewProj;\n// };\n\nout vec2 outUV;\n\nvoid main()\n{\n    outUV = aVertexNormal;\n\n    //  Transformed vertex position\n    vec4 vertex = uModelViewMatrix * vec4(aVertexPosition, 1.0);\n\n    //  Final vertex position\n    gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(aVertexPosition, 1.0);\n}\n";
-var fs = "#version 300 es\nprecision highp float;\n\n// layout(std140, column_major) uniform;\n\n// uniform SceneUniforms {\n//     mat4 viewProj;\n// };\n\nuniform sampler2D tex;\n\nin vec2 outUV;\n\nout vec4 fragColor;\n\nvoid main() {\n    fragColor = texture(tex, outUV);\n    // fragColor = vec4(1.0, 1.0, 1.0, 1.0);\n}\n";
+var vs = "#version 300 es\n\nlayout(location=0) in vec3 aVertexPosition;\nlayout(location=1) in vec2 aVertexNormal;\nlayout(location=2) in vec2 aOffset;\n\nuniform mat4 uModelViewMatrix;\nuniform mat4 uProjectionMatrix;\n\nout vec2 outUV;\n\nvoid main()\n{\n    outUV = aVertexNormal;\n\n    //  Final vertex position\n    gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(aVertexPosition, 1.0);\n\n    gl_Position.xy += aOffset;\n}\n";
+var fs = "#version 300 es\nprecision highp float;\n\nuniform sampler2D tex;\n\nin vec2 outUV;\n\nout vec4 fragColor;\n\nvoid main() {\n    fragColor = texture(tex, outUV);\n}\n";
 var app = new WebGL2Renderer(document.getElementById('game'));
-app.setClearColor(0.2, 0.4, 0, 1);
-app.gl.disable(app.gl.CULL_FACE);
-app.gl.disable(app.gl.DEPTH_TEST);
+app.setClearColor(0.6, 0.6, 0, 1);
 var program = app.createProgram(vs, fs);
 var quad = createQuad(0, 0, 512, 512);
+console.log(quad.position);
 var positions = app.createVertexBuffer(app.gl.FLOAT, 2, quad.position);
 var uvs = app.createVertexBuffer(app.gl.FLOAT, 2, quad.uvs);
-var triangleArray = app.createVertexArray().vertexAttributeBuffer(0, positions).vertexAttributeBuffer(1, uvs);
+var offsets = app.createVertexBuffer(app.gl.FLOAT, 2, new Float32Array([0, 0, 1, 0, 0, -1, 1, -1]));
+var triangleArray = app.createVertexArray();
+triangleArray.vertexAttributeBuffer(0, positions);
+triangleArray.vertexAttributeBuffer(1, uvs);
+triangleArray.instanceAttributeBuffer(2, offsets);
 var projectionMatrix = new Matrix4();
 Ortho(projectionMatrix, 0, app.width, app.height, 0, 0, 1000);
 var modelViewMatrix = new Matrix4();
@@ -2267,7 +2270,6 @@ var scaleY = 1;
 ImageFile('stone', '../assets/512x512.png').load().then(file => {
   var t = app.createTexture2D(file.data);
   var drawCall = app.createDrawCall(program, triangleArray);
-  drawCall.uniform('uModelViewMatrix', modelViewMatrix.getArray());
   drawCall.uniform('uProjectionMatrix', projectionMatrix.getArray());
   drawCall.texture('tex', t);
 
@@ -2284,4 +2286,4 @@ ImageFile('stone', '../assets/512x512.png').load().then(file => {
 
   render();
 });
-//# sourceMappingURL=test026.js.map
+//# sourceMappingURL=test027.js.map

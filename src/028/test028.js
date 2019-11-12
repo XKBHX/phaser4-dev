@@ -2033,6 +2033,25 @@ function ImageFile(key, url) {
   return file;
 }
 
+function LoadMatrix2D(target, src) {
+  var {
+    a,
+    b,
+    c,
+    d,
+    tx,
+    ty
+  } = src;
+  target.identity();
+  target.m00 = a;
+  target.m01 = b;
+  target.m10 = c;
+  target.m11 = d;
+  target.m20 = tx;
+  target.m21 = ty;
+  return target;
+}
+
 class Matrix4 {
   constructor() {
     var m00 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
@@ -2113,7 +2132,63 @@ class Matrix4 {
 
 }
 
-function Ortho(target, left, right, bottom, top, near, far) {
+function ITRS(target, x, y, angle, scaleX, scaleY) {
+  var sin = Math.sin(angle);
+  var cos = Math.cos(angle);
+  return target.set(cos * scaleX, sin * scaleX, -sin * scaleY, cos * scaleY, x, y);
+}
+
+class Matrix2D {
+  constructor() {
+    var a = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
+    var b = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+    var c = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+    var d = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 1;
+    var tx = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0;
+    var ty = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 0;
+    this.set(a, b, c, d, tx, ty);
+  }
+
+  set() {
+    var a = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
+    var b = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+    var c = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+    var d = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 1;
+    var tx = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0;
+    var ty = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 0;
+    this.a = a;
+    this.b = b;
+    this.c = c;
+    this.d = d;
+    this.tx = tx;
+    this.ty = ty;
+    return this;
+  }
+
+  zero() {
+    return this.set(0, 0, 0, 0, 0, 0);
+  }
+
+  identity() {
+    return this.set();
+  }
+
+  getArray() {
+    return [this.a, this.b, this.c, this.d, this.tx, this.ty];
+  }
+
+  fromArray(src) {
+    return this.set(src[0], src[1], src[2], src[3], src[4], src[5]);
+  }
+
+  [Symbol.iterator]() {
+    var data = this.getArray();
+    return data[Symbol.iterator]();
+  }
+
+}
+
+function Ortho(left, right, bottom, top, near, far) {
   var lr = 1 / (left - right);
   var bt = 1 / (bottom - top);
   var nf = 1 / (near - far);
@@ -2123,76 +2198,7 @@ function Ortho(target, left, right, bottom, top, near, far) {
   var m30 = (left + right) * lr;
   var m31 = (top + bottom) * bt;
   var m32 = (far + near) * nf;
-  return target.set(m00, 0, 0, 0, 0, m11, 0, 0, 0, 0, m22, 0, m30, m31, m32, 1);
-}
-
-function RotateZ(target, angle) {
-  var s = Math.sin(angle);
-  var c = Math.cos(angle);
-  var {
-    m00,
-    m01,
-    m02,
-    m03,
-    m10,
-    m11,
-    m12,
-    m13
-  } = target;
-  target.m00 = m00 * c + m10 * s;
-  target.m01 = m01 * c + m11 * s;
-  target.m02 = m02 * c + m12 * s;
-  target.m03 = m03 * c + m13 * s;
-  target.m10 = m10 * c - m00 * s;
-  target.m11 = m11 * c - m01 * s;
-  target.m12 = m12 * c - m02 * s;
-  target.m13 = m13 * c - m03 * s;
-  return target;
-}
-
-function Scale(target, scaleX, scaleY, scaleZ) {
-  target.m00 *= scaleX;
-  target.m01 *= scaleX;
-  target.m02 *= scaleX;
-  target.m03 *= scaleX;
-  target.m10 *= scaleY;
-  target.m11 *= scaleY;
-  target.m12 *= scaleY;
-  target.m13 *= scaleY;
-  target.m20 *= scaleZ;
-  target.m21 *= scaleZ;
-  target.m22 *= scaleZ;
-  target.m23 *= scaleZ;
-  return target;
-}
-
-function Translate(target) {
-  var x = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-  var y = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-  var z = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
-  var {
-    m00,
-    m01,
-    m02,
-    m03,
-    m10,
-    m11,
-    m12,
-    m13,
-    m20,
-    m21,
-    m22,
-    m23,
-    m30,
-    m31,
-    m32,
-    m33
-  } = target;
-  target.m30 = m00 * x + m10 * y + m20 * z + m30;
-  target.m31 = m01 * x + m11 * y + m21 * z + m31;
-  target.m32 = m02 * x + m12 * y + m22 * z + m32;
-  target.m33 = m03 * x + m13 * y + m23 * z + m33;
-  return target;
+  return new Matrix4(m00, 0, 0, 0, 0, m11, 0, 0, 0, 0, m22, 0, m30, m31, m32, 1);
 }
 
 class Vec2 {
@@ -2244,38 +2250,37 @@ function createQuad(x, y, width, height) {
   };
 }
 
-var vs = "#version 300 es\nprecision mediump float;\n\nuniform mat4 uModelViewMatrix;\nuniform mat4 uProjectionMatrix;\n\nlayout(location=0) in vec3 aVertexPosition;\nlayout(location=1) in vec2 aVertexNormal;\n\n// uniform SceneUniforms {\n//     mat4 viewProj;\n// };\n\nout vec2 outUV;\n\nvoid main()\n{\n    outUV = aVertexNormal;\n\n    //  Transformed vertex position\n    vec4 vertex = uModelViewMatrix * vec4(aVertexPosition, 1.0);\n\n    //  Final vertex position\n    gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(aVertexPosition, 1.0);\n}\n";
-var fs = "#version 300 es\nprecision highp float;\n\n// layout(std140, column_major) uniform;\n\n// uniform SceneUniforms {\n//     mat4 viewProj;\n// };\n\nuniform sampler2D tex;\n\nin vec2 outUV;\n\nout vec4 fragColor;\n\nvoid main() {\n    fragColor = texture(tex, outUV);\n    // fragColor = vec4(1.0, 1.0, 1.0, 1.0);\n}\n";
+var vs = "#version 300 es\nprecision highp float;\n\nlayout(location=0) in vec3 position;\nlayout(location=1) in vec2 uv;\n\nuniform mat4 uModelViewMatrix;\n\nuniform SceneUniforms {\n    mat4 uProjectionMatrix;\n};\n\nout vec2 outUV;\n\nvoid main()\n{\n    outUV = uv;\n\n    gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(position, 1.0);\n}\n";
+var fs = "#version 300 es\nprecision highp float;\n\nlayout(std140, column_major) uniform;\n\nuniform SceneUniforms {\n    mat4 uProjectionMatrix;\n};\n\nuniform sampler2D texture0;\n\nin vec2 outUV;\n\nout vec4 fragColor;\n\nvoid main() {\n    fragColor = texture(texture0, outUV);\n}\n";
 var app = new WebGL2Renderer(document.getElementById('game'));
 app.setClearColor(0.2, 0.4, 0, 1);
-app.gl.disable(app.gl.CULL_FACE);
-app.gl.disable(app.gl.DEPTH_TEST);
 var program = app.createProgram(vs, fs);
 var quad = createQuad(0, 0, 512, 512);
 var positions = app.createVertexBuffer(app.gl.FLOAT, 2, quad.position);
 var uvs = app.createVertexBuffer(app.gl.FLOAT, 2, quad.uvs);
-var triangleArray = app.createVertexArray().vertexAttributeBuffer(0, positions).vertexAttributeBuffer(1, uvs);
-var projectionMatrix = new Matrix4();
-Ortho(projectionMatrix, 0, app.width, app.height, 0, 0, 1000);
+var batch = app.createVertexArray();
+batch.vertexAttributeBuffer(0, positions);
+batch.vertexAttributeBuffer(1, uvs);
+var projectionMatrix = Ortho(0, app.width, app.height, 0, 0, 1000);
+var sub = app.createUniformBuffer([app.gl.FLOAT_MAT4]);
+sub.set(0, projectionMatrix.getArray());
+sub.update();
+var spriteMatrix = new Matrix2D();
 var modelViewMatrix = new Matrix4();
 var x = 0;
 var y = 0;
-var z = 0;
 var r = 0;
 var scaleX = 1;
 var scaleY = 1;
 ImageFile('stone', '../assets/512x512.png').load().then(file => {
   var t = app.createTexture2D(file.data);
-  var drawCall = app.createDrawCall(program, triangleArray);
-  drawCall.uniform('uModelViewMatrix', modelViewMatrix.getArray());
-  drawCall.uniform('uProjectionMatrix', projectionMatrix.getArray());
-  drawCall.texture('tex', t);
+  var drawCall = app.createDrawCall(program, batch);
+  drawCall.uniformBlock('SceneUniforms', sub);
+  drawCall.texture('texture0', t);
 
   function render() {
-    modelViewMatrix.identity();
-    Translate(modelViewMatrix, x, y, z);
-    RotateZ(modelViewMatrix, r);
-    Scale(modelViewMatrix, scaleX, scaleY, 1);
+    ITRS(spriteMatrix, x, y, r, scaleX, scaleY);
+    LoadMatrix2D(modelViewMatrix, spriteMatrix);
     drawCall.uniform('uModelViewMatrix', modelViewMatrix.getArray());
     app.clear();
     drawCall.draw();
@@ -2284,4 +2289,4 @@ ImageFile('stone', '../assets/512x512.png').load().then(file => {
 
   render();
 });
-//# sourceMappingURL=test026.js.map
+//# sourceMappingURL=test028.js.map
