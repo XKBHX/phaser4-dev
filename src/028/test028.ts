@@ -56,7 +56,8 @@ void main()
 {
     outUV = uv;
 
-    gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(position, 1.0);
+    gl_Position = uModelViewMatrix * vec4(position, 1.0);
+    // gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(position, 1.0);
 }
 `;
 
@@ -98,7 +99,8 @@ let batch = app.createVertexArray();
 batch.vertexAttributeBuffer(0, positions);
 batch.vertexAttributeBuffer(1, uvs);
 
-let projectionMatrix = Ortho(0, app.width, app.height, 0, 0, 1000);
+// let projectionMatrix = Ortho(0, app.width, app.height, 0, 0, 1000);
+let projectionMatrix = new Matrix4();
 
 let sub = app.createUniformBuffer([
     app.gl.FLOAT_MAT4
@@ -109,7 +111,44 @@ sub.update();
 
 let spriteMatrix = new Matrix2D();
 
-let modelViewMatrix = new Matrix4();
+let modelViewMatrix = new Matrix4(0.001943367510308644, -0.000259982855851115, 0, 0, -0.00019498714188833624, -0.002591156680411525, 0, 0, 0, 0, -0.002, 0, -0.99609375, 0.9921875, -1, 1);
+
+// ITRS(spriteMatrix, 2, 3, 0.1, 1, 1);
+// LoadMatrix2D(modelViewMatrix, spriteMatrix);
+
+console.log(projectionMatrix.getArray());
+// (16) [0.001953125, 0, 0, 0, 0, -0.0026041666666666665, 0, 0, 0, 0, -0.002, 0, -1, 1, -1, 1]
+
+Translate(projectionMatrix, 2, 3, 0);
+RotateZ(projectionMatrix, 0.1);
+Scale(projectionMatrix, 1, 1, 1);
+
+console.log(projectionMatrix.getArray());
+// (16) [0.001943367510308644, -0.000259982855851115, 0, 0, -0.00019498714188833624, -0.002591156680411525, 0, 0, 0, 0, -0.002, 0, -0.99609375, 0.9921875, -1, 1]
+
+// console.log(modelViewMatrix.getArray());
+// console.log(spriteMatrix.getArray());
+
+//  shader = proj * model * position
+
+//  proj                        model                       sprite
+//  -----------------------------------------------------------------
+//  0.001953125                 0.9950041652780257          a
+//  0                           0.09983341664682815         b
+//  0                           0
+//  0                           0
+//  0                           -0.09983341664682815        c
+//  -0.0026041666666666665      0.9950041652780257          d
+//  0                           0
+//  0                           0
+//  0                           2                           tx
+//  0                           3                           ty
+//  -0.002                      1
+//  0                           0
+//  -1                          0
+//  1                           0
+//  -1                          0
+//  1                           1
 
 let x = 0;
 let y = 0;
@@ -128,11 +167,13 @@ ImageFile('stone', '../assets/512x512.png').load().then((file) => {
 
     function render ()
     {
-        ITRS(spriteMatrix, x, y, r, scaleX, scaleY);
+        // ITRS(spriteMatrix, x, y, r, scaleX, scaleY);
 
-        LoadMatrix2D(modelViewMatrix, spriteMatrix);
+        // LoadMatrix2D(modelViewMatrix, spriteMatrix);
 
         drawCall.uniform('uModelViewMatrix', modelViewMatrix.getArray());
+
+        // drawCall.uniform('uModelViewMatrix', spriteMatrix.getArray());
 
         app.clear();
     
