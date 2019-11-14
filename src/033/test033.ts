@@ -1,10 +1,8 @@
-import { WebGL2Renderer } from '@phaserjs/renderer-webgl2';
+import { CreateDrawCall, CreateProgram, CreateUniformBuffer, CreateVertexArray, CreateIndexBuffer, CreateInterleavedBuffer, CreateTexture2D, WebGL2Renderer } from '@phaserjs/renderer-webgl2';
 import { ImageFile } from '@phaserjs/loader-filetypes';
 import { ITRS, Matrix2D } from '@phaserjs/math-matrix2d';
-import { Ortho, LookAt, Multiply, Perspective } from '@phaserjs/math-matrix4-funcs';
+import { Ortho } from '@phaserjs/math-matrix4-funcs';
 import { Vec2 } from '@phaserjs/math-vec2';
-import { Vec3 } from '@phaserjs/math-vec3';
-import { gsap } from '../../node_modules/gsap/index';
 
 class Quad 
 {
@@ -223,11 +221,11 @@ let app = new WebGL2Renderer(document.getElementById('game') as HTMLCanvasElemen
 
 app.setClearColor(0, 0, 0, 1);
 
-let program = app.createProgram(vs, fs);
+let program = CreateProgram(app, vs, fs);
 
 let projectionMatrix = Ortho(0, app.width, app.height, 0, -1000, 1000);
 
-let sub = app.createUniformBuffer([ app.gl.FLOAT_MAT4 ]);
+let sub = CreateUniformBuffer(app, [ app.gl.FLOAT_MAT4 ]);
 
 sub.set(0, projectionMatrix.getArray()).update();
 
@@ -290,10 +288,10 @@ quads.forEach((quad) => {
 
 console.log(max, 'sprites', dataTA.byteLength, 'bytes', dataTA.byteLength / 1e+6, 'MB');
 
-let buffer = app.createInterleavedBuffer(size * 4, dataTA);
-let indices = app.createIndexBuffer(app.gl.UNSIGNED_SHORT, 3, new Uint16Array(ibo));
+let buffer = CreateInterleavedBuffer(app, size * 4, dataTA);
+let indices = CreateIndexBuffer(app, app.gl.UNSIGNED_SHORT, 3, new Uint16Array(ibo));
 
-let batch = app.createVertexArray();
+let batch = CreateVertexArray(app);
 
 batch.vertexAttributeBuffer(0, buffer, {
     type: app.gl.FLOAT,
@@ -313,13 +311,14 @@ batch.indexBuffer(indices);
 
 ImageFile('sprites', '../assets/box-item-boxed.png').load().then((file) => {
 
-    let t = app.createTexture2D(file.data, 64, 64, { flipY: false });
+    let t = CreateTexture2D(app, file.data);
 
-    let drawCall = app.createDrawCall(program, batch);
+    let drawCall = CreateDrawCall(app, program, batch);
 
     drawCall.uniformBlock('SceneUniforms', sub);
     drawCall.texture('texture0', t);
 
+    /*
     quads.forEach((quad) => {
 
         let x = Math.floor(Math.random() * app.width);
@@ -333,6 +332,7 @@ ImageFile('sprites', '../assets/box-item-boxed.png').load().then((file) => {
         gsap.to(quad, { duration, x, y, rotation, scaleX: scale, scaleY: scale, ease: 'sine.inOut',  yoyo: true, repeat: -1 });
 
     });
+    */
 
     function render ()
     {
@@ -340,6 +340,13 @@ ImageFile('sprites', '../assets/box-item-boxed.png').load().then((file) => {
         let dirty = false;
 
         quads.forEach((quad) => {
+
+            quad.x += 1;
+
+            if (quad.x > app.width)
+            {
+                quad.x = -64;
+            }
 
             if (quad.update())
             {
