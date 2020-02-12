@@ -127,7 +127,7 @@ const UVBL = new Vec2(0, 1);
 const UVBR = new Vec2(1, 1);
 
 let quads = [];
-let max = 50;
+let max = 100;
 
 for (let i = 0; i < max; i++)
 {
@@ -204,11 +204,13 @@ batch.vertexAttributeBuffer(1, buffer, {
 
 batch.indexBuffer(indices);
 
-window.bob = quads[0];
-
 ImageFile('sprites', '../assets/512x512.png').load().then((file) => {
 
-    let t = CreateTexture2D(app, file.data);
+    let t = CreateTexture2D(app, file.data, 512, 512, {
+        minFilter: app.gl.LINEAR_MIPMAP_LINEAR
+    });
+
+    console.log(t);
 
     let drawCall = CreateDrawCall(app, program, batch);
 
@@ -220,11 +222,13 @@ ImageFile('sprites', '../assets/512x512.png').load().then((file) => {
         let duration = 1 + Math.random() * 4;
         // let rotation = Math.PI * 2;
         let rotation = 0;
+        let scale = 0.01 + (Math.random() / 2);
         let skewX = -4 + Math.random() * 8;
         let skewY = -4 + Math.random() * 8;
     
         //  !!! Warning !!! This uses up LOTS of CPU time:
-        gsap.to(quad, { duration, rotation, skewX, skewY, ease: 'sine.inOut',  yoyo: true, repeat: -1 });
+        // gsap.to(quad, { duration, rotation, skewX, skewY, ease: 'sine.inOut',  yoyo: true, repeat: -1 });
+        gsap.to(quad, { duration, scaleX: scale, scaleY: scale, skewX, skewY, ease: 'sine.inOut',  yoyo: true, repeat: -1 });
 
     });
 

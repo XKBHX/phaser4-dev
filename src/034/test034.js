@@ -277,8 +277,10 @@ class Texture {
       appState
     } = this;
     var texture = this.texture;
+    console.log('Texture.resize');
 
     if (texture && width === this.width && height === this.height && depth === this.depth) {
+      console.log('resize bail');
       return this;
     }
 
@@ -6944,7 +6946,7 @@ var UVTR = new Vec2(1, 0);
 var UVBL = new Vec2(0, 1);
 var UVBR = new Vec2(1, 1);
 var quads = [];
-var max = 50;
+var max = 100;
 
 for (var i = 0; i < max; i++) {
   var x = Math.floor(Math.random() * app.width);
@@ -6999,20 +7001,23 @@ batch.vertexAttributeBuffer(1, buffer, {
   stride: size * 4
 });
 batch.indexBuffer(indices);
-window.bob = quads[0];
 ImageFile('sprites', '../assets/512x512.png').load().then(file => {
-  var t = CreateTexture2D(app, file.data);
+  var t = CreateTexture2D(app, file.data, 512, 512, {
+    minFilter: app.gl.LINEAR_MIPMAP_LINEAR
+  });
+  console.log(t);
   var drawCall = CreateDrawCall(app, program, batch);
   drawCall.uniformBlock('SceneUniforms', sub);
   drawCall.texture('texture0', t);
   quads.forEach(quad => {
     var duration = 1 + Math.random() * 4;
-    var rotation = 0;
+    var scale = 0.01 + Math.random() / 2;
     var skewX = -4 + Math.random() * 8;
     var skewY = -4 + Math.random() * 8;
     gsapWithCSS.to(quad, {
       duration,
-      rotation,
+      scaleX: scale,
+      scaleY: scale,
       skewX,
       skewY,
       ease: 'sine.inOut',
