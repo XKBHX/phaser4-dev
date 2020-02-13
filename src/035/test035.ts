@@ -6,5 +6,6 @@ import part05 from './part05';
 import part06 from './part06';
 import part07 from './part07';
 import part08 from './part08';
+import part09 from './part09';
 
-part08();
+part09();

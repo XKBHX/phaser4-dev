@@ -1,4 +1,19 @@
-function part08 () {
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, {
+      value: value,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+  } else {
+    obj[key] = value;
+  }
+
+  return obj;
+}
+
+function part09 () {
   var fs = "\n    precision mediump float;\n\n    varying vec4 vColor;\n    \n    void main (void)\n    {\n        gl_FragColor = vec4(vColor.r, vColor.g, vColor.b, vColor.a);\n    }\n    ";
   var vs = "\n    attribute vec4 aColor;\n    attribute vec2 aVertexPosition;\n\n    uniform mat4 uProjectionMatrix;\n    uniform mat4 uModelTransform;\n\n    varying vec4 vColor;\n    \n    void main (void)\n    {\n        vColor = aColor;\n    \n        gl_Position = uProjectionMatrix * uModelTransform * vec4(aVertexPosition, 0.0, 1.0);\n    }\n    ";
   var canvas = document.getElementById('game');
@@ -48,7 +63,60 @@ function part08 () {
     totalQuads++;
   }
 
-  addQuad(0, 1, 0, 1);
+  class Quad {
+    constructor(x, y, width, height) {
+      var r = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0;
+      var g = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 1;
+      var b = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 0;
+      var a = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : 1;
+
+      _defineProperty(this, "x", void 0);
+
+      _defineProperty(this, "y", void 0);
+
+      _defineProperty(this, "width", void 0);
+
+      _defineProperty(this, "height", void 0);
+
+      _defineProperty(this, "rotation", void 0);
+
+      _defineProperty(this, "scaleX", void 0);
+
+      _defineProperty(this, "scaleY", void 0);
+
+      _defineProperty(this, "modelTransform", void 0);
+
+      _defineProperty(this, "r", void 0);
+
+      this.x = x;
+      this.y = y;
+      this.width = width;
+      this.height = height;
+      this.rotation = 0;
+      this.scaleX = 1;
+      this.scaleY = 1;
+      this.modelTransform = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+      this.r = 0.01;
+      addQuad(r, g, b, a);
+    }
+
+    update() {
+      this.rotation += this.r;
+      Identity(this.modelTransform);
+      Translate(this.modelTransform, this.x, this.y, 0);
+      RotateZ(this.modelTransform, this.rotation);
+      Translate(this.modelTransform, this.width / -2, this.height / -2, 0);
+      Scale(this.modelTransform, this.width * this.scaleX, this.height * this.scaleY, 0);
+    }
+
+  }
+
+  var quads = [];
+  quads.push(new Quad(400, 300, 128, 128));
+  quads.push(new Quad(400, 400, 64, 64, 1, 0, 0));
+  quads.push(new Quad(200, 400, 64, 64, 0, 0, 1));
+  quads.push(new Quad(600, 400, 64, 64, 1, 0, 1));
+  window['quads'] = quads;
   var vertexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
@@ -169,29 +237,9 @@ function part08 () {
   }
 
   var projectionMatrix = getOrtho(0, resolution.x, resolution.y, 0, -1000, 1000);
-  var modelTransform = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
   var stride = 24;
-  var x = 0;
-  var d = true;
-  var r = 0;
 
   function render() {
-    Identity(modelTransform);
-    var width = 256;
-    var height = 256;
-    Translate(modelTransform, x, 300, 0);
-    x += d ? 4 : -4;
-
-    if (d && x >= 800) {
-      d = false;
-    } else if (!d && x <= 0) {
-      d = true;
-    }
-
-    RotateZ(modelTransform, r);
-    r += 0.01;
-    Translate(modelTransform, width / -2, height / -2, 0);
-    Scale(modelTransform, width, height, 0);
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.enable(gl.BLEND);
@@ -199,16 +247,21 @@ function part08 () {
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
-    gl.uniformMatrix4fv(uModelTransform, false, modelTransform);
     gl.vertexAttribPointer(vertexPositionAttrib, 2, gl.FLOAT, false, stride, 0);
     gl.vertexAttribPointer(vertexColorAttrib, 4, gl.FLOAT, false, stride, 8);
-    gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
+    gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
+
+    for (var i = 0; i < quads.length; i++) {
+      quads[i].update();
+      gl.uniformMatrix4fv(uModelTransform, false, quads[i].modelTransform);
+      gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, i * 12);
+    }
+
     requestAnimationFrame(render);
   }
 
   requestAnimationFrame(render);
 }
 
-part08();
+part09();
 //# sourceMappingURL=test035.js.map
