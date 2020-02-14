@@ -9,8 +9,11 @@ import part08 from './part08';
 import part09 from './part09';
 import part10 from './part10';
 import part11 from './part11';
+import part12 from './part12';
+import part13 from './part13';
+import part14 from './part14';
 
-part11();
+part14();
 
 //  Next steps:
 
@@ -18,3 +21,7 @@ part11();
 //  * Sub-data buffer with batch flush, like current renderer handles it
 //  * Transform stack test (Quad with children, children of children, etc)
 //  * Instead of a Quad class, try a class that can have any number of vertices in it (ala Rope), or any vertex moved
+
+//  * Add a basic display list, so the buffer is cleared each frame and populated via the list
+//  X Try adding all quads to a single huge buffer on creation (remove on destruction), then in the render loop
+//    copy chunks from this buffer to the gl buffer - depends how fast typed array copies are vs. pushing elements by index

@@ -278,7 +278,8 @@ export default function ()
         let skewX = -4 + Math.random() * 8;
         let skewY = -4 + Math.random() * 8;
     
-        //  !!! Warning !!! This uses up LOTS of CPU time:
+        //  !!! Warning !!! This uses up LOTS of CPU time AND also adds 133KB to the JS size:
+
         // gsap.to(quad, { duration, scaleX: scale, scaleY: scale, ease: 'sine.inOut', yoyo: true, repeat: -1 });
         // gsap.to(quad, { duration, rotation, skewX, skewY, ease: 'sine.inOut',  yoyo: true, repeat: -1 });
         gsap.to(quad, { duration, scaleX: scale, scaleY: scale, skewX, skewY, ease: 'sine.inOut',  yoyo: true, repeat: -1 });
