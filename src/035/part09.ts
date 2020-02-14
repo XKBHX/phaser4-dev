@@ -1,6 +1,6 @@
 export default function ()
 {
-    //  Encapsulate a quad, so we can have multple quads (still using modelTransform approach)
+    //  Encapsulate a quad, so we can have multiple quads (still using modelTransform approach)
 
     const fs = `
     precision mediump float;
@@ -297,7 +297,6 @@ export default function ()
 
     const stride = 24;
 
-    //  This approach only works for a single quad
     function render ()
     {
         gl.clearColor(0, 0, 0, 1);
@@ -324,6 +323,17 @@ export default function ()
     
             //  draw one quad at a time! Terrible for performance, but for our purposes here, it'll work.
             //  the next stage will be to not use a uniform for the model transform, as we can't batch our quads
+            //  this is the reason why you can't do all the matrix math in the shader,
+            //  because you have to re-assign the uniform per draw call,
+            //  or, pass the model matrix as an attribute, which means you'd have to put all
+            //  of the mat4 data into the buffer (all 16 elements of it) - this would work, but it's
+            //  16 * 4 = 64 bytes *per vertex*, PLUS position and color data.
+
+            //  So you end-up trading buffer space to let the GPU do the math, vs. doing
+            //  the math on the CPU and sending the transformed vertex positions.
+            //  As we're dealing with 2D specifically, the math is less intensive than
+            //  full 3D mat4 transforms, so it makes sense to let the CPU handle it and batch
+            //  all the data.
 
             //  count = how many indicies are there per quad in the element array (6)
             //  offset = byte offset in element array buffer, i.e. how many indicies are there per quad (6) * 2 (as they're floats) = 12 bytes
