@@ -460,7 +460,7 @@ function Ortho(left, right, bottom, top, near, far) {
   return new Matrix4(m00, 0, 0, 0, 0, m11, 0, 0, 0, 0, m22, 0, m30, m31, m32, 1);
 }
 
-function part14 () {
+function part15 () {
   var canvas = document.getElementById('game');
   canvas.width = 800;
   canvas.height = 600;
@@ -488,9 +488,10 @@ function part14 () {
   var sprites = [];
   var maxSprites = 404;
   var maxSpritesPerBatch = 100;
+  var size = 4;
   var singleVertexSize = 24;
   var singleSpriteSize = 24;
-  var singleSpriteByteSize = singleVertexSize * 4;
+  var singleSpriteByteSize = singleVertexSize * size;
   var singleIndexSize = 4;
   var bufferByteSize = maxSpritesPerBatch * singleSpriteByteSize;
   var dataTA = new Float32Array(bufferByteSize);
@@ -532,11 +533,6 @@ function part14 () {
   gl.bindBuffer(gl.ARRAY_BUFFER, null);
   var projectionMatrix = Ortho(0, resolution.x, resolution.y, 0, -1000, 1000);
   var stride = 24;
-  window.addEventListener('click', () => {
-    var i = Math.floor(Math.random() * sprites.length);
-    console.log(i);
-    sprites[i].visible = false;
-  });
 
   function flush(offset) {
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
@@ -588,5 +584,5 @@ function part14 () {
   render();
 }
 
-part14();
+part15();
 //# sourceMappingURL=test035.js.map
