@@ -43,8 +43,8 @@ export default function ()
 
     const sprites: Sprite[] = [];
 
-    const maxSprites = 600;
-    const maxSpritesPerBatch = 200;
+    const maxSprites = 404;
+    const maxSpritesPerBatch = 100;
 
     //  The size in bytes per element in the dataArray
     const size = 4;
@@ -52,34 +52,43 @@ export default function ()
     //  Size in bytes of a single vertex
     const singleVertexSize = 24;
 
+    //  Size of a single sprite in array elements
+    const singleSpriteSize = 24;
+
     //  Size in bytes of a single sprite
-    const singleSpriteSize = singleVertexSize * 4;
+    const singleSpriteByteSize = singleVertexSize * 4;
 
     //  Size in bytes of a single vertex indicies
     const singleIndexSize = 4;
 
     //  The size of our ArrayBuffer
-    const bufferByteSize = maxSpritesPerBatch * singleSpriteSize;
+    const bufferByteSize = maxSpritesPerBatch * singleSpriteByteSize;
 
     //  Our ArrayBuffer + View
     const dataTA = new Float32Array(bufferByteSize);
 
     let ibo = [];
     let iboIndex = 0;
+
+    let x = 0;
+    let y = 0;
     
     for (let i = 0; i < maxSprites; i++)
     {
-        let x = Math.floor(Math.random() * resolution.x);
-        let y = Math.floor(Math.random() * resolution.y);
-        let s = 0.1 + Math.random() * 0.2;
+        // let x = Math.floor(Math.random() * resolution.x);
+        // let y = Math.floor(Math.random() * resolution.y);
+        // let s = 0.1 + Math.random() * 0.2;
+
+        // let s = 0.2;
+
         let r = Math.min(1, 0.2 + Math.random());
         let g = Math.min(1, 0.2 + Math.random());
         let b = Math.min(1, 0.2 + Math.random());
     
-        let sprite = new Sprite(x, y, 128, 128, r, g, b, 0.3);
+        let sprite = new Sprite(x, y, 32, 32, r, g, b, 1);
     
-        sprite.setOrigin(0.5);
-        sprite.setScale(s);
+        // sprite.setOrigin(0.5);
+        // sprite.setScale(s);
    
         sprites.push(sprite);
 
@@ -89,8 +98,17 @@ export default function ()
 
             iboIndex += singleIndexSize;
         }
+
+        x += 32;
+
+        if (x === 800)
+        {
+            x = 0;
+            y += 32;
+        }
     }
 
+    console.log('sprites array', sprites.length);
     console.log(maxSprites, 'sprites total', dataTA.byteLength, 'bytes', dataTA.byteLength / 1e+6, 'MB');
     console.log('maxSpritesPerBatch', maxSpritesPerBatch, 'bytes:', bufferByteSize, 'batch', dataTA.length / singleSpriteSize);
 
@@ -143,13 +161,21 @@ export default function ()
 
         if (offset === bufferByteSize)
         {
+            // console.log('full draw');
             gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.DYNAMIC_DRAW);
         }
         else
         {
+            // console.log('sub draw');
+
             let view = dataTA.subarray(0, offset);
 
+            //  What's the difference here? We're drawing into a new subarray view anyway, maybe we don't
+            //  actually need the subarray at all?
+
             gl.bufferSubData(gl.ARRAY_BUFFER, 0, view);
+
+            // gl.bufferData(gl.ARRAY_BUFFER, view, gl.DYNAMIC_DRAW);
         }
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
@@ -172,29 +198,35 @@ export default function ()
 
         gl.viewport(0, 0, canvas.width, canvas.height);
     
-        let offset = 0;
+        let bytesOffset = 0;
+        let spriteOffset = 0;
 
         sprites.forEach((sprite) => {
 
             if (sprite.visible)
             {
                 sprite.updateVertices();
-                sprite.batch(dataTA, offset);
-                offset += singleSpriteSize;
+                sprite.batch(dataTA, spriteOffset);
 
-                if (offset === bufferByteSize)
+                //  The offset here is the offset into the array, NOT a byte size!
+                spriteOffset += singleSpriteSize;
+
+                bytesOffset += singleSpriteByteSize;
+
+                if (bytesOffset === bufferByteSize)
                 {
-                    flush(offset);
+                    flush(bytesOffset);
 
-                    offset = 0;
+                    bytesOffset = 0;
+                    spriteOffset = 0;
                 }
             }
 
         });
 
-        if (offset > 0)
+        if (bytesOffset > 0)
         {
-            flush(offset);
+            flush(bytesOffset);
         }
 
         requestAnimationFrame(render);

@@ -13,6 +13,7 @@ import part12 from './part12';
 import part13 from './part13';
 import part14 from './part14';
 
+// part10();
 part14();
 
 //  Next steps:

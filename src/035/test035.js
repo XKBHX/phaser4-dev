@@ -486,34 +486,40 @@ function part14 () {
     y: 600
   };
   var sprites = [];
-  var maxSprites = 600;
-  var maxSpritesPerBatch = 200;
+  var maxSprites = 404;
+  var maxSpritesPerBatch = 100;
   var singleVertexSize = 24;
-  var singleSpriteSize = singleVertexSize * 4;
+  var singleSpriteSize = 24;
+  var singleSpriteByteSize = singleVertexSize * 4;
   var singleIndexSize = 4;
-  var bufferByteSize = maxSpritesPerBatch * singleSpriteSize;
+  var bufferByteSize = maxSpritesPerBatch * singleSpriteByteSize;
   var dataTA = new Float32Array(bufferByteSize);
   var ibo = [];
   var iboIndex = 0;
+  var x = 0;
+  var y = 0;
 
   for (var i = 0; i < maxSprites; i++) {
-    var x = Math.floor(Math.random() * resolution.x);
-    var y = Math.floor(Math.random() * resolution.y);
-    var s = 0.1 + Math.random() * 0.2;
     var r = Math.min(1, 0.2 + Math.random());
     var g = Math.min(1, 0.2 + Math.random());
     var b = Math.min(1, 0.2 + Math.random());
-    var sprite = new Sprite(x, y, 128, 128, r, g, b, 0.3);
-    sprite.setOrigin(0.5);
-    sprite.setScale(s);
+    var sprite = new Sprite(x, y, 32, 32, r, g, b, 1);
     sprites.push(sprite);
 
     if (i < maxSpritesPerBatch) {
       ibo.push(iboIndex + 0, iboIndex + 1, iboIndex + 2, iboIndex + 2, iboIndex + 3, iboIndex + 0);
       iboIndex += singleIndexSize;
     }
+
+    x += 32;
+
+    if (x === 800) {
+      x = 0;
+      y += 32;
+    }
   }
 
+  console.log('sprites array', sprites.length);
   console.log(maxSprites, 'sprites total', dataTA.byteLength, 'bytes', dataTA.byteLength / 1e+6, 'MB');
   console.log('maxSpritesPerBatch', maxSpritesPerBatch, 'bytes:', bufferByteSize, 'batch', dataTA.length / singleSpriteSize);
   var vertexBuffer = gl.createBuffer();
@@ -555,22 +561,25 @@ function part14 () {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.viewport(0, 0, canvas.width, canvas.height);
-    var offset = 0;
+    var bytesOffset = 0;
+    var spriteOffset = 0;
     sprites.forEach(sprite => {
       if (sprite.visible) {
         sprite.updateVertices();
-        sprite.batch(dataTA, offset);
-        offset += singleSpriteSize;
+        sprite.batch(dataTA, spriteOffset);
+        spriteOffset += singleSpriteSize;
+        bytesOffset += singleSpriteByteSize;
 
-        if (offset === bufferByteSize) {
-          flush(offset);
-          offset = 0;
+        if (bytesOffset === bufferByteSize) {
+          flush(bytesOffset);
+          bytesOffset = 0;
+          spriteOffset = 0;
         }
       }
     });
 
-    if (offset > 0) {
-      flush(offset);
+    if (bytesOffset > 0) {
+      flush(bytesOffset);
     }
 
     requestAnimationFrame(render);
