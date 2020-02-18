@@ -460,7 +460,7 @@ function Ortho(left, right, bottom, top, near, far) {
   return new Matrix4(m00, 0, 0, 0, 0, m11, 0, 0, 0, 0, m22, 0, m30, m31, m32, 1);
 }
 
-function part15 () {
+function part16 () {
   var canvas = document.getElementById('game');
   canvas.width = 800;
   canvas.height = 600;
@@ -486,7 +486,6 @@ function part15 () {
     y: 600
   };
   var sprites = [];
-  var maxSprites = 404;
   var maxSpritesPerBatch = 100;
   var size = 4;
   var singleVertexSize = 24;
@@ -496,33 +495,13 @@ function part15 () {
   var bufferByteSize = maxSpritesPerBatch * singleSpriteByteSize;
   var dataTA = new Float32Array(bufferByteSize);
   var ibo = [];
-  var iboIndex = 0;
-  var x = 0;
-  var y = 0;
 
-  for (var i = 0; i < maxSprites; i++) {
-    var r = Math.min(1, 0.2 + Math.random());
-    var g = Math.min(1, 0.2 + Math.random());
-    var b = Math.min(1, 0.2 + Math.random());
-    var sprite = new Sprite(x, y, 32, 32, r, g, b, 1);
-    sprites.push(sprite);
-
-    if (i < maxSpritesPerBatch) {
-      ibo.push(iboIndex + 0, iboIndex + 1, iboIndex + 2, iboIndex + 2, iboIndex + 3, iboIndex + 0);
-      iboIndex += singleIndexSize;
-    }
-
-    x += 32;
-
-    if (x === 800) {
-      x = 0;
-      y += 32;
-    }
+  for (var i = 0; i < maxSpritesPerBatch * singleIndexSize; i += singleIndexSize) {
+    ibo.push(i + 0, i + 1, i + 2, i + 2, i + 3, i + 0);
   }
 
-  console.log('sprites array', sprites.length);
-  console.log(maxSprites, 'sprites total', dataTA.byteLength, 'bytes', dataTA.byteLength / 1e+6, 'MB');
-  console.log('maxSpritesPerBatch', maxSpritesPerBatch, 'bytes:', bufferByteSize, 'batch', dataTA.length / singleSpriteSize);
+  var sprite = new Sprite(100, 100, 256, 96, 0, 1, 0, 1);
+  sprites.push(sprite);
   var vertexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.DYNAMIC_DRAW);
@@ -535,8 +514,6 @@ function part15 () {
   var stride = 24;
 
   function flush(offset) {
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-
     if (offset === bufferByteSize) {
       gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.DYNAMIC_DRAW);
     } else {
@@ -544,10 +521,6 @@ function part15 () {
       gl.bufferSubData(gl.ARRAY_BUFFER, 0, view);
     }
 
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl.vertexAttribPointer(vertexPositionAttrib, 2, gl.FLOAT, false, stride, 0);
-    gl.vertexAttribPointer(vertexColorAttrib, 4, gl.FLOAT, false, stride, 8);
-    gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
     gl.drawElements(gl.TRIANGLES, ibo.length, gl.UNSIGNED_SHORT, 0);
   }
 
@@ -557,6 +530,11 @@ function part15 () {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    gl.vertexAttribPointer(vertexPositionAttrib, 2, gl.FLOAT, false, stride, 0);
+    gl.vertexAttribPointer(vertexColorAttrib, 4, gl.FLOAT, false, stride, 8);
     var bytesOffset = 0;
     var spriteOffset = 0;
     sprites.forEach(sprite => {
@@ -584,5 +562,5 @@ function part15 () {
   render();
 }
 
-part15();
+part16();
 //# sourceMappingURL=test035.js.map

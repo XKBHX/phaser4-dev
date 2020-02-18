@@ -1,8 +1,9 @@
+import Container from './Container';
 import Sprite from './Sprite';
 import QuadShader from './QuadShader';
 import { Ortho } from '@phaserjs/math-matrix4-funcs';
 
-//  Tidied up the flush function, didn't need to reset most of the shader values again
+//  Stacked transform matrix (Container plus children)
 
 export default function ()
 {
@@ -69,49 +70,21 @@ export default function ()
     const dataTA = new Float32Array(bufferByteSize);
 
     let ibo = [];
-    let iboIndex = 0;
 
-    let x = 0;
-    let y = 0;
-    
-    for (let i = 0; i < maxSprites; i++)
+    //  Seed the index buffer
+    for (let i = 0; i < (maxSpritesPerBatch * singleIndexSize); i += singleIndexSize)
     {
-        // let x = Math.floor(Math.random() * resolution.x);
-        // let y = Math.floor(Math.random() * resolution.y);
-        // let s = 0.1 + Math.random() * 0.2;
-
-        // let s = 0.2;
-
-        let r = Math.min(1, 0.2 + Math.random());
-        let g = Math.min(1, 0.2 + Math.random());
-        let b = Math.min(1, 0.2 + Math.random());
-    
-        let sprite = new Sprite(x, y, 32, 32, r, g, b, 1);
-    
-        // sprite.setOrigin(0.5);
-        // sprite.setScale(s);
-   
-        sprites.push(sprite);
-
-        if (i < maxSpritesPerBatch)
-        {
-            ibo.push(iboIndex + 0, iboIndex + 1, iboIndex + 2, iboIndex + 2, iboIndex + 3, iboIndex + 0);
-
-            iboIndex += singleIndexSize;
-        }
-
-        x += 32;
-
-        if (x === 800)
-        {
-            x = 0;
-            y += 32;
-        }
+        ibo.push(i + 0, i + 1, i + 2, i + 2, i + 3, i + 0);
     }
 
-    console.log('sprites array', sprites.length);
-    console.log(maxSprites, 'sprites total', dataTA.byteLength, 'bytes', dataTA.byteLength / 1e+6, 'MB');
-    console.log('maxSpritesPerBatch', maxSpritesPerBatch, 'bytes:', bufferByteSize, 'batch', dataTA.length / singleSpriteSize);
+    //  Our test display list
+
+    let sprite = new Sprite(100, 100, 256, 96, 0, 1, 0, 1);
+    
+    // sprite.setOrigin(0.5);
+    // sprite.setScale(s);
+   
+    sprites.push(sprite);
 
     const vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
@@ -127,14 +100,6 @@ export default function ()
     const projectionMatrix = Ortho(0, resolution.x, resolution.y, 0, -1000, 1000);
 
     const stride = 24;
-
-    window.addEventListener('click', () => {
-
-        let i = Math.floor(Math.random() * sprites.length);
-
-        sprites[i].visible = false;
-
-    });
 
     function flush (offset: number)
     {
