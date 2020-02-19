@@ -1,3 +1,4 @@
+import Texture from './Texture';
 import { Transform } from '@phaserjs/math-transform';
 import { Vec2 } from '@phaserjs/math-vec2';
 
@@ -11,6 +12,7 @@ export default class Sprite extends Transform
     readonly rgba;
 
     visible: boolean = true;
+    texture: Texture = null;
 
     uv = {
         topLeft: { x: 0, y: 0 },
@@ -35,6 +37,19 @@ export default class Sprite extends Transform
         this.rgba = { r, g, b, a };
 
         this.updateVertices();
+    }
+
+    setTexture (texture: Texture)
+    {
+        this.texture = texture;
+
+        this._size.set(texture.width, texture.height);
+
+        this.dirty = true;
+
+        this.updateVertices();
+
+        return this;
     }
 
     updateVertices (): boolean
