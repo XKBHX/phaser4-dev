@@ -8,8 +8,10 @@ export default class Texture
     height: number;
 
     image: HTMLImageElement;
+
     gl: WebGLRenderingContext;
     glTexture: WebGLTexture;
+    glIndex: number = 0;
 
     _onLoadCallback: Function;
 

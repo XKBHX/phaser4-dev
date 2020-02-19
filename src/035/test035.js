@@ -403,6 +403,52 @@ class Sprite extends Transform {
     dataTA[offset + 31] = this.uv.topRight.y;
   }
 
+  batchMultiTexture(dataTA, offset) {
+    var textureIndex = this.texture.glIndex;
+    var {
+      r,
+      g,
+      b,
+      a
+    } = this.rgba;
+    dataTA[offset + 0] = this.topLeft.x;
+    dataTA[offset + 1] = this.topLeft.y;
+    dataTA[offset + 2] = r;
+    dataTA[offset + 3] = g;
+    dataTA[offset + 4] = b;
+    dataTA[offset + 5] = a;
+    dataTA[offset + 6] = this.uv.topLeft.x;
+    dataTA[offset + 7] = this.uv.topLeft.y;
+    dataTA[offset + 8] = textureIndex;
+    dataTA[offset + 9] = this.bottomLeft.x;
+    dataTA[offset + 10] = this.bottomLeft.y;
+    dataTA[offset + 11] = r;
+    dataTA[offset + 12] = g;
+    dataTA[offset + 13] = b;
+    dataTA[offset + 14] = a;
+    dataTA[offset + 15] = this.uv.bottomLeft.x;
+    dataTA[offset + 16] = this.uv.bottomLeft.y;
+    dataTA[offset + 17] = textureIndex;
+    dataTA[offset + 18] = this.bottomRight.x;
+    dataTA[offset + 19] = this.bottomRight.y;
+    dataTA[offset + 20] = r;
+    dataTA[offset + 21] = g;
+    dataTA[offset + 22] = b;
+    dataTA[offset + 23] = a;
+    dataTA[offset + 24] = this.uv.bottomRight.x;
+    dataTA[offset + 25] = this.uv.bottomRight.y;
+    dataTA[offset + 26] = textureIndex;
+    dataTA[offset + 27] = this.topRight.x;
+    dataTA[offset + 28] = this.topRight.y;
+    dataTA[offset + 29] = r;
+    dataTA[offset + 30] = g;
+    dataTA[offset + 31] = b;
+    dataTA[offset + 32] = a;
+    dataTA[offset + 33] = this.uv.topRight.x;
+    dataTA[offset + 34] = this.uv.topRight.y;
+    dataTA[offset + 35] = textureIndex;
+  }
+
 }
 
 class Texture {
@@ -418,6 +464,8 @@ class Texture {
     _defineProperty(this, "gl", void 0);
 
     _defineProperty(this, "glTexture", void 0);
+
+    _defineProperty(this, "glIndex", 0);
 
     _defineProperty(this, "_onLoadCallback", void 0);
 
@@ -462,9 +510,9 @@ class Texture {
 
 }
 
-var TexturedQuadShader = {
-  fragmentShader: "\n    precision mediump float;\n\n    varying vec4 vColor;\n    varying vec2 vTextureCoord;\n\n    uniform sampler2D uTexture;\n    \n    void main (void)\n    {\n        gl_FragColor = texture2D(uTexture, vTextureCoord) * vColor;\n    }\n    ",
-  vertexShader: "\n    attribute vec4 aColor;\n    attribute vec2 aVertexPosition;\n    attribute vec2 aTextureCoord;\n\n    uniform mat4 uProjectionMatrix;\n\n    varying vec4 vColor;\n    varying vec2 vTextureCoord;\n    \n    void main (void)\n    {\n        vColor = aColor;\n        vTextureCoord = aTextureCoord;\n    \n        gl_Position = uProjectionMatrix * vec4(aVertexPosition, 0.0, 1.0);\n    }\n    "
+var MultiTexturedQuadShader = {
+  fragmentShader: "\nprecision mediump float;\n\nvarying vec4 vColor;\nvarying vec2 vTextureCoord;\nvarying float vTextureId;\n\nuniform sampler2D uTexture[%count%];\n\nvoid main (void)\n{\n    vec4 color;\n\n    %forloop%\n\n    gl_FragColor = color * vColor;\n}",
+  vertexShader: "\nattribute vec4 aColor;\nattribute vec2 aVertexPosition;\nattribute vec2 aTextureCoord;\nattribute float aTextureId;\n\nuniform mat4 uProjectionMatrix;\n\nvarying vec4 vColor;\nvarying vec2 vTextureCoord;\nvarying float vTextureId;\n\nvoid main (void)\n{\n    vColor = aColor;\n    vTextureCoord = aTextureCoord;\n    vTextureId = aTextureId;\n\n    gl_Position = uProjectionMatrix * vec4(aVertexPosition, 0.0, 1.0);\n}"
 };
 
 class Matrix4 {
@@ -560,7 +608,63 @@ function Ortho(left, right, bottom, top, near, far) {
   return new Matrix4(m00, 0, 0, 0, 0, m11, 0, 0, 0, 0, m22, 0, m30, m31, m32, 1);
 }
 
-function part18 () {
+var fragTemplate = ['precision mediump float;', 'void main(void){', 'float test = 0.1;', '%forloop%', 'gl_FragColor = vec4(0.0);', '}'].join('\n');
+
+function checkMaxIfStatementsInShader(maxIfs, gl) {
+  var shader = gl.createShader(gl.FRAGMENT_SHADER);
+
+  while (true) {
+    var fragmentSrc = fragTemplate.replace(/%forloop%/gi, generateIfTestSrc(maxIfs));
+    gl.shaderSource(shader, fragmentSrc);
+    gl.compileShader(shader);
+
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      maxIfs = maxIfs / 2 | 0;
+    } else {
+      break;
+    }
+  }
+
+  return maxIfs;
+}
+
+function generateIfTestSrc(maxIfs) {
+  var src = '';
+
+  for (var i = 0; i < maxIfs; ++i) {
+    if (i > 0) {
+      src += '\nelse ';
+    }
+
+    if (i < maxIfs - 1) {
+      src += "if(test == ".concat(i, ".0){}");
+    }
+  }
+
+  return src;
+}
+
+function generateSampleSrc(maxTextures) {
+  var src = '';
+
+  for (var i = 0; i < maxTextures; i++) {
+    if (i > 0) {
+      src += '\n    else ';
+    }
+
+    if (i < maxTextures - 1) {
+      src += "if (vTextureId < ".concat(i, ".5)");
+    }
+
+    src += '\n    {';
+    src += "\n        color = texture2D(uTexture[".concat(i, "], vTextureCoord);");
+    src += '\n    }';
+  }
+
+  return src;
+}
+
+function part19 () {
   var resolution = {
     x: 800,
     y: 600
@@ -576,11 +680,16 @@ function part18 () {
     preserveDrawingBuffer: false
   };
   var gl = canvas.getContext('webgl', contextOptions);
+  var maxTextures = checkMaxIfStatementsInShader(gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS), gl);
+  console.log('maxTextures', maxTextures, 'out of', gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS));
+  var fragmentShaderSource = MultiTexturedQuadShader.fragmentShader;
+  fragmentShaderSource = fragmentShaderSource.replace(/%count%/gi, "".concat(maxTextures));
+  fragmentShaderSource = fragmentShaderSource.replace(/%forloop%/gi, generateSampleSrc(maxTextures));
   var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-  gl.shaderSource(fragmentShader, TexturedQuadShader.fragmentShader);
+  gl.shaderSource(fragmentShader, fragmentShaderSource);
   gl.compileShader(fragmentShader);
   var vertexShader = gl.createShader(gl.VERTEX_SHADER);
-  gl.shaderSource(vertexShader, TexturedQuadShader.vertexShader);
+  gl.shaderSource(vertexShader, MultiTexturedQuadShader.vertexShader);
   gl.compileShader(vertexShader);
   var program = gl.createProgram();
   gl.attachShader(program, vertexShader);
@@ -590,15 +699,17 @@ function part18 () {
   var vertexPositionAttrib = gl.getAttribLocation(program, 'aVertexPosition');
   var vertexColorAttrib = gl.getAttribLocation(program, 'aColor');
   var vertexTextureCoord = gl.getAttribLocation(program, 'aTextureCoord');
+  var vertexTextureIndex = gl.getAttribLocation(program, 'aTextureId');
   var uProjectionMatrix = gl.getUniformLocation(program, 'uProjectionMatrix');
   var uTextureLocation = gl.getUniformLocation(program, 'uTexture');
   gl.enableVertexAttribArray(vertexPositionAttrib);
   gl.enableVertexAttribArray(vertexColorAttrib);
   gl.enableVertexAttribArray(vertexTextureCoord);
+  gl.enableVertexAttribArray(vertexTextureIndex);
   var maxSpritesPerBatch = 500;
   var size = 4;
-  var singleVertexSize = 32;
-  var singleSpriteSize = 32;
+  var singleVertexSize = 36;
+  var singleSpriteSize = 36;
   var singleSpriteByteSize = singleVertexSize * size;
   var singleIndexByteSize = 4;
   var singleSpriteIndexSize = 6;
@@ -619,7 +730,7 @@ function part18 () {
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(ibo), gl.STATIC_DRAW);
   gl.bindBuffer(gl.ARRAY_BUFFER, null);
   var projectionMatrix = Ortho(0, resolution.x, resolution.y, 0, -1000, 1000);
-  var stride = 32;
+  var stride = 36;
   var textures = [];
 
   function loadTextures(urls) {
@@ -629,7 +740,6 @@ function part18 () {
       texturesLeft--;
 
       if (texturesLeft === 0) {
-        console.log('load finished');
         create();
       }
     };
@@ -690,13 +800,12 @@ function part18 () {
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
-    gl.uniform1i(uTextureLocation, 0);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.activeTexture(gl.TEXTURE0);
     gl.vertexAttribPointer(vertexPositionAttrib, 2, gl.FLOAT, false, stride, 0);
     gl.vertexAttribPointer(vertexColorAttrib, 4, gl.FLOAT, false, stride, 8);
     gl.vertexAttribPointer(vertexTextureCoord, 2, gl.FLOAT, false, stride, 16 + 8);
+    gl.vertexAttribPointer(vertexTextureIndex, 1, gl.FLOAT, false, stride, 16 + 8 + 8);
     var prevTexture = renderList[0].texture;
     var size = 0;
 
@@ -710,7 +819,7 @@ function part18 () {
         prevTexture = sprite.texture;
       }
 
-      sprite.batch(dataTA, size * singleSpriteSize);
+      sprite.batchMultiTexture(dataTA, size * singleSpriteSize);
 
       if (size === maxSpritesPerBatch) {
         gl.bindTexture(gl.TEXTURE_2D, prevTexture.glTexture);
@@ -731,5 +840,5 @@ function part18 () {
   }
 }
 
-part18();
+part19();
 //# sourceMappingURL=test035.js.map

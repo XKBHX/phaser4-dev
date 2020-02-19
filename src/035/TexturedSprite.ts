@@ -89,7 +89,7 @@ export default class Sprite extends Transform
         this.bottomRight.set(x1a + y1c + tx, x1b + y1d + ty);
 
         return true;
-    }    
+    }
 
     batch (dataTA: Float32Array, offset: number)
     {
@@ -128,6 +128,52 @@ export default class Sprite extends Transform
         dataTA[offset + 29] = this.rgba.a;
         dataTA[offset + 30] = this.uv.topRight.x;
         dataTA[offset + 31] = this.uv.topRight.y;
+    }
+
+    batchMultiTexture (dataTA: Float32Array, offset: number)
+    {
+        const textureIndex = this.texture.glIndex;
+        const { r, g, b, a } = this.rgba;
+
+        dataTA[offset + 0] = this.topLeft.x;
+        dataTA[offset + 1] = this.topLeft.y;
+        dataTA[offset + 2] = r;
+        dataTA[offset + 3] = g;
+        dataTA[offset + 4] = b;
+        dataTA[offset + 5] = a;
+        dataTA[offset + 6] = this.uv.topLeft.x;
+        dataTA[offset + 7] = this.uv.topLeft.y;
+        dataTA[offset + 8] = textureIndex;
+
+        dataTA[offset + 9] = this.bottomLeft.x;
+        dataTA[offset + 10] = this.bottomLeft.y;
+        dataTA[offset + 11] = r;
+        dataTA[offset + 12] = g;
+        dataTA[offset + 13] = b;
+        dataTA[offset + 14] = a;
+        dataTA[offset + 15] = this.uv.bottomLeft.x;
+        dataTA[offset + 16] = this.uv.bottomLeft.y;
+        dataTA[offset + 17] = textureIndex;
+
+        dataTA[offset + 18] = this.bottomRight.x;
+        dataTA[offset + 19] = this.bottomRight.y;
+        dataTA[offset + 20] = r;
+        dataTA[offset + 21] = g;
+        dataTA[offset + 22] = b;
+        dataTA[offset + 23] = a;
+        dataTA[offset + 24] = this.uv.bottomRight.x;
+        dataTA[offset + 25] = this.uv.bottomRight.y;
+        dataTA[offset + 26] = textureIndex;
+
+        dataTA[offset + 27] = this.topRight.x;
+        dataTA[offset + 28] = this.topRight.y;
+        dataTA[offset + 29] = r;
+        dataTA[offset + 30] = g;
+        dataTA[offset + 31] = b;
+        dataTA[offset + 32] = a;
+        dataTA[offset + 33] = this.uv.topRight.x;
+        dataTA[offset + 34] = this.uv.topRight.y;
+        dataTA[offset + 35] = textureIndex;
     }
 
 }
