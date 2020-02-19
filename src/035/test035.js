@@ -560,10 +560,14 @@ function Ortho(left, right, bottom, top, near, far) {
   return new Matrix4(m00, 0, 0, 0, 0, m11, 0, 0, 0, 0, m22, 0, m30, m31, m32, 1);
 }
 
-function part17 () {
+function part18 () {
+  var resolution = {
+    x: 800,
+    y: 600
+  };
   var canvas = document.getElementById('game');
-  canvas.width = 800;
-  canvas.height = 600;
+  canvas.width = resolution.x;
+  canvas.height = resolution.y;
   var contextOptions = {
     alpha: false,
     antialias: true,
@@ -591,11 +595,7 @@ function part17 () {
   gl.enableVertexAttribArray(vertexPositionAttrib);
   gl.enableVertexAttribArray(vertexColorAttrib);
   gl.enableVertexAttribArray(vertexTextureCoord);
-  var resolution = {
-    x: 800,
-    y: 600
-  };
-  var maxSpritesPerBatch = 2000;
+  var maxSpritesPerBatch = 500;
   var size = 4;
   var singleVertexSize = 32;
   var singleSpriteSize = 32;
@@ -641,14 +641,21 @@ function part17 () {
     });
   }
 
-  loadTextures(['128x128.png', 'brain.png', 'logo.png', 'shinyball.png']);
+  loadTextures(['car.png', 'carrot.png', 'clown.png', 'skull.png']);
   var sprites = [];
 
   function create() {
-    for (var _i = 0; _i < 32; _i++) {
-      var x = Math.floor(Math.random() * (resolution.x - 200));
-      var y = Math.floor(Math.random() * (resolution.y - 100));
-      var t = textures[Math.floor(Math.random() * textures.length)];
+    var textureIndex = 0;
+
+    for (var _i = 0; _i < 500 * 4; _i++) {
+      var x = Math.floor(Math.random() * resolution.x);
+      var y = Math.floor(Math.random() * resolution.y);
+
+      if (_i > 0 && _i % 500 === 0) {
+        textureIndex++;
+      }
+
+      var t = textures[textureIndex];
       var sprite = new Sprite(x, y, t.width, t.height);
       sprite.setTexture(t);
       sprites.push(sprite);
@@ -704,13 +711,14 @@ function part17 () {
       }
 
       sprite.batch(dataTA, size * singleSpriteSize);
-      size++;
 
       if (size === maxSpritesPerBatch) {
         gl.bindTexture(gl.TEXTURE_2D, prevTexture.glTexture);
         flush(size);
         size = 0;
         prevTexture = sprite.texture;
+      } else {
+        size++;
       }
     }
 
@@ -723,5 +731,5 @@ function part17 () {
   }
 }
 
-part17();
+part18();
 //# sourceMappingURL=test035.js.map
