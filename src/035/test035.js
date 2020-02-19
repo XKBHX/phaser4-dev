@@ -267,7 +267,11 @@ class Transform {
 }
 
 class Sprite extends Transform {
-  constructor(x, y, width, height, r, g, b, a) {
+  constructor(x, y, width, height) {
+    var r = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 1;
+    var g = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 1;
+    var b = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 1;
+    var a = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : 1;
     super(x, y);
 
     _defineProperty(this, "topLeft", void 0);
@@ -281,6 +285,25 @@ class Sprite extends Transform {
     _defineProperty(this, "rgba", void 0);
 
     _defineProperty(this, "visible", true);
+
+    _defineProperty(this, "uv", {
+      topLeft: {
+        x: 0,
+        y: 0
+      },
+      topRight: {
+        x: 1,
+        y: 0
+      },
+      bottomLeft: {
+        x: 0,
+        y: 1
+      },
+      bottomRight: {
+        x: 1,
+        y: 1
+      }
+    });
 
     _defineProperty(this, "_size", void 0);
 
@@ -340,31 +363,39 @@ class Sprite extends Transform {
     dataTA[offset + 3] = this.rgba.g;
     dataTA[offset + 4] = this.rgba.b;
     dataTA[offset + 5] = this.rgba.a;
-    dataTA[offset + 6] = this.bottomLeft.x;
-    dataTA[offset + 7] = this.bottomLeft.y;
-    dataTA[offset + 8] = this.rgba.r;
-    dataTA[offset + 9] = this.rgba.g;
-    dataTA[offset + 10] = this.rgba.b;
-    dataTA[offset + 11] = this.rgba.a;
-    dataTA[offset + 12] = this.bottomRight.x;
-    dataTA[offset + 13] = this.bottomRight.y;
-    dataTA[offset + 14] = this.rgba.r;
-    dataTA[offset + 15] = this.rgba.g;
-    dataTA[offset + 16] = this.rgba.b;
-    dataTA[offset + 17] = this.rgba.a;
-    dataTA[offset + 18] = this.topRight.x;
-    dataTA[offset + 19] = this.topRight.y;
-    dataTA[offset + 20] = this.rgba.r;
-    dataTA[offset + 21] = this.rgba.g;
-    dataTA[offset + 22] = this.rgba.b;
-    dataTA[offset + 23] = this.rgba.a;
+    dataTA[offset + 6] = this.uv.topLeft.x;
+    dataTA[offset + 7] = this.uv.topLeft.y;
+    dataTA[offset + 8] = this.bottomLeft.x;
+    dataTA[offset + 9] = this.bottomLeft.y;
+    dataTA[offset + 10] = this.rgba.r;
+    dataTA[offset + 11] = this.rgba.g;
+    dataTA[offset + 12] = this.rgba.b;
+    dataTA[offset + 13] = this.rgba.a;
+    dataTA[offset + 14] = this.uv.bottomLeft.x;
+    dataTA[offset + 15] = this.uv.bottomLeft.y;
+    dataTA[offset + 16] = this.bottomRight.x;
+    dataTA[offset + 17] = this.bottomRight.y;
+    dataTA[offset + 18] = this.rgba.r;
+    dataTA[offset + 19] = this.rgba.g;
+    dataTA[offset + 20] = this.rgba.b;
+    dataTA[offset + 21] = this.rgba.a;
+    dataTA[offset + 22] = this.uv.bottomRight.x;
+    dataTA[offset + 23] = this.uv.bottomRight.y;
+    dataTA[offset + 24] = this.topRight.x;
+    dataTA[offset + 25] = this.topRight.y;
+    dataTA[offset + 26] = this.rgba.r;
+    dataTA[offset + 27] = this.rgba.g;
+    dataTA[offset + 28] = this.rgba.b;
+    dataTA[offset + 29] = this.rgba.a;
+    dataTA[offset + 30] = this.uv.topRight.x;
+    dataTA[offset + 31] = this.uv.topRight.y;
   }
 
 }
 
-var QuadShader = {
-  fragmentShader: "\n    precision mediump float;\n\n    varying vec4 vColor;\n    \n    void main (void)\n    {\n        gl_FragColor = vec4(vColor.r, vColor.g, vColor.b, vColor.a);\n    }\n    ",
-  vertexShader: "\n    attribute vec4 aColor;\n    attribute vec2 aVertexPosition;\n\n    uniform mat4 uProjectionMatrix;\n\n    varying vec4 vColor;\n    \n    void main (void)\n    {\n        vColor = aColor;\n    \n        gl_Position = uProjectionMatrix * vec4(aVertexPosition, 0.0, 1.0);\n    }\n    "
+var TexturedQuadShader = {
+  fragmentShader: "\n    precision mediump float;\n\n    varying vec4 vColor;\n    varying vec2 vTextureCoord;\n\n    uniform sampler2D uTexture;\n    \n    void main (void)\n    {\n        gl_FragColor = texture2D(uTexture, vTextureCoord) * vColor;\n    }\n    ",
+  vertexShader: "\n    attribute vec4 aColor;\n    attribute vec2 aVertexPosition;\n    attribute vec2 aTextureCoord;\n\n    uniform mat4 uProjectionMatrix;\n\n    varying vec4 vColor;\n    varying vec2 vTextureCoord;\n    \n    void main (void)\n    {\n        vColor = aColor;\n        vTextureCoord = aTextureCoord;\n    \n        gl_Position = uProjectionMatrix * vec4(aVertexPosition, 0.0, 1.0);\n    }\n    "
 };
 
 class Matrix4 {
@@ -466,10 +497,10 @@ function part16 () {
   canvas.height = 600;
   var gl = canvas.getContext('webgl');
   var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-  gl.shaderSource(fragmentShader, QuadShader.fragmentShader);
+  gl.shaderSource(fragmentShader, TexturedQuadShader.fragmentShader);
   gl.compileShader(fragmentShader);
   var vertexShader = gl.createShader(gl.VERTEX_SHADER);
-  gl.shaderSource(vertexShader, QuadShader.vertexShader);
+  gl.shaderSource(vertexShader, TexturedQuadShader.vertexShader);
   gl.compileShader(vertexShader);
   var program = gl.createProgram();
   gl.attachShader(program, vertexShader);
@@ -478,18 +509,21 @@ function part16 () {
   gl.useProgram(program);
   var vertexPositionAttrib = gl.getAttribLocation(program, 'aVertexPosition');
   var vertexColorAttrib = gl.getAttribLocation(program, 'aColor');
+  var vertexTextureCoord = gl.getAttribLocation(program, 'aTextureCoord');
   var uProjectionMatrix = gl.getUniformLocation(program, 'uProjectionMatrix');
+  var uTextureLocation = gl.getUniformLocation(program, 'uTexture');
   gl.enableVertexAttribArray(vertexPositionAttrib);
   gl.enableVertexAttribArray(vertexColorAttrib);
+  gl.enableVertexAttribArray(vertexTextureCoord);
   var resolution = {
     x: 800,
     y: 600
   };
   var sprites = [];
-  var maxSpritesPerBatch = 100;
+  var maxSpritesPerBatch = 2000;
   var size = 4;
-  var singleVertexSize = 24;
-  var singleSpriteSize = 24;
+  var singleVertexSize = 32;
+  var singleSpriteSize = 32;
   var singleSpriteByteSize = singleVertexSize * size;
   var singleIndexSize = 4;
   var bufferByteSize = maxSpritesPerBatch * singleSpriteByteSize;
@@ -500,8 +534,17 @@ function part16 () {
     ibo.push(i + 0, i + 1, i + 2, i + 2, i + 3, i + 0);
   }
 
-  var sprite = new Sprite(100, 100, 256, 96, 0, 1, 0, 1);
-  sprites.push(sprite);
+  for (var _i = 0; _i < 8; _i++) {
+    var x = Math.floor(Math.random() * resolution.x);
+    var y = Math.floor(Math.random() * resolution.y);
+    var s = 0.2 + Math.random() * 0.8;
+    var r = Math.random();
+    var sprite = new Sprite(x, y, 256, 256);
+    sprite.setRotation(r);
+    sprite.setScale(s);
+    sprites.push(sprite);
+  }
+
   var vertexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.DYNAMIC_DRAW);
@@ -511,7 +554,19 @@ function part16 () {
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(ibo), gl.STATIC_DRAW);
   gl.bindBuffer(gl.ARRAY_BUFFER, null);
   var projectionMatrix = Ortho(0, resolution.x, resolution.y, 0, -1000, 1000);
-  var stride = 24;
+  var texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 255, 0, 255]));
+  var image = new Image();
+  image.addEventListener('load', () => {
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    render();
+  });
+  image.src = '../assets/f-texture.png';
+  var stride = 32;
 
   function flush(offset) {
     if (offset === bufferByteSize) {
@@ -531,10 +586,12 @@ function part16 () {
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
+    gl.uniform1i(uTextureLocation, 0);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.vertexAttribPointer(vertexPositionAttrib, 2, gl.FLOAT, false, stride, 0);
     gl.vertexAttribPointer(vertexColorAttrib, 4, gl.FLOAT, false, stride, 8);
+    gl.vertexAttribPointer(vertexTextureCoord, 2, gl.FLOAT, false, stride, 16 + 8);
     var bytesOffset = 0;
     var spriteOffset = 0;
     sprites.forEach(sprite => {
@@ -558,8 +615,6 @@ function part16 () {
 
     requestAnimationFrame(render);
   }
-
-  render();
 }
 
 part16();
