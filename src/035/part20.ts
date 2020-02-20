@@ -3,7 +3,7 @@ import Texture from './Texture';
 import MultiTexturedQuadShader from './MultiTexturedQuadShader';
 import { Ortho } from '@phaserjs/math-matrix4-funcs';
 
-//  Multi-texture Test
+//  Multi-Texture Assigned at run-time, not hard coded into render
 
 const fragTemplate = [
     'precision mediump float;',
@@ -245,10 +245,13 @@ export default function ()
         'car.png',
         'carrot.png',
         'clown.png',
-        'skull.png'
+        'skull.png',
+        '2x2.png',
+        '4x4.png',
+        '8x8.png',
+        'orb-blue.png',
+        'phaser_tiny.png'
     ]);
-
-    //  Set the texture index? Or round-robin it?
 
     const sprites: Sprite[] = [];
 
@@ -304,6 +307,8 @@ export default function ()
 
         });
 
+        const activeTextures = Array(maxTextures).fill(0);
+
         gl.clearColor(0, 0, 0, 1);
         gl.clear(gl.COLOR_BUFFER_BIT);
 
@@ -341,42 +346,19 @@ export default function ()
         gl.vertexAttribPointer(vertexTextureCoord, 2, gl.FLOAT, false, stride, 16 + 8);      // size = 8
         gl.vertexAttribPointer(vertexTextureIndex, 1, gl.FLOAT, false, stride, 16 + 8 + 8);  // size = 4
 
-        //  This needs to be made dynamic of course, but for this test it works well enough
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, textures[0].glTexture);
-
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, textures[1].glTexture);
-
-        gl.activeTexture(gl.TEXTURE2);
-        gl.bindTexture(gl.TEXTURE_2D, textures[2].glTexture);
-
-        gl.activeTexture(gl.TEXTURE3);
-        gl.bindTexture(gl.TEXTURE_2D, textures[3].glTexture);
-
-        // let prevTexture = renderList[0].texture;
         let size = 0;
 
         for (let i = 0; i < renderList.length; i++)
         {
             let sprite = renderList[i];
+            let texture = sprite.texture;
 
-            // if (sprite.texture !== prevTexture)
-            // {
-            //     gl.activeTexture(gl['TEXTURE' + sprite.texture.glIndex]);
-            //     gl.bindTexture(gl.TEXTURE_2D, sprite.texture.glTexture);
-
-                //  We've got a new texture, so lets flush
-                // console.log('Texture', prevTexture.key, 'for', size, 'sprites');
-
-                // gl.bindTexture(gl.TEXTURE_2D, prevTexture.glTexture);
-
-                // flush(size);
-
-                // start = i;
-                // size = 0;
-                // prevTexture = sprite.texture;
-            // }
+            if (activeTextures[texture.glIndex] === 0)
+            {
+                gl.activeTexture(gl.TEXTURE0 + texture.glIndex);
+                gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
+                activeTextures[texture.glIndex] = 1;
+            }
 
             //  The offset here is the offset into the array, NOT a byte size!
             sprite.batchMultiTexture(dataTA, size * singleSpriteSize);

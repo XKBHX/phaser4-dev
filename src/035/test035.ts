@@ -17,13 +17,16 @@ import part16 from './part16';
 import part17 from './part17';
 import part18 from './part18';
 import part19 from './part19';
+import part20 from './part20';
 
-// part18();
-part19();
+part20();
 
 //  Next steps:
 
-//  * Multi-texture support
+//  * Multi Textures keep index 0 free for exceeding max
+//  * Multi Textures round-robin, don't use glIndex
+//  X Multi Textures assigned at run-time up to max
+//  X Multi-texture support
 //  * Texture Frames (UV) support
 //  * Camera matrix, added to the shader (projection * camera * vertex pos), so we can move the camera around, rotate it, etc.
 //  X Sub-data buffer with batch flush, like current renderer handles it

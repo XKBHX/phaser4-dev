@@ -668,7 +668,7 @@ function generateSampleSrc(maxTextures) {
   return src;
 }
 
-function part19 () {
+function part20 () {
   var resolution = {
     x: 800,
     y: 600
@@ -686,6 +686,7 @@ function part19 () {
   var gl = canvas.getContext('webgl', contextOptions);
   var maxTextures = checkMaxIfStatementsInShader(gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS), gl);
   console.log('maxTextures', maxTextures, 'out of', gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS));
+  var uTextureLocationIndex = Array.from(Array(maxTextures).keys());
   var fragmentShaderSource = MultiTexturedQuadShader.fragmentShader;
   fragmentShaderSource = fragmentShaderSource.replace(/%count%/gi, "".concat(maxTextures));
   fragmentShaderSource = fragmentShaderSource.replace(/%forloop%/gi, generateSampleSrc(maxTextures));
@@ -710,12 +711,13 @@ function part19 () {
   gl.enableVertexAttribArray(vertexColorAttrib);
   gl.enableVertexAttribArray(vertexTextureCoord);
   gl.enableVertexAttribArray(vertexTextureIndex);
-  var maxSpritesPerBatch = 500;
+  var maxSpritesPerBatch = 2000;
   var size = 4;
   var singleVertexSize = 36;
   var singleSpriteSize = 36;
   var singleSpriteByteSize = singleVertexSize * size;
   var singleIndexByteSize = 4;
+  var singleSpriteIndexSize = 6;
   var bufferByteSize = maxSpritesPerBatch * singleSpriteByteSize;
   var dataTA = new Float32Array(bufferByteSize);
   var ibo = [];
@@ -754,22 +756,16 @@ function part19 () {
     });
   }
 
-  loadTextures(['car.png', 'carrot.png', 'clown.png', 'skull.png']);
+  loadTextures(['car.png', 'carrot.png', 'clown.png', 'skull.png', '2x2.png', '4x4.png', '8x8.png', 'orb-blue.png', 'phaser_tiny.png']);
   var sprites = [];
 
   function create() {
-    console.log(textures);
-    var textureIndex = 0;
+    var totalSprites = 4000;
 
-    for (var _i = 0; _i < 500 * 4; _i++) {
+    for (var _i = 0; _i < totalSprites; _i++) {
       var x = Math.floor(Math.random() * resolution.x);
       var y = Math.floor(Math.random() * resolution.y);
-
-      if (_i > 0 && _i % 500 === 0) {
-        textureIndex++;
-      }
-
-      var t = textures[textureIndex];
+      var t = textures[Math.floor(Math.random() * textures.length)];
       var sprite = new Sprite(x, y, t.width, t.height);
       sprite.setTexture(t);
       sprites.push(sprite);
@@ -779,8 +775,16 @@ function part19 () {
   }
 
   function flush(count) {
-    gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.DYNAMIC_DRAW);
-    gl.drawElements(gl.TRIANGLES, ibo.length, gl.UNSIGNED_SHORT, 0);
+    var offset = count * singleSpriteByteSize;
+
+    if (offset === bufferByteSize) {
+      gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.DYNAMIC_DRAW);
+    } else {
+      var view = dataTA.subarray(0, offset);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, view);
+    }
+
+    gl.drawElements(gl.TRIANGLES, count * singleSpriteIndexSize, gl.UNSIGNED_SHORT, 0);
   }
 
   function render() {
@@ -790,41 +794,49 @@ function part19 () {
         return sprite;
       }
     });
+    var activeTextures = Array(maxTextures).fill(0);
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.activeTexture(gl.TEXTURE0);
     gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
-    gl.uniform1iv(uTextureLocation, [0, 1, 2, 3]);
+    gl.uniform1iv(uTextureLocation, uTextureLocationIndex);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.vertexAttribPointer(vertexPositionAttrib, 2, gl.FLOAT, false, stride, 0);
     gl.vertexAttribPointer(vertexColorAttrib, 4, gl.FLOAT, false, stride, 8);
     gl.vertexAttribPointer(vertexTextureCoord, 2, gl.FLOAT, false, stride, 16 + 8);
     gl.vertexAttribPointer(vertexTextureIndex, 1, gl.FLOAT, false, stride, 16 + 8 + 8);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, textures[0].glTexture);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, textures[1].glTexture);
-    gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, textures[2].glTexture);
-    gl.activeTexture(gl.TEXTURE3);
-    gl.bindTexture(gl.TEXTURE_2D, textures[3].glTexture);
-    var prevTexture = renderList[0].texture;
     var size = 0;
 
     for (var _i2 = 0; _i2 < renderList.length; _i2++) {
       var sprite = renderList[_i2];
+      var texture = sprite.texture;
+
+      if (activeTextures[texture.glIndex] === 0) {
+        gl.activeTexture(gl.TEXTURE0 + texture.glIndex);
+        gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
+        activeTextures[texture.glIndex] = 1;
+      }
+
       sprite.batchMultiTexture(dataTA, size * singleSpriteSize);
-      size++;
+
+      if (size === maxSpritesPerBatch) {
+        flush(size);
+        size = 0;
+      } else {
+        size++;
+      }
     }
 
-    flush();
+    if (size > 0) {
+      flush(size);
+    }
+
     requestAnimationFrame(render);
   }
 }
 
-part19();
+part20();
 //# sourceMappingURL=test035.js.map
