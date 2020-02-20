@@ -307,7 +307,15 @@ class Sprite extends Transform {
       }
     });
 
+    _defineProperty(this, "bounds", null);
+
     _defineProperty(this, "_size", void 0);
+
+    _defineProperty(this, "gravity", 0.75);
+
+    _defineProperty(this, "speedX", Math.random() * 10);
+
+    _defineProperty(this, "speedY", Math.random() * 10 - 5);
 
     this._size = new Vec2(width, height);
     this.topLeft = new Vec2();
@@ -320,6 +328,7 @@ class Sprite extends Transform {
       b,
       a
     };
+    this.setOrigin(0.5, 1);
     this.updateVertices();
   }
 
@@ -331,6 +340,34 @@ class Sprite extends Transform {
     this.dirty = true;
     this.updateVertices();
     return this;
+  }
+
+  step() {
+    this.x += this.speedX;
+    this.y += this.speedY;
+    this.speedY += this.gravity;
+
+    if (this.x > this.bounds.right) {
+      this.speedX *= -1;
+      this.x = this.bounds.right;
+    } else if (this.x < this.bounds.left) {
+      this.speedX *= -1;
+      this.x = this.bounds.left;
+    }
+
+    if (this.y > this.bounds.bottom) {
+      this.speedY *= -0.85;
+      this.y = this.bounds.bottom;
+
+      if (Math.random() > 0.5) {
+        this.speedY -= Math.random() * 6;
+      }
+    } else if (this.y < this.bounds.top) {
+      this.speedY = 0;
+      this.y = this.bounds.top;
+    }
+
+    this.updateVertices();
   }
 
   updateVertices() {
@@ -668,10 +705,16 @@ function generateSampleSrc(maxTextures) {
   return src;
 }
 
-function part20 () {
+function bunnymark () {
   var resolution = {
     x: 800,
     y: 600
+  };
+  var bounds = {
+    left: 0,
+    top: 0,
+    right: resolution.x,
+    bottom: resolution.y
   };
   var canvas = document.getElementById('game');
   canvas.width = resolution.x;
@@ -711,7 +754,12 @@ function part20 () {
   gl.enableVertexAttribArray(vertexColorAttrib);
   gl.enableVertexAttribArray(vertexTextureCoord);
   gl.enableVertexAttribArray(vertexTextureIndex);
-  var maxSpritesPerBatch = 2000;
+  var count = 0;
+  var maxCount = 200000;
+  var amount = 500;
+  var isAdding = false;
+  var startBunnyCount = 30000;
+  var maxSpritesPerBatch = 20000;
   var size = 4;
   var singleVertexSize = 36;
   var singleSpriteSize = 36;
@@ -751,26 +799,46 @@ function part20 () {
 
     urls.forEach((url, index) => {
       var texture = new Texture(url, gl, textures.length);
-      texture.load('../assets/' + url, onLoadCallback);
+      texture.load('../assets/bunnies/' + url, onLoadCallback);
       textures.push(texture);
     });
   }
 
-  loadTextures(['car.png', 'carrot.png', 'clown.png', 'skull.png', '2x2.png', '4x4.png', '8x8.png', 'orb-blue.png', 'phaser_tiny.png']);
-  var sprites = [];
+  loadTextures(['rabbitv3.png', 'rabbitv3_ash.png', 'rabbitv3_batman.png', 'rabbitv3_bb8.png', 'rabbitv3_frankenstein.png', 'rabbitv3_neo.png', 'rabbitv3_sonic.png', 'rabbitv3_spidey.png', 'rabbitv3_stormtrooper.png', 'rabbitv3_superman.png', 'rabbitv3_tron.png', 'rabbitv3_wolverine.png']);
+  var bunnies = [];
+
+  function addBunnies(num) {
+    for (var _i = 0; _i < num; _i++) {
+      var texture = textures[count % textures.length];
+      var x = count % 2 * 800;
+      var bunny = new Sprite(x, 0, 25, 32);
+      bunny.bounds = bounds;
+      bunny.setTexture(texture);
+      bunnies.push(bunny);
+      count++;
+    }
+  }
+
+  var stats;
+  var counter;
 
   function create() {
-    var totalSprites = 4000;
-
-    for (var _i = 0; _i < totalSprites; _i++) {
-      var x = Math.floor(Math.random() * resolution.x);
-      var y = Math.floor(Math.random() * resolution.y);
-      var t = textures[Math.floor(Math.random() * textures.length)];
-      var sprite = new Sprite(x, y, t.width, t.height);
-      sprite.setTexture(t);
-      sprites.push(sprite);
+    {
+      addBunnies(startBunnyCount);
     }
 
+    stats = new window['Stats']();
+    stats.domElement.id = 'stats';
+    document.body.append(stats.domElement);
+    counter = document.createElement('span');
+    counter.innerText = count.toString();
+    document.body.append(counter);
+    window.addEventListener('mousedown', () => {
+      isAdding = true;
+    });
+    window.addEventListener('mouseup', () => {
+      isAdding = false;
+    });
     render();
   }
 
@@ -788,12 +856,13 @@ function part20 () {
   }
 
   function render() {
-    var renderList = sprites.map(sprite => {
-      if (sprite.visible) {
-        sprite.updateVertices();
-        return sprite;
-      }
-    });
+    stats.begin();
+
+    if (isAdding && count < maxCount) {
+      addBunnies(amount);
+      counter.innerText = count.toString();
+    }
+
     var activeTextures = Array(maxTextures).fill(0);
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -810,9 +879,9 @@ function part20 () {
     gl.vertexAttribPointer(vertexTextureIndex, 1, gl.FLOAT, false, stride, 16 + 8 + 8);
     var size = 0;
 
-    for (var _i2 = 0; _i2 < renderList.length; _i2++) {
-      var sprite = renderList[_i2];
-      var texture = sprite.texture;
+    for (var _i2 = 0; _i2 < bunnies.length; _i2++) {
+      var bunny = bunnies[_i2];
+      var texture = bunny.texture;
 
       if (activeTextures[texture.glIndex] === 0) {
         gl.activeTexture(gl.TEXTURE0 + texture.glIndex);
@@ -820,7 +889,8 @@ function part20 () {
         activeTextures[texture.glIndex] = 1;
       }
 
-      sprite.batchMultiTexture(dataTA, size * singleSpriteSize);
+      bunny.step();
+      bunny.batchMultiTexture(dataTA, size * singleSpriteSize);
 
       if (size === maxSpritesPerBatch) {
         flush(size);
@@ -835,8 +905,9 @@ function part20 () {
     }
 
     requestAnimationFrame(render);
+    stats.end();
   }
 }
 
-part20();
+bunnymark();
 //# sourceMappingURL=test035.js.map
