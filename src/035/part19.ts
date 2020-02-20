@@ -142,6 +142,13 @@ export default function ()
 
     const uProjectionMatrix = gl.getUniformLocation(program, 'uProjectionMatrix');
     const uTextureLocation = gl.getUniformLocation(program, 'uTexture');
+    // const uTextureLocation0 = gl.getUniformLocation(program, 'uTexture[0]');
+    // const uTextureLocation1 = gl.getUniformLocation(program, 'uTexture[1]');
+    // const uTextureLocation2 = gl.getUniformLocation(program, 'uTexture[2]');
+    // const uTextureLocation3 = gl.getUniformLocation(program, 'uTexture[3]');
+
+    // console.log(uTextureLocation);
+    // console.log(uTextureLocation0, uTextureLocation1, uTextureLocation2, uTextureLocation3);
 
     gl.enableVertexAttribArray(vertexPositionAttrib);
     gl.enableVertexAttribArray(vertexColorAttrib);
@@ -230,7 +237,7 @@ export default function ()
 
         urls.forEach((url, index) => {
 
-            let texture = new Texture(url, gl);
+            let texture = new Texture(url, gl, textures.length);
 
             texture.load('../assets/' + url, onLoadCallback);
 
@@ -254,6 +261,8 @@ export default function ()
     {
         //  Some textured sprites
         //  The batch size in this test is 500, so we'll create 500 of each texture
+
+        console.log(textures);
 
         let textureIndex = 0;
 
@@ -281,6 +290,7 @@ export default function ()
 
     function flush (count: number)
     {
+        /*
         const offset = count * singleSpriteByteSize;
 
         if (offset === bufferByteSize)
@@ -295,6 +305,10 @@ export default function ()
         }
 
         gl.drawElements(gl.TRIANGLES, count * singleSpriteIndexSize, gl.UNSIGNED_SHORT, 0);
+        */
+
+        gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.DYNAMIC_DRAW);
+        gl.drawElements(gl.TRIANGLES, ibo.length, gl.UNSIGNED_SHORT, 0);
     }
 
     function render ()
@@ -318,7 +332,15 @@ export default function ()
 
         gl.viewport(0, 0, canvas.width, canvas.height);
 
+        gl.activeTexture(gl.TEXTURE0);
+
         gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
+
+        gl.uniform1iv(uTextureLocation, [ 0, 1, 2, 3 ]);
+        // gl.uniform1i(uTextureLocation0, 0);
+        // gl.uniform1i(uTextureLocation1, 1);
+        // gl.uniform1i(uTextureLocation2, 2);
+        // gl.uniform1i(uTextureLocation3, 3);
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
@@ -346,6 +368,18 @@ export default function ()
         gl.vertexAttribPointer(vertexTextureCoord, 2, gl.FLOAT, false, stride, 16 + 8);
         gl.vertexAttribPointer(vertexTextureIndex, 1, gl.FLOAT, false, stride, 16 + 8 + 8);
 
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, textures[0].glTexture);
+
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, textures[1].glTexture);
+
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, textures[2].glTexture);
+
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, textures[3].glTexture);
+
         let prevTexture = renderList[0].texture;
         let size = 0;
 
@@ -353,24 +387,28 @@ export default function ()
         {
             let sprite = renderList[i];
 
-            if (sprite.texture !== prevTexture)
-            {
+            // if (sprite.texture !== prevTexture)
+            // {
+            //     gl.activeTexture(gl['TEXTURE' + sprite.texture.glIndex]);
+            //     gl.bindTexture(gl.TEXTURE_2D, sprite.texture.glTexture);
+
                 //  We've got a new texture, so lets flush
                 // console.log('Texture', prevTexture.key, 'for', size, 'sprites');
 
-                gl.bindTexture(gl.TEXTURE_2D, prevTexture.glTexture);
+                // gl.bindTexture(gl.TEXTURE_2D, prevTexture.glTexture);
 
-                flush(size);
+                // flush(size);
 
                 // start = i;
-                size = 0;
-                prevTexture = sprite.texture;
-            }
+                // size = 0;
+                // prevTexture = sprite.texture;
+            // }
 
             //  The offset here is the offset into the array, NOT a byte size!
             sprite.batchMultiTexture(dataTA, size * singleSpriteSize);
 
             //  if size = batch limit, flush here
+            /*
             if (size === maxSpritesPerBatch)
             {
                 gl.bindTexture(gl.TEXTURE_2D, prevTexture.glTexture);
@@ -385,16 +423,19 @@ export default function ()
             {
                 size++;
             }
+            */
+
+            size++;
         }
 
-        if (size > 0)
-        {
+        // if (size > 0)
+        // {
             // console.log('Final Texture', prevTexture.key, 'for', size, 'sprites');
 
-            gl.bindTexture(gl.TEXTURE_2D, prevTexture.glTexture);
+            // gl.bindTexture(gl.TEXTURE_2D, prevTexture.glTexture);
 
             flush(size);
-        }
+        // }
 
         requestAnimationFrame(render);
     }

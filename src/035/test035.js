@@ -453,6 +453,8 @@ class Sprite extends Transform {
 
 class Texture {
   constructor(key, gl) {
+    var glIndex = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+
     _defineProperty(this, "key", void 0);
 
     _defineProperty(this, "width", void 0);
@@ -471,11 +473,13 @@ class Texture {
 
     this.key = key;
     this.gl = gl;
+    this.glIndex = glIndex;
   }
 
   onLoad() {
     var gl = this.gl;
     this.glTexture = this.gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0 + this.glIndex);
     gl.bindTexture(gl.TEXTURE_2D, this.glTexture);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.image);
@@ -712,7 +716,6 @@ function part19 () {
   var singleSpriteSize = 36;
   var singleSpriteByteSize = singleVertexSize * size;
   var singleIndexByteSize = 4;
-  var singleSpriteIndexSize = 6;
   var bufferByteSize = maxSpritesPerBatch * singleSpriteByteSize;
   var dataTA = new Float32Array(bufferByteSize);
   var ibo = [];
@@ -745,7 +748,7 @@ function part19 () {
     };
 
     urls.forEach((url, index) => {
-      var texture = new Texture(url, gl);
+      var texture = new Texture(url, gl, textures.length);
       texture.load('../assets/' + url, onLoadCallback);
       textures.push(texture);
     });
@@ -755,6 +758,7 @@ function part19 () {
   var sprites = [];
 
   function create() {
+    console.log(textures);
     var textureIndex = 0;
 
     for (var _i = 0; _i < 500 * 4; _i++) {
@@ -775,16 +779,8 @@ function part19 () {
   }
 
   function flush(count) {
-    var offset = count * singleSpriteByteSize;
-
-    if (offset === bufferByteSize) {
-      gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.DYNAMIC_DRAW);
-    } else {
-      var view = dataTA.subarray(0, offset);
-      gl.bufferSubData(gl.ARRAY_BUFFER, 0, view);
-    }
-
-    gl.drawElements(gl.TRIANGLES, count * singleSpriteIndexSize, gl.UNSIGNED_SHORT, 0);
+    gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.DYNAMIC_DRAW);
+    gl.drawElements(gl.TRIANGLES, ibo.length, gl.UNSIGNED_SHORT, 0);
   }
 
   function render() {
@@ -799,43 +795,33 @@ function part19 () {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.activeTexture(gl.TEXTURE0);
     gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
+    gl.uniform1iv(uTextureLocation, [0, 1, 2, 3]);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.vertexAttribPointer(vertexPositionAttrib, 2, gl.FLOAT, false, stride, 0);
     gl.vertexAttribPointer(vertexColorAttrib, 4, gl.FLOAT, false, stride, 8);
     gl.vertexAttribPointer(vertexTextureCoord, 2, gl.FLOAT, false, stride, 16 + 8);
     gl.vertexAttribPointer(vertexTextureIndex, 1, gl.FLOAT, false, stride, 16 + 8 + 8);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, textures[0].glTexture);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, textures[1].glTexture);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, textures[2].glTexture);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, textures[3].glTexture);
     var prevTexture = renderList[0].texture;
     var size = 0;
 
     for (var _i2 = 0; _i2 < renderList.length; _i2++) {
       var sprite = renderList[_i2];
-
-      if (sprite.texture !== prevTexture) {
-        gl.bindTexture(gl.TEXTURE_2D, prevTexture.glTexture);
-        flush(size);
-        size = 0;
-        prevTexture = sprite.texture;
-      }
-
       sprite.batchMultiTexture(dataTA, size * singleSpriteSize);
-
-      if (size === maxSpritesPerBatch) {
-        gl.bindTexture(gl.TEXTURE_2D, prevTexture.glTexture);
-        flush(size);
-        size = 0;
-        prevTexture = sprite.texture;
-      } else {
-        size++;
-      }
+      size++;
     }
 
-    if (size > 0) {
-      gl.bindTexture(gl.TEXTURE_2D, prevTexture.glTexture);
-      flush(size);
-    }
-
+    flush();
     requestAnimationFrame(render);
   }
 }

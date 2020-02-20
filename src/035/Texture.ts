@@ -15,11 +15,12 @@ export default class Texture
 
     _onLoadCallback: Function;
 
-    constructor (key: string, gl: WebGLRenderingContext)
+    constructor (key: string, gl: WebGLRenderingContext, glIndex: number = 0)
     {
         this.key = key;
 
         this.gl = gl;
+        this.glIndex = glIndex;
     }
 
     onLoad ()
@@ -29,6 +30,8 @@ export default class Texture
         const gl = this.gl;
 
         this.glTexture = this.gl.createTexture();
+
+        gl.activeTexture(gl.TEXTURE0 + this.glIndex);
 
         gl.bindTexture(gl.TEXTURE_2D, this.glTexture);
 

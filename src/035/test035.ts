@@ -18,6 +18,7 @@ import part17 from './part17';
 import part18 from './part18';
 import part19 from './part19';
 
+// part18();
 part19();
 
 //  Next steps:
