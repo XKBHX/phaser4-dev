@@ -486,6 +486,30 @@ class Sprite extends Transform {
     dataTA[offset + 35] = textureIndex;
   }
 
+  batchMultiTextureNoColor(dataTA, offset) {
+    var textureIndex = this.texture.glIndex;
+    dataTA[offset + 0] = this.topLeft.x;
+    dataTA[offset + 1] = this.topLeft.y;
+    dataTA[offset + 2] = this.uv.topLeft.x;
+    dataTA[offset + 3] = this.uv.topLeft.y;
+    dataTA[offset + 4] = textureIndex;
+    dataTA[offset + 5] = this.bottomLeft.x;
+    dataTA[offset + 6] = this.bottomLeft.y;
+    dataTA[offset + 7] = this.uv.bottomLeft.x;
+    dataTA[offset + 8] = this.uv.bottomLeft.y;
+    dataTA[offset + 9] = textureIndex;
+    dataTA[offset + 10] = this.bottomRight.x;
+    dataTA[offset + 11] = this.bottomRight.y;
+    dataTA[offset + 12] = this.uv.bottomRight.x;
+    dataTA[offset + 13] = this.uv.bottomRight.y;
+    dataTA[offset + 14] = textureIndex;
+    dataTA[offset + 15] = this.topRight.x;
+    dataTA[offset + 16] = this.topRight.y;
+    dataTA[offset + 17] = this.uv.topRight.x;
+    dataTA[offset + 18] = this.uv.topRight.y;
+    dataTA[offset + 19] = textureIndex;
+  }
+
 }
 
 class Texture {
@@ -552,8 +576,8 @@ class Texture {
 }
 
 var MultiTexturedQuadShader = {
-  fragmentShader: "\nprecision mediump float;\n\nvarying vec4 vColor;\nvarying vec2 vTextureCoord;\nvarying float vTextureId;\n\nuniform sampler2D uTexture[%count%];\n\nvoid main (void)\n{\n    vec4 color;\n\n    %forloop%\n\n    gl_FragColor = color * vColor;\n}",
-  vertexShader: "\nattribute vec4 aColor;\nattribute vec2 aVertexPosition;\nattribute vec2 aTextureCoord;\nattribute float aTextureId;\n\nuniform mat4 uProjectionMatrix;\n\nvarying vec4 vColor;\nvarying vec2 vTextureCoord;\nvarying float vTextureId;\n\nvoid main (void)\n{\n    vColor = aColor;\n    vTextureCoord = aTextureCoord;\n    vTextureId = aTextureId;\n\n    gl_Position = uProjectionMatrix * vec4(aVertexPosition, 0.0, 1.0);\n}"
+  fragmentShader: "\nprecision mediump float;\n\nvarying vec2 vTextureCoord;\nvarying float vTextureId;\n\nuniform sampler2D uTexture[%count%];\n\nvoid main (void)\n{\n    vec4 color;\n\n    %forloop%\n\n    gl_FragColor = color;\n}",
+  vertexShader: "\nattribute vec2 aVertexPosition;\nattribute vec2 aTextureCoord;\nattribute float aTextureId;\n\nuniform mat4 uProjectionMatrix;\n\nvarying vec2 vTextureCoord;\nvarying float vTextureId;\n\nvoid main (void)\n{\n    vTextureCoord = aTextureCoord;\n    vTextureId = aTextureId;\n\n    gl_Position = uProjectionMatrix * vec4(aVertexPosition, 0.0, 1.0);\n}"
 };
 
 class Matrix4 {
@@ -705,7 +729,7 @@ function generateSampleSrc(maxTextures) {
   return src;
 }
 
-function bunnymark () {
+function bunnymarkNoColor () {
   var resolution = {
     x: 800,
     y: 600
@@ -729,6 +753,14 @@ function bunnymark () {
   var gl = canvas.getContext('webgl', contextOptions);
   var maxTextures = checkMaxIfStatementsInShader(gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS), gl);
   console.log('maxTextures', maxTextures, 'out of', gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS));
+
+  for (var i = 0; i < maxTextures; i++) {
+    var tempTexture = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0 + i);
+    gl.bindTexture(gl.TEXTURE_2D, tempTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 255, 255]));
+  }
+
   var uTextureLocationIndex = Array.from(Array(maxTextures).keys());
   var fragmentShaderSource = MultiTexturedQuadShader.fragmentShader;
   fragmentShaderSource = fragmentShaderSource.replace(/%count%/gi, "".concat(maxTextures));
@@ -745,24 +777,22 @@ function bunnymark () {
   gl.linkProgram(program);
   gl.useProgram(program);
   var vertexPositionAttrib = gl.getAttribLocation(program, 'aVertexPosition');
-  var vertexColorAttrib = gl.getAttribLocation(program, 'aColor');
   var vertexTextureCoord = gl.getAttribLocation(program, 'aTextureCoord');
   var vertexTextureIndex = gl.getAttribLocation(program, 'aTextureId');
   var uProjectionMatrix = gl.getUniformLocation(program, 'uProjectionMatrix');
   var uTextureLocation = gl.getUniformLocation(program, 'uTexture');
   gl.enableVertexAttribArray(vertexPositionAttrib);
-  gl.enableVertexAttribArray(vertexColorAttrib);
   gl.enableVertexAttribArray(vertexTextureCoord);
   gl.enableVertexAttribArray(vertexTextureIndex);
   var count = 0;
   var maxCount = 200000;
-  var amount = 500;
+  var amount = 200;
   var isAdding = false;
-  var startBunnyCount = 30000;
-  var maxSpritesPerBatch = 20000;
+  var startBunnyCount = 2000;
+  var maxSpritesPerBatch = 2000;
   var size = 4;
-  var singleVertexSize = 36;
-  var singleSpriteSize = 36;
+  var singleVertexSize = 20;
+  var singleSpriteSize = 20;
   var singleSpriteByteSize = singleVertexSize * size;
   var singleIndexByteSize = 4;
   var singleSpriteIndexSize = 6;
@@ -770,8 +800,8 @@ function bunnymark () {
   var dataTA = new Float32Array(bufferByteSize);
   var ibo = [];
 
-  for (var i = 0; i < maxSpritesPerBatch * singleIndexByteSize; i += singleIndexByteSize) {
-    ibo.push(i + 0, i + 1, i + 2, i + 2, i + 3, i + 0);
+  for (var _i = 0; _i < maxSpritesPerBatch * singleIndexByteSize; _i += singleIndexByteSize) {
+    ibo.push(_i + 0, _i + 1, _i + 2, _i + 2, _i + 3, _i + 0);
   }
 
   var vertexBuffer = gl.createBuffer();
@@ -783,7 +813,7 @@ function bunnymark () {
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(ibo), gl.STATIC_DRAW);
   gl.bindBuffer(gl.ARRAY_BUFFER, null);
   var projectionMatrix = Ortho(0, resolution.x, resolution.y, 0, -1000, 1000);
-  var stride = 36;
+  var stride = 20;
   var textures = [];
 
   function loadTextures(urls) {
@@ -808,7 +838,7 @@ function bunnymark () {
   var bunnies = [];
 
   function addBunnies(num) {
-    for (var _i = 0; _i < num; _i++) {
+    for (var _i2 = 0; _i2 < num; _i2++) {
       var texture = textures[count % textures.length];
       var x = count % 2 * 800;
       var bunny = new Sprite(x, 0, 25, 32);
@@ -819,26 +849,23 @@ function bunnymark () {
     }
   }
 
-  var stats;
-  var counter;
-
   function create() {
     {
       addBunnies(startBunnyCount);
     }
 
-    stats = new window['Stats']();
-    stats.domElement.id = 'stats';
-    document.body.append(stats.domElement);
-    counter = document.createElement('span');
-    counter.innerText = count.toString();
-    document.body.append(counter);
     window.addEventListener('mousedown', () => {
       isAdding = true;
     });
     window.addEventListener('mouseup', () => {
       isAdding = false;
     });
+
+    for (var _i3 = 0; _i3 < textures.length; _i3++) {
+      gl.activeTexture(gl.TEXTURE0 + _i3);
+      gl.bindTexture(gl.TEXTURE_2D, textures[_i3].glTexture);
+    }
+
     render();
   }
 
@@ -856,14 +883,10 @@ function bunnymark () {
   }
 
   function render() {
-    stats.begin();
-
     if (isAdding && count < maxCount) {
       addBunnies(amount);
-      counter.innerText = count.toString();
     }
 
-    var activeTextures = Array(maxTextures).fill(0);
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.enable(gl.BLEND);
@@ -874,23 +897,14 @@ function bunnymark () {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.vertexAttribPointer(vertexPositionAttrib, 2, gl.FLOAT, false, stride, 0);
-    gl.vertexAttribPointer(vertexColorAttrib, 4, gl.FLOAT, false, stride, 8);
-    gl.vertexAttribPointer(vertexTextureCoord, 2, gl.FLOAT, false, stride, 16 + 8);
-    gl.vertexAttribPointer(vertexTextureIndex, 1, gl.FLOAT, false, stride, 16 + 8 + 8);
+    gl.vertexAttribPointer(vertexTextureCoord, 2, gl.FLOAT, false, stride, 8);
+    gl.vertexAttribPointer(vertexTextureIndex, 1, gl.FLOAT, false, stride, 8 + 8);
     var size = 0;
 
-    for (var _i2 = 0; _i2 < bunnies.length; _i2++) {
-      var bunny = bunnies[_i2];
-      var texture = bunny.texture;
-
-      if (activeTextures[texture.glIndex] === 0) {
-        gl.activeTexture(gl.TEXTURE0 + texture.glIndex);
-        gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
-        activeTextures[texture.glIndex] = 1;
-      }
-
+    for (var _i4 = 0; _i4 < bunnies.length; _i4++) {
+      var bunny = bunnies[_i4];
       bunny.step();
-      bunny.batchMultiTexture(dataTA, size * singleSpriteSize);
+      bunny.batchMultiTextureNoColor(dataTA, size * singleSpriteSize);
 
       if (size === maxSpritesPerBatch) {
         flush(size);
@@ -905,9 +919,8 @@ function bunnymark () {
     }
 
     requestAnimationFrame(render);
-    stats.end();
   }
 }
 
-bunnymark();
+bunnymarkNoColor();
 //# sourceMappingURL=test035.js.map

@@ -151,7 +151,6 @@ export default function ()
     gl.useProgram(program);
     
     const vertexPositionAttrib = gl.getAttribLocation(program, 'aVertexPosition');
-    const vertexColorAttrib = gl.getAttribLocation(program, 'aColor');
     const vertexTextureCoord = gl.getAttribLocation(program, 'aTextureCoord');
     const vertexTextureIndex = gl.getAttribLocation(program, 'aTextureId');
 
@@ -159,7 +158,6 @@ export default function ()
     const uTextureLocation = gl.getUniformLocation(program, 'uTexture');
 
     gl.enableVertexAttribArray(vertexPositionAttrib);
-    gl.enableVertexAttribArray(vertexColorAttrib);
     gl.enableVertexAttribArray(vertexTextureCoord);
     gl.enableVertexAttribArray(vertexTextureIndex);
 
@@ -175,7 +173,7 @@ export default function ()
     let isAdding = false;
 
     //  Number of bunnies to start with
-    let startBunnyCount = 20000;
+    let startBunnyCount = 2000;
 
 
 
@@ -315,13 +313,13 @@ export default function ()
             addBunnies(startBunnyCount);
         }
 
-        stats = new window['Stats']();
-        stats.domElement.id = 'stats';
-        document.body.append(stats.domElement);
+        // stats = new window['Stats']();
+        // stats.domElement.id = 'stats';
+        // document.body.append(stats.domElement);
 
-        counter = document.createElement('span');
-        counter.innerText = count.toString();
-        document.body.append(counter);
+        // counter = document.createElement('span');
+        // counter.innerText = count.toString();
+        // document.body.append(counter);
 
         window.addEventListener('mousedown', () => {
             isAdding = true;
@@ -361,12 +359,12 @@ export default function ()
 
     function render ()
     {
-        stats.begin();
+        // stats.begin();
 
         if (isAdding && count < maxCount)
         {
             addBunnies(amount);
-            counter.innerText = count.toString();
+            // counter.innerText = count.toString();
         }
 
         // const activeTextures = Array(maxTextures).fill(0);
@@ -414,7 +412,7 @@ export default function ()
             bunny.step();
 
             //  The offset here is the offset into the array, NOT a byte size!
-            bunny.batchMultiTexture(dataTA, size * singleSpriteSize);
+            bunny.batchMultiTextureNoColor(dataTA, size * singleSpriteSize);
 
             //  if size = batch limit, flush here
             if (size === maxSpritesPerBatch)
@@ -436,6 +434,6 @@ export default function ()
 
         requestAnimationFrame(render);
 
-        stats.end();
+        // stats.end();
     }
 }

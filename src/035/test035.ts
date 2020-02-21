@@ -19,12 +19,14 @@ import part18 from './part18';
 import part19 from './part19';
 import part20 from './part20';
 import bunnymark from './bunnymark';
+import bunnymarkNoColor from './bunnymark-nocolor';
 
-bunnymark();
+// bunnymark();
+bunnymarkNoColor();
 
 //  Next steps:
 
-//  * Bunny mark (because, why not?)
+//  X Bunny mark (because, why not?)
 //  * Multi Textures keep index 0 free for exceeding max
 //  * Multi Textures round-robin, don't use glIndex
 //  X Multi Textures assigned at run-time up to max

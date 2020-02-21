@@ -219,4 +219,33 @@ export default class Sprite extends Transform
         dataTA[offset + 35] = textureIndex;
     }
 
+    batchMultiTextureNoColor (dataTA: Float32Array, offset: number)
+    {
+        const textureIndex = this.texture.glIndex;
+
+        dataTA[offset + 0] = this.topLeft.x;
+        dataTA[offset + 1] = this.topLeft.y;
+        dataTA[offset + 2] = this.uv.topLeft.x;
+        dataTA[offset + 3] = this.uv.topLeft.y;
+        dataTA[offset + 4] = textureIndex;
+
+        dataTA[offset + 5] = this.bottomLeft.x;
+        dataTA[offset + 6] = this.bottomLeft.y;
+        dataTA[offset + 7] = this.uv.bottomLeft.x;
+        dataTA[offset + 8] = this.uv.bottomLeft.y;
+        dataTA[offset + 9] = textureIndex;
+
+        dataTA[offset + 10] = this.bottomRight.x;
+        dataTA[offset + 11] = this.bottomRight.y;
+        dataTA[offset + 12] = this.uv.bottomRight.x;
+        dataTA[offset + 13] = this.uv.bottomRight.y;
+        dataTA[offset + 14] = textureIndex;
+
+        dataTA[offset + 15] = this.topRight.x;
+        dataTA[offset + 16] = this.topRight.y;
+        dataTA[offset + 17] = this.uv.topRight.x;
+        dataTA[offset + 18] = this.uv.topRight.y;
+        dataTA[offset + 19] = textureIndex;
+    }
+
 }
