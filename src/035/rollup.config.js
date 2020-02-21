@@ -1,5 +1,6 @@
 import resolve from 'rollup-plugin-node-resolve';
-import babel from 'rollup-plugin-babel';
+import typescript from 'rollup-plugin-typescript2';
+import { terser } from 'rollup-plugin-terser';
 
 const extensions = [
     '.js', '.jsx', '.ts', '.tsx'
@@ -9,38 +10,30 @@ export default {
 
     input: './src/035/test035.ts',
 
-    output: {
-        file: './src/035/test035.js',
-        format: 'es',
-        sourcemap: true
-    },
+    output: [
+        {
+            file: './src/035/test035.js',
+            format: 'es',
+            sourcemap: true
+        },
+        // {
+            // file: './src/035/test035.min.js',
+            // format: 'iife',
+            // name: 'Phaser4Test35',
+            // plugins: [ terser() ]
+        // }
+    ],
 
     plugins: [
+
         resolve({
             extensions
         }),
 
-        //  Used here instead of .babelrc so it applies to external modules, too.
-        babel({
-            extensions,
-            comments: false,
-            presets: [
-                [ "@babel/preset-env", {
-                    targets: {
-                        esmodules: true
-                    }
-                }],
-                // [ "minify", {
-                //     removeConsole: false,
-                //     builtIns: false
-                // }],
-                "@babel/preset-typescript"
-            ],
-            plugins: [
-                "@babel/proposal-class-properties",
-                "@babel/proposal-object-rest-spread"
-            ]
+        typescript({
+            tsconfig: './src/035/tsconfig.json'
         })
 
     ]
+
 };

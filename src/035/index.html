@@ -10,10 +10,26 @@
             body {
                 margin: 0;
             }
+
+            #stats, #gameParent {
+                top: 0;
+                position: absolute;
+            }
+
+            #gameParent div {
+                top: 48px;
+                position: absolute;
+                font-size: 14px;
+                font-family: 'Courier New', Courier, monospace;
+                background-color: midnightblue;
+                width: 80px;
+                color: white;
+            }
         </style>
     </head>
     <body>
-        <canvas id="game" width="1024" height="768" />
+        <div id="gameParent"><canvas id="game" width="800" height="600"></div>
+        <input type="button" id="toggle" value="Play / Pause" style="margin-top: 600px">
         <script src="test035.js"></script>
     </body>
 </html>

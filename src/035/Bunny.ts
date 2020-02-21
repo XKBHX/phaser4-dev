@@ -134,45 +134,6 @@ export default class Sprite extends Transform
         return true;
     }
 
-    batch (dataTA: Float32Array, offset: number)
-    {
-        dataTA[offset + 0] = this.topLeft.x;
-        dataTA[offset + 1] = this.topLeft.y;
-        dataTA[offset + 2] = this.rgba.r;
-        dataTA[offset + 3] = this.rgba.g;
-        dataTA[offset + 4] = this.rgba.b;
-        dataTA[offset + 5] = this.rgba.a;
-        dataTA[offset + 6] = this.uv.topLeft.x;
-        dataTA[offset + 7] = this.uv.topLeft.y;
-
-        dataTA[offset + 8] = this.bottomLeft.x;
-        dataTA[offset + 9] = this.bottomLeft.y;
-        dataTA[offset + 10] = this.rgba.r;
-        dataTA[offset + 11] = this.rgba.g;
-        dataTA[offset + 12] = this.rgba.b;
-        dataTA[offset + 13] = this.rgba.a;
-        dataTA[offset + 14] = this.uv.bottomLeft.x;
-        dataTA[offset + 15] = this.uv.bottomLeft.y;
-
-        dataTA[offset + 16] = this.bottomRight.x;
-        dataTA[offset + 17] = this.bottomRight.y;
-        dataTA[offset + 18] = this.rgba.r;
-        dataTA[offset + 19] = this.rgba.g;
-        dataTA[offset + 20] = this.rgba.b;
-        dataTA[offset + 21] = this.rgba.a;
-        dataTA[offset + 22] = this.uv.bottomRight.x;
-        dataTA[offset + 23] = this.uv.bottomRight.y;
-
-        dataTA[offset + 24] = this.topRight.x;
-        dataTA[offset + 25] = this.topRight.y;
-        dataTA[offset + 26] = this.rgba.r;
-        dataTA[offset + 27] = this.rgba.g;
-        dataTA[offset + 28] = this.rgba.b;
-        dataTA[offset + 29] = this.rgba.a;
-        dataTA[offset + 30] = this.uv.topRight.x;
-        dataTA[offset + 31] = this.uv.topRight.y;
-    }
-
     batchMultiTexture (dataTA: Float32Array, offset: number)
     {
         const textureIndex = this.texture.glIndex;

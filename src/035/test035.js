@@ -1,926 +1,793 @@
-function _defineProperty(obj, key, value) {
-  if (key in obj) {
-    Object.defineProperty(obj, key, {
-      value: value,
-      enumerable: true,
-      configurable: true,
-      writable: true
-    });
-  } else {
-    obj[key] = value;
-  }
-
-  return obj;
-}
-
-class Matrix2D {
-  constructor() {
-    var a = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
-    var b = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-    var c = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-    var d = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 1;
-    var tx = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0;
-    var ty = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 0;
-    this.set(a, b, c, d, tx, ty);
-  }
-
-  set() {
-    var a = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
-    var b = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-    var c = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-    var d = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 1;
-    var tx = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0;
-    var ty = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 0;
-    this.a = a;
-    this.b = b;
-    this.c = c;
-    this.d = d;
-    this.tx = tx;
-    this.ty = ty;
-    return this;
-  }
-
-  identity() {
-    return this.set();
-  }
-
-  toArray() {
-    return [this.a, this.b, this.c, this.d, this.tx, this.ty];
-  }
-
-  fromArray(src) {
-    return this.set(src[0], src[1], src[2], src[3], src[4], src[5]);
-  }
-
-  [Symbol.iterator]() {
-    var data = this.toArray();
-    return data[Symbol.iterator]();
-  }
-
-}
-
 class Vec2 {
-  constructor() {
-    var x = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
-    var y = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-    this.set(x, y);
-  }
+    /**
+     * Creates an instance of a Vector2.
+     *
+     * @param {number} [x=0] - X component
+     * @param {number} [y=0] - Y component
+     * @memberof Vec2
+     */
+    constructor(x = 0, y = 0) {
+        this.set(x, y);
+    }
+    /**
+     * Sets the components of this Vector2.
+     *
+     * @param {number} [x=0] - X component
+     * @param {number} [y=0] - Y component
+     * @returns {Vec2}
+     * @memberof Vec2
+     */
+    set(x = 0, y = 0) {
+        this.x = x;
+        this.y = y;
+        return this;
+    }
+    /**
+     * Sets all components of this Vector2 to zero.
+     *
+     * @returns {Vec2}
+     * @memberof Vec2
+     */
+    zero() {
+        return this.set();
+    }
+    /**
+     * Returns a new array containg the Vector2 component values.
+     *
+     * @returns {number[]}
+     * @memberof Vec2
+     */
+    getArray() {
+        return [this.x, this.y];
+    }
+    /**
+     * Sets the values of this Vector2 based on the given array, or array-like object, such as a Float32.
+     *
+     * The source must have 2 elements, starting from index 0 through to index 1.
+     *
+     * @param {number[]} src - The source array to copy the values from.
+     * @returns {Vec2}
+     * @memberof Vec2
+     */
+    fromArray(src) {
+        return this.set(src[0], src[1]);
+    }
+    [Symbol.iterator]() {
+        const data = this.getArray();
+        return data[Symbol.iterator]();
+    }
+}
+//# sourceMappingURL=Vec2.js.map
 
-  set() {
-    var x = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
-    var y = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-    this.x = x;
-    this.y = y;
-    return this;
-  }
-
-  zero() {
-    return this.set();
-  }
-
-  getArray() {
-    return [this.x, this.y];
-  }
-
-  fromArray(src) {
-    return this.set(src[0], src[1]);
-  }
-
-  [Symbol.iterator]() {
-    var data = this.getArray();
-    return data[Symbol.iterator]();
-  }
-
+class BunnyMergedTransform {
+    constructor(x, y, texture) {
+        this.rgba = { r: 1, g: 1, b: 1, a: 1 };
+        this.visible = true;
+        this.texture = null;
+        this.uv = {
+            topLeft: { x: 0, y: 0 },
+            topRight: { x: 1, y: 0 },
+            bottomLeft: { x: 0, y: 1 },
+            bottomRight: { x: 1, y: 1 }
+        };
+        this.bounds = null;
+        this._a = 1;
+        this._b = 0;
+        this._c = 0;
+        this._d = 1;
+        this._tx = 0;
+        this._ty = 0;
+        this.gravity = 0.75;
+        this.speedX = Math.random() * 10;
+        this.speedY = (Math.random() * 10) - 5;
+        this.texture = texture;
+        this._size = new Vec2(texture.width, texture.height);
+        this.topLeft = new Vec2();
+        this.topRight = new Vec2();
+        this.bottomLeft = new Vec2();
+        this.bottomRight = new Vec2();
+        this._position = new Vec2(x, y);
+        this._scale = new Vec2(1, 1);
+        this._skew = new Vec2(0, 0);
+        this._origin = new Vec2(0, 0);
+        this._rotation = 0;
+        this.setOrigin(0.5, 1);
+        // this.updateVertices();
+    }
+    setOrigin(originX, originY = originX) {
+        this._origin.set(originX, originY);
+        return this;
+    }
+    updateCache() {
+        const { _rotation, _skew, _scale } = this;
+        this._a = Math.cos(_rotation + _skew.y) * _scale.x;
+        this._b = Math.sin(_rotation + _skew.y) * _scale.x;
+        this._c = -Math.sin(_rotation - _skew.x) * _scale.y;
+        this._d = Math.cos(_rotation - _skew.x) * _scale.y;
+    }
+    setTexture(texture) {
+        this.texture = texture;
+        this._size.set(texture.width, texture.height);
+        // this.dirty = true;
+        // this.updateVertices();
+        return this;
+    }
+    step(dataTA, offset) {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        this.speedY += this.gravity;
+        if (this.x > this.bounds.right) {
+            this.speedX *= -1;
+            this.x = this.bounds.right;
+        }
+        else if (this.x < this.bounds.left) {
+            this.speedX *= -1;
+            this.x = this.bounds.left;
+        }
+        if (this.y > this.bounds.bottom) {
+            this.speedY *= -0.85;
+            this.y = this.bounds.bottom;
+            if (Math.random() > 0.5) {
+                this.speedY -= Math.random() * 6;
+            }
+        }
+        else if (this.y < this.bounds.top) {
+            this.speedY = 0;
+            this.y = this.bounds.top;
+        }
+        //  Transform.update:
+        this._tx = this.x;
+        this._ty = this.y;
+        //  Update Vertices:
+        const w = this._size.x;
+        const h = this._size.y;
+        const x0 = -(this._origin.x * w);
+        const x1 = x0 + w;
+        const y0 = -(this._origin.y * h);
+        const y1 = y0 + h;
+        const { _a, _b, _c, _d, _tx, _ty } = this;
+        //  Cache the calculations to avoid 8 getX/Y function calls:
+        const x0a = x0 * _a;
+        const x0b = x0 * _b;
+        const y0c = y0 * _c;
+        const y0d = y0 * _d;
+        const x1a = x1 * _a;
+        const x1b = x1 * _b;
+        const y1c = y1 * _c;
+        const y1d = y1 * _d;
+        this.topLeft.set(x0a + y0c + _tx, x0b + y0d + _ty);
+        this.topRight.set(x1a + y0c + _tx, x1b + y0d + _ty);
+        this.bottomLeft.set(x0a + y1c + _tx, x0b + y1d + _ty);
+        this.bottomRight.set(x1a + y1c + _tx, x1b + y1d + _ty);
+        //  Batch:
+        const textureIndex = this.texture.glIndex;
+        dataTA[offset + 0] = this.topLeft.x;
+        dataTA[offset + 1] = this.topLeft.y;
+        dataTA[offset + 2] = this.uv.topLeft.x;
+        dataTA[offset + 3] = this.uv.topLeft.y;
+        dataTA[offset + 4] = textureIndex;
+        dataTA[offset + 5] = this.bottomLeft.x;
+        dataTA[offset + 6] = this.bottomLeft.y;
+        dataTA[offset + 7] = this.uv.bottomLeft.x;
+        dataTA[offset + 8] = this.uv.bottomLeft.y;
+        dataTA[offset + 9] = textureIndex;
+        dataTA[offset + 10] = this.bottomRight.x;
+        dataTA[offset + 11] = this.bottomRight.y;
+        dataTA[offset + 12] = this.uv.bottomRight.x;
+        dataTA[offset + 13] = this.uv.bottomRight.y;
+        dataTA[offset + 14] = textureIndex;
+        dataTA[offset + 15] = this.topRight.x;
+        dataTA[offset + 16] = this.topRight.y;
+        dataTA[offset + 17] = this.uv.topRight.x;
+        dataTA[offset + 18] = this.uv.topRight.y;
+        dataTA[offset + 19] = textureIndex;
+    }
+    stepNoTexture(dataTA, offset) {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        this.speedY += this.gravity;
+        if (this.x > this.bounds.right) {
+            this.speedX *= -1;
+            this.x = this.bounds.right;
+        }
+        else if (this.x < this.bounds.left) {
+            this.speedX *= -1;
+            this.x = this.bounds.left;
+        }
+        if (this.y > this.bounds.bottom) {
+            this.speedY *= -0.85;
+            this.y = this.bounds.bottom;
+            if (Math.random() > 0.5) {
+                this.speedY -= Math.random() * 6;
+            }
+        }
+        else if (this.y < this.bounds.top) {
+            this.speedY = 0;
+            this.y = this.bounds.top;
+        }
+        //  Transform.update:
+        this._tx = this.x;
+        this._ty = this.y;
+        //  Update Vertices:
+        const w = this._size.x;
+        const h = this._size.y;
+        const x0 = -(this._origin.x * w);
+        const x1 = x0 + w;
+        const y0 = -(this._origin.y * h);
+        const y1 = y0 + h;
+        const { _a, _b, _c, _d, _tx, _ty } = this;
+        //  Cache the calculations to avoid 8 getX/Y function calls:
+        const x0a = x0 * _a;
+        const x0b = x0 * _b;
+        const y0c = y0 * _c;
+        const y0d = y0 * _d;
+        const x1a = x1 * _a;
+        const x1b = x1 * _b;
+        const y1c = y1 * _c;
+        const y1d = y1 * _d;
+        this.topLeft.set(x0a + y0c + _tx, x0b + y0d + _ty);
+        this.topRight.set(x1a + y0c + _tx, x1b + y0d + _ty);
+        this.bottomLeft.set(x0a + y1c + _tx, x0b + y1d + _ty);
+        this.bottomRight.set(x1a + y1c + _tx, x1b + y1d + _ty);
+        //  Batch:
+        dataTA[offset + 0] = this.topLeft.x;
+        dataTA[offset + 1] = this.topLeft.y;
+        dataTA[offset + 2] = this.uv.topLeft.x;
+        dataTA[offset + 3] = this.uv.topLeft.y;
+        dataTA[offset + 4] = this.bottomLeft.x;
+        dataTA[offset + 5] = this.bottomLeft.y;
+        dataTA[offset + 6] = this.uv.bottomLeft.x;
+        dataTA[offset + 7] = this.uv.bottomLeft.y;
+        dataTA[offset + 8] = this.bottomRight.x;
+        dataTA[offset + 9] = this.bottomRight.y;
+        dataTA[offset + 10] = this.uv.bottomRight.x;
+        dataTA[offset + 11] = this.uv.bottomRight.y;
+        dataTA[offset + 12] = this.topRight.x;
+        dataTA[offset + 13] = this.topRight.y;
+        dataTA[offset + 14] = this.uv.topRight.x;
+        dataTA[offset + 15] = this.uv.topRight.y;
+    }
+    set x(value) {
+        this._position.x = value;
+    }
+    get x() {
+        return this._position.x;
+    }
+    set y(value) {
+        this._position.y = value;
+    }
+    get y() {
+        return this._position.y;
+    }
 }
 
-class Transform {
-  constructor() {
-    var x = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
-    var y = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-    var rotation = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-    var scaleX = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 1;
-    var scaleY = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 1;
-    this.local = new Matrix2D();
-    this.world = new Matrix2D();
-    this._position = new Vec2(x, y);
-    this._scale = new Vec2(scaleX, scaleY);
-    this._skew = new Vec2(0, 0);
-    this._origin = new Vec2(0, 0);
-    this._rotation = rotation;
-    this.dirty = true;
-  }
-
-  update() {
-    if (!this.dirty) {
-      return false;
-    }
-
-    var {
-      _a,
-      _b,
-      _c,
-      _d,
-      _position
-    } = this;
-    this.local.set(_a, _b, _c, _d, _position.x, _position.y);
-    this.dirty = false;
-    return true;
-  }
-
-  setPosition(x, y) {
-    this._position.set(x, y);
-
-    this.dirty = true;
-    return this;
-  }
-
-  setScale(scaleX) {
-    var scaleY = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : scaleX;
-
-    this._scale.set(scaleX, scaleY);
-
-    this.dirty = true;
-    this.updateCache();
-    return this;
-  }
-
-  setSkew(skewX, skewY) {
-    this._skew.set(skewX, skewY);
-
-    this.dirty = true;
-    this.updateCache();
-    return this;
-  }
-
-  setOrigin(originX) {
-    var originY = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : originX;
-
-    this._origin.set(originX, originY);
-
-    this.dirty = true;
-    return this;
-  }
-
-  setRotation(rotation) {
-    this.rotation = rotation;
-    return this;
-  }
-
-  updateCache() {
-    var {
-      _rotation,
-      _skew,
-      _scale
-    } = this;
-    this._a = Math.cos(_rotation + _skew.y) * _scale.x;
-    this._b = Math.sin(_rotation + _skew.y) * _scale.x;
-    this._c = -Math.sin(_rotation - _skew.x) * _scale.y;
-    this._d = Math.cos(_rotation - _skew.x) * _scale.y;
-  }
-
-  set x(value) {
-    this._position.x = value;
-    this.dirty = true;
-  }
-
-  get x() {
-    return this._position.x;
-  }
-
-  set y(value) {
-    this._position.y = value;
-    this.dirty = true;
-  }
-
-  get y() {
-    return this._position.y;
-  }
-
-  set rotation(value) {
-    this._rotation = value;
-    this.dirty = true;
-    this.updateCache();
-  }
-
-  get rotation() {
-    return this._rotation;
-  }
-
-  set scaleX(value) {
-    this._scale.x = value;
-    this.dirty = true;
-    this.updateCache();
-  }
-
-  get scaleX() {
-    return this._scale.x;
-  }
-
-  set scaleY(value) {
-    this._scale.y = value;
-    this.dirty = true;
-    this.updateCache();
-  }
-
-  get scaleY() {
-    return this._scale.y;
-  }
-
-  set originX(value) {
-    this._origin.x = value;
-    this.dirty = true;
-  }
-
-  get originX() {
-    return this._origin.x;
-  }
-
-  set originY(value) {
-    this._origin.y = value;
-    this.dirty = true;
-  }
-
-  get originY() {
-    return this._origin.y;
-  }
-
-  set skewX(value) {
-    this._skew.x = value;
-    this.dirty = true;
-    this.updateCache();
-  }
-
-  get skewX() {
-    return this._skew.x;
-  }
-
-  set skewY(value) {
-    this._skew.y = value;
-    this.dirty = true;
-    this.updateCache();
-  }
-
-  get skewY() {
-    return this._skew.y;
-  }
-
-}
-
-class Sprite extends Transform {
-  constructor(x, y, width, height) {
-    var r = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 1;
-    var g = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 1;
-    var b = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 1;
-    var a = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : 1;
-    super(x, y);
-
-    _defineProperty(this, "topLeft", void 0);
-
-    _defineProperty(this, "topRight", void 0);
-
-    _defineProperty(this, "bottomLeft", void 0);
-
-    _defineProperty(this, "bottomRight", void 0);
-
-    _defineProperty(this, "rgba", void 0);
-
-    _defineProperty(this, "visible", true);
-
-    _defineProperty(this, "texture", null);
-
-    _defineProperty(this, "uv", {
-      topLeft: {
-        x: 0,
-        y: 0
-      },
-      topRight: {
-        x: 1,
-        y: 0
-      },
-      bottomLeft: {
-        x: 0,
-        y: 1
-      },
-      bottomRight: {
-        x: 1,
-        y: 1
-      }
-    });
-
-    _defineProperty(this, "bounds", null);
-
-    _defineProperty(this, "_size", void 0);
-
-    _defineProperty(this, "gravity", 0.75);
-
-    _defineProperty(this, "speedX", Math.random() * 10);
-
-    _defineProperty(this, "speedY", Math.random() * 10 - 5);
-
-    this._size = new Vec2(width, height);
-    this.topLeft = new Vec2();
-    this.topRight = new Vec2();
-    this.bottomLeft = new Vec2();
-    this.bottomRight = new Vec2();
-    this.rgba = {
-      r,
-      g,
-      b,
-      a
-    };
-    this.setOrigin(0.5, 1);
-    this.updateVertices();
-  }
-
-  setTexture(texture) {
-    this.texture = texture;
-
-    this._size.set(texture.width, texture.height);
-
-    this.dirty = true;
-    this.updateVertices();
-    return this;
-  }
-
-  step() {
-    this.x += this.speedX;
-    this.y += this.speedY;
-    this.speedY += this.gravity;
-
-    if (this.x > this.bounds.right) {
-      this.speedX *= -1;
-      this.x = this.bounds.right;
-    } else if (this.x < this.bounds.left) {
-      this.speedX *= -1;
-      this.x = this.bounds.left;
-    }
-
-    if (this.y > this.bounds.bottom) {
-      this.speedY *= -0.85;
-      this.y = this.bounds.bottom;
-
-      if (Math.random() > 0.5) {
-        this.speedY -= Math.random() * 6;
-      }
-    } else if (this.y < this.bounds.top) {
-      this.speedY = 0;
-      this.y = this.bounds.top;
-    }
-
-    this.updateVertices();
-  }
-
-  updateVertices() {
-    if (!this.dirty) {
-      return false;
-    }
-
-    this.update();
-    var w = this._size.x;
-    var h = this._size.y;
-    var x0 = -(this._origin.x * w);
-    var x1 = x0 + w;
-    var y0 = -(this._origin.y * h);
-    var y1 = y0 + h;
-    var {
-      a,
-      b,
-      c,
-      d,
-      tx,
-      ty
-    } = this.local;
-    var x0a = x0 * a;
-    var x0b = x0 * b;
-    var y0c = y0 * c;
-    var y0d = y0 * d;
-    var x1a = x1 * a;
-    var x1b = x1 * b;
-    var y1c = y1 * c;
-    var y1d = y1 * d;
-    this.topLeft.set(x0a + y0c + tx, x0b + y0d + ty);
-    this.topRight.set(x1a + y0c + tx, x1b + y0d + ty);
-    this.bottomLeft.set(x0a + y1c + tx, x0b + y1d + ty);
-    this.bottomRight.set(x1a + y1c + tx, x1b + y1d + ty);
-    return true;
-  }
-
-  batch(dataTA, offset) {
-    dataTA[offset + 0] = this.topLeft.x;
-    dataTA[offset + 1] = this.topLeft.y;
-    dataTA[offset + 2] = this.rgba.r;
-    dataTA[offset + 3] = this.rgba.g;
-    dataTA[offset + 4] = this.rgba.b;
-    dataTA[offset + 5] = this.rgba.a;
-    dataTA[offset + 6] = this.uv.topLeft.x;
-    dataTA[offset + 7] = this.uv.topLeft.y;
-    dataTA[offset + 8] = this.bottomLeft.x;
-    dataTA[offset + 9] = this.bottomLeft.y;
-    dataTA[offset + 10] = this.rgba.r;
-    dataTA[offset + 11] = this.rgba.g;
-    dataTA[offset + 12] = this.rgba.b;
-    dataTA[offset + 13] = this.rgba.a;
-    dataTA[offset + 14] = this.uv.bottomLeft.x;
-    dataTA[offset + 15] = this.uv.bottomLeft.y;
-    dataTA[offset + 16] = this.bottomRight.x;
-    dataTA[offset + 17] = this.bottomRight.y;
-    dataTA[offset + 18] = this.rgba.r;
-    dataTA[offset + 19] = this.rgba.g;
-    dataTA[offset + 20] = this.rgba.b;
-    dataTA[offset + 21] = this.rgba.a;
-    dataTA[offset + 22] = this.uv.bottomRight.x;
-    dataTA[offset + 23] = this.uv.bottomRight.y;
-    dataTA[offset + 24] = this.topRight.x;
-    dataTA[offset + 25] = this.topRight.y;
-    dataTA[offset + 26] = this.rgba.r;
-    dataTA[offset + 27] = this.rgba.g;
-    dataTA[offset + 28] = this.rgba.b;
-    dataTA[offset + 29] = this.rgba.a;
-    dataTA[offset + 30] = this.uv.topRight.x;
-    dataTA[offset + 31] = this.uv.topRight.y;
-  }
-
-  batchMultiTexture(dataTA, offset) {
-    var textureIndex = this.texture.glIndex;
-    var {
-      r,
-      g,
-      b,
-      a
-    } = this.rgba;
-    dataTA[offset + 0] = this.topLeft.x;
-    dataTA[offset + 1] = this.topLeft.y;
-    dataTA[offset + 2] = r;
-    dataTA[offset + 3] = g;
-    dataTA[offset + 4] = b;
-    dataTA[offset + 5] = a;
-    dataTA[offset + 6] = this.uv.topLeft.x;
-    dataTA[offset + 7] = this.uv.topLeft.y;
-    dataTA[offset + 8] = textureIndex;
-    dataTA[offset + 9] = this.bottomLeft.x;
-    dataTA[offset + 10] = this.bottomLeft.y;
-    dataTA[offset + 11] = r;
-    dataTA[offset + 12] = g;
-    dataTA[offset + 13] = b;
-    dataTA[offset + 14] = a;
-    dataTA[offset + 15] = this.uv.bottomLeft.x;
-    dataTA[offset + 16] = this.uv.bottomLeft.y;
-    dataTA[offset + 17] = textureIndex;
-    dataTA[offset + 18] = this.bottomRight.x;
-    dataTA[offset + 19] = this.bottomRight.y;
-    dataTA[offset + 20] = r;
-    dataTA[offset + 21] = g;
-    dataTA[offset + 22] = b;
-    dataTA[offset + 23] = a;
-    dataTA[offset + 24] = this.uv.bottomRight.x;
-    dataTA[offset + 25] = this.uv.bottomRight.y;
-    dataTA[offset + 26] = textureIndex;
-    dataTA[offset + 27] = this.topRight.x;
-    dataTA[offset + 28] = this.topRight.y;
-    dataTA[offset + 29] = r;
-    dataTA[offset + 30] = g;
-    dataTA[offset + 31] = b;
-    dataTA[offset + 32] = a;
-    dataTA[offset + 33] = this.uv.topRight.x;
-    dataTA[offset + 34] = this.uv.topRight.y;
-    dataTA[offset + 35] = textureIndex;
-  }
-
-  batchMultiTextureNoColor(dataTA, offset) {
-    var textureIndex = this.texture.glIndex;
-    dataTA[offset + 0] = this.topLeft.x;
-    dataTA[offset + 1] = this.topLeft.y;
-    dataTA[offset + 2] = this.uv.topLeft.x;
-    dataTA[offset + 3] = this.uv.topLeft.y;
-    dataTA[offset + 4] = textureIndex;
-    dataTA[offset + 5] = this.bottomLeft.x;
-    dataTA[offset + 6] = this.bottomLeft.y;
-    dataTA[offset + 7] = this.uv.bottomLeft.x;
-    dataTA[offset + 8] = this.uv.bottomLeft.y;
-    dataTA[offset + 9] = textureIndex;
-    dataTA[offset + 10] = this.bottomRight.x;
-    dataTA[offset + 11] = this.bottomRight.y;
-    dataTA[offset + 12] = this.uv.bottomRight.x;
-    dataTA[offset + 13] = this.uv.bottomRight.y;
-    dataTA[offset + 14] = textureIndex;
-    dataTA[offset + 15] = this.topRight.x;
-    dataTA[offset + 16] = this.topRight.y;
-    dataTA[offset + 17] = this.uv.topRight.x;
-    dataTA[offset + 18] = this.uv.topRight.y;
-    dataTA[offset + 19] = textureIndex;
-  }
-
-}
-
+//  Base Texture
 class Texture {
-  constructor(key, gl) {
-    var glIndex = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-
-    _defineProperty(this, "key", void 0);
-
-    _defineProperty(this, "width", void 0);
-
-    _defineProperty(this, "height", void 0);
-
-    _defineProperty(this, "image", void 0);
-
-    _defineProperty(this, "gl", void 0);
-
-    _defineProperty(this, "glTexture", void 0);
-
-    _defineProperty(this, "glIndex", 0);
-
-    _defineProperty(this, "_onLoadCallback", void 0);
-
-    this.key = key;
-    this.gl = gl;
-    this.glIndex = glIndex;
-  }
-
-  onLoad() {
-    var gl = this.gl;
-    this.glTexture = this.gl.createTexture();
-    gl.activeTexture(gl.TEXTURE0 + this.glIndex);
-    gl.bindTexture(gl.TEXTURE_2D, this.glTexture);
-    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.image);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    this.width = this.image.width;
-    this.height = this.image.height;
-    this.image.onload = null;
-
-    if (this._onLoadCallback) {
-      this._onLoadCallback(this);
+    constructor(key, gl, glIndex = 0) {
+        this.glIndex = 0;
+        this.key = key;
+        this.gl = gl;
+        this.glIndex = glIndex;
     }
-  }
-
-  load(url, callback) {
-    this.image = new Image();
-
-    this.image.onload = () => this.onLoad();
-
-    this.image.src = url;
-
-    if (callback) {
-      this._onLoadCallback = callback;
+    onLoad() {
+        // console.log(this.key, 'loaded');
+        const gl = this.gl;
+        this.glTexture = this.gl.createTexture();
+        gl.activeTexture(gl.TEXTURE0 + this.glIndex);
+        gl.bindTexture(gl.TEXTURE_2D, this.glTexture);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.image);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        this.width = this.image.width;
+        this.height = this.image.height;
+        //  POT only
+        // gl.generateMipmap(gl.TEXTURE_2D);
+        this.image.onload = null;
+        if (this._onLoadCallback) {
+            this._onLoadCallback(this);
+        }
     }
-
-    if (this.image.complete && this.image.width && this.image.height) {
-      this.onLoad();
+    load(url, callback) {
+        // console.log(this.key, 'loading');
+        this.image = new Image();
+        this.image.onload = () => this.onLoad();
+        this.image.src = url;
+        if (callback) {
+            this._onLoadCallback = callback;
+        }
+        // Image is immediately-available / cached
+        if (this.image.complete && this.image.width && this.image.height) {
+            this.onLoad();
+        }
     }
-  }
-
 }
 
 var MultiTexturedQuadShader = {
-  fragmentShader: "\nprecision mediump float;\n\nvarying vec2 vTextureCoord;\nvarying float vTextureId;\n\nuniform sampler2D uTexture[%count%];\n\nvoid main (void)\n{\n    vec4 color;\n\n    %forloop%\n\n    gl_FragColor = color;\n}",
-  vertexShader: "\nattribute vec2 aVertexPosition;\nattribute vec2 aTextureCoord;\nattribute float aTextureId;\n\nuniform mat4 uProjectionMatrix;\n\nvarying vec2 vTextureCoord;\nvarying float vTextureId;\n\nvoid main (void)\n{\n    vTextureCoord = aTextureCoord;\n    vTextureId = aTextureId;\n\n    gl_Position = uProjectionMatrix * vec4(aVertexPosition, 0.0, 1.0);\n}"
+    fragmentShader: `
+precision mediump float;
+
+varying vec2 vTextureCoord;
+varying float vTextureId;
+
+uniform sampler2D uTexture[%count%];
+
+void main (void)
+{
+    vec4 color;
+
+    %forloop%
+
+    gl_FragColor = color;
+}`,
+    vertexShader: `
+attribute vec2 aVertexPosition;
+attribute vec2 aTextureCoord;
+attribute float aTextureId;
+
+uniform mat4 uProjectionMatrix;
+
+varying vec2 vTextureCoord;
+varying float vTextureId;
+
+void main (void)
+{
+    vTextureCoord = aTextureCoord;
+    vTextureId = aTextureId;
+
+    gl_Position = uProjectionMatrix * vec4(aVertexPosition, 0.0, 1.0);
+}`
 };
 
 class Matrix4 {
-  constructor() {
-    var m00 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
-    var m01 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-    var m02 = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-    var m03 = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
-    var m10 = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0;
-    var m11 = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 1;
-    var m12 = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 0;
-    var m13 = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : 0;
-    var m20 = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : 0;
-    var m21 = arguments.length > 9 && arguments[9] !== undefined ? arguments[9] : 0;
-    var m22 = arguments.length > 10 && arguments[10] !== undefined ? arguments[10] : 1;
-    var m23 = arguments.length > 11 && arguments[11] !== undefined ? arguments[11] : 0;
-    var m30 = arguments.length > 12 && arguments[12] !== undefined ? arguments[12] : 0;
-    var m31 = arguments.length > 13 && arguments[13] !== undefined ? arguments[13] : 0;
-    var m32 = arguments.length > 14 && arguments[14] !== undefined ? arguments[14] : 0;
-    var m33 = arguments.length > 15 && arguments[15] !== undefined ? arguments[15] : 1;
-    this.set(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33);
-  }
-
-  set() {
-    var m00 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
-    var m01 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-    var m02 = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-    var m03 = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
-    var m10 = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0;
-    var m11 = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 1;
-    var m12 = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 0;
-    var m13 = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : 0;
-    var m20 = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : 0;
-    var m21 = arguments.length > 9 && arguments[9] !== undefined ? arguments[9] : 0;
-    var m22 = arguments.length > 10 && arguments[10] !== undefined ? arguments[10] : 1;
-    var m23 = arguments.length > 11 && arguments[11] !== undefined ? arguments[11] : 0;
-    var m30 = arguments.length > 12 && arguments[12] !== undefined ? arguments[12] : 0;
-    var m31 = arguments.length > 13 && arguments[13] !== undefined ? arguments[13] : 0;
-    var m32 = arguments.length > 14 && arguments[14] !== undefined ? arguments[14] : 0;
-    var m33 = arguments.length > 15 && arguments[15] !== undefined ? arguments[15] : 1;
-    this.m00 = m00;
-    this.m01 = m01;
-    this.m02 = m02;
-    this.m03 = m03;
-    this.m10 = m10;
-    this.m11 = m11;
-    this.m12 = m12;
-    this.m13 = m13;
-    this.m20 = m20;
-    this.m21 = m21;
-    this.m22 = m22;
-    this.m23 = m23;
-    this.m30 = m30;
-    this.m31 = m31;
-    this.m32 = m32;
-    this.m33 = m33;
-    return this;
-  }
-
-  zero() {
-    return this.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-  }
-
-  identity() {
-    return this.set();
-  }
-
-  getArray() {
-    return [this.m00, this.m01, this.m02, this.m03, this.m10, this.m11, this.m12, this.m13, this.m20, this.m21, this.m22, this.m23, this.m30, this.m31, this.m32, this.m33];
-  }
-
-  fromArray(src) {
-    return this.set(src[0], src[1], src[2], src[3], src[4], src[5], src[6], src[7], src[8], src[9], src[10], src[11], src[12], src[13], src[14], src[15]);
-  }
-
-  [Symbol.iterator]() {
-    var data = this.getArray();
-    return data[Symbol.iterator]();
-  }
-
+    /**
+     * Creates an instance of a Matrix4.
+     *
+     * Format: column-major, when typed out it looks like row-major.
+     *
+     * @param {number} [m00=1] - Component in column 0, row 0 position (index 0)
+     * @param {number} [m01=0] - Component in column 0, row 1 position (index 1)
+     * @param {number} [m02=0] - Component in column 0, row 2 position (index 2)
+     * @param {number} [m03=0] - Component in column 0, row 3 position (index 3)
+     * @param {number} [m10=0] - Component in column 1, row 0 position (index 4)
+     * @param {number} [m11=1] - Component in column 1, row 1 position (index 5)
+     * @param {number} [m12=0] - Component in column 1, row 2 position (index 6)
+     * @param {number} [m13=0] - Component in column 1, row 3 position (index 7)
+     * @param {number} [m20=0] - Component in column 2, row 0 position (index 8)
+     * @param {number} [m21=0] - Component in column 2, row 1 position (index 9)
+     * @param {number} [m22=1] - Component in column 2, row 2 position (index 10)
+     * @param {number} [m23=0] - Component in column 2, row 3 position (index 11)
+     * @param {number} [m30=0] - Component in column 3, row 0 position (index 12)
+     * @param {number} [m31=0] - Component in column 3, row 1 position (index 13)
+     * @param {number} [m32=0] - Component in column 3, row 2 position (index 14)
+     * @param {number} [m33=1] - Component in column 3, row 3 position (index 15)
+     * @memberof Matrix4
+     */
+    constructor(m00 = 1, m01 = 0, m02 = 0, m03 = 0, m10 = 0, m11 = 1, m12 = 0, m13 = 0, m20 = 0, m21 = 0, m22 = 1, m23 = 0, m30 = 0, m31 = 0, m32 = 0, m33 = 1) {
+        this.set(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33);
+    }
+    /**
+     * Sets the components of this Matrix4.
+     *
+     * If no parameters are given it resets this Matrix4 to an identity matrix.
+     *
+     * @param {number} [m00=1] - Component in column 0, row 0 position (index 0)
+     * @param {number} [m01=0] - Component in column 0, row 1 position (index 1)
+     * @param {number} [m02=0] - Component in column 0, row 2 position (index 2)
+     * @param {number} [m03=0] - Component in column 0, row 3 position (index 3)
+     * @param {number} [m10=0] - Component in column 1, row 0 position (index 4)
+     * @param {number} [m11=1] - Component in column 1, row 1 position (index 5)
+     * @param {number} [m12=0] - Component in column 1, row 2 position (index 6)
+     * @param {number} [m13=0] - Component in column 1, row 3 position (index 7)
+     * @param {number} [m20=0] - Component in column 2, row 0 position (index 8)
+     * @param {number} [m21=0] - Component in column 2, row 1 position (index 9)
+     * @param {number} [m22=1] - Component in column 2, row 2 position (index 10)
+     * @param {number} [m23=0] - Component in column 2, row 3 position (index 11)
+     * @param {number} [m30=0] - Component in column 3, row 0 position (index 12)
+     * @param {number} [m31=0] - Component in column 3, row 1 position (index 13)
+     * @param {number} [m32=0] - Component in column 3, row 2 position (index 14)
+     * @param {number} [m33=1] - Component in column 3, row 3 position (index 15)
+     * @returns {Matrix4}
+     * @memberof Matrix4
+     */
+    set(m00 = 1, m01 = 0, m02 = 0, m03 = 0, m10 = 0, m11 = 1, m12 = 0, m13 = 0, m20 = 0, m21 = 0, m22 = 1, m23 = 0, m30 = 0, m31 = 0, m32 = 0, m33 = 1) {
+        this.m00 = m00;
+        this.m01 = m01;
+        this.m02 = m02;
+        this.m03 = m03;
+        this.m10 = m10;
+        this.m11 = m11;
+        this.m12 = m12;
+        this.m13 = m13;
+        this.m20 = m20;
+        this.m21 = m21;
+        this.m22 = m22;
+        this.m23 = m23;
+        this.m30 = m30;
+        this.m31 = m31;
+        this.m32 = m32;
+        this.m33 = m33;
+        return this;
+    }
+    /**
+     * Sets all components of this Matrix4 to zero.
+     *
+     * @returns {Matrix4}
+     * @memberof Matrix4
+     */
+    zero() {
+        return this.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    }
+    /**
+     * Resets this Matrix4 to an identity matrix.
+     *
+     * @returns {Matrix4}
+     * @memberof Matrix4
+     */
+    identity() {
+        return this.set();
+    }
+    /**
+     * Returns a new array containg the Matrix4 component values in column-major format.
+     *
+     * @returns {number[]}
+     * @memberof Matrix4
+     */
+    getArray() {
+        return [this.m00, this.m01, this.m02, this.m03, this.m10, this.m11, this.m12, this.m13, this.m20, this.m21, this.m22, this.m23, this.m30, this.m31, this.m32, this.m33];
+    }
+    /**
+     * Sets the values of this Matrix4 based on the given array, or array-like object, such as a Float32.
+     *
+     * The source must have 16 elements, starting from index 0 through to index 15.
+     *
+     * @param {number[]} src - The source array to copy the values from.
+     * @returns {Matrix4}
+     * @memberof Matrix4
+     */
+    fromArray(src) {
+        return this.set(src[0], src[1], src[2], src[3], src[4], src[5], src[6], src[7], src[8], src[9], src[10], src[11], src[12], src[13], src[14], src[15]);
+    }
+    [Symbol.iterator]() {
+        const data = this.getArray();
+        return data[Symbol.iterator]();
+    }
 }
+//# sourceMappingURL=Matrix4.js.map
 
 function Ortho(left, right, bottom, top, near, far) {
-  var lr = 1 / (left - right);
-  var bt = 1 / (bottom - top);
-  var nf = 1 / (near - far);
-  var m00 = -2 * lr;
-  var m11 = -2 * bt;
-  var m22 = 2 * nf;
-  var m30 = (left + right) * lr;
-  var m31 = (top + bottom) * bt;
-  var m32 = (far + near) * nf;
-  return new Matrix4(m00, 0, 0, 0, 0, m11, 0, 0, 0, 0, m22, 0, m30, m31, m32, 1);
+    const lr = 1 / (left - right);
+    const bt = 1 / (bottom - top);
+    const nf = 1 / (near - far);
+    const m00 = -2 * lr;
+    const m11 = -2 * bt;
+    const m22 = 2 * nf;
+    const m30 = (left + right) * lr;
+    const m31 = (top + bottom) * bt;
+    const m32 = (far + near) * nf;
+    return new Matrix4(m00, 0, 0, 0, 0, m11, 0, 0, 0, 0, m22, 0, m30, m31, m32, 1);
 }
+//# sourceMappingURL=Ortho.js.map
 
-var fragTemplate = ['precision mediump float;', 'void main(void){', 'float test = 0.1;', '%forloop%', 'gl_FragColor = vec4(0.0);', '}'].join('\n');
-
+//  Multi-Texture Assigned at run-time, not hard coded into render
+const fragTemplate = [
+    'precision mediump float;',
+    'void main(void){',
+    'float test = 0.1;',
+    '%forloop%',
+    'gl_FragColor = vec4(0.0);',
+    '}',
+].join('\n');
+//  From Pixi v5:
 function checkMaxIfStatementsInShader(maxIfs, gl) {
-  var shader = gl.createShader(gl.FRAGMENT_SHADER);
-
-  while (true) {
-    var fragmentSrc = fragTemplate.replace(/%forloop%/gi, generateIfTestSrc(maxIfs));
-    gl.shaderSource(shader, fragmentSrc);
-    gl.compileShader(shader);
-
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      maxIfs = maxIfs / 2 | 0;
-    } else {
-      break;
+    const shader = gl.createShader(gl.FRAGMENT_SHADER);
+    while (true) {
+        const fragmentSrc = fragTemplate.replace(/%forloop%/gi, generateIfTestSrc(maxIfs));
+        gl.shaderSource(shader, fragmentSrc);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            maxIfs = (maxIfs / 2) | 0;
+        }
+        else {
+            // valid!
+            break;
+        }
     }
-  }
-
-  return maxIfs;
+    return maxIfs;
 }
-
 function generateIfTestSrc(maxIfs) {
-  var src = '';
-
-  for (var i = 0; i < maxIfs; ++i) {
-    if (i > 0) {
-      src += '\nelse ';
+    let src = '';
+    for (let i = 0; i < maxIfs; ++i) {
+        if (i > 0) {
+            src += '\nelse ';
+        }
+        if (i < maxIfs - 1) {
+            src += `if(test == ${i}.0){}`;
+        }
     }
-
-    if (i < maxIfs - 1) {
-      src += "if(test == ".concat(i, ".0){}");
-    }
-  }
-
-  return src;
+    return src;
 }
-
 function generateSampleSrc(maxTextures) {
-  var src = '';
-
-  for (var i = 0; i < maxTextures; i++) {
-    if (i > 0) {
-      src += '\n    else ';
+    let src = '';
+    for (let i = 0; i < maxTextures; i++) {
+        if (i > 0) {
+            src += '\n    else ';
+        }
+        if (i < maxTextures - 1) {
+            src += `if (vTextureId < ${i}.5)`;
+        }
+        src += '\n    {';
+        src += `\n        color = texture2D(uTexture[${i}], vTextureCoord);`;
+        src += '\n    }';
     }
-
-    if (i < maxTextures - 1) {
-      src += "if (vTextureId < ".concat(i, ".5)");
-    }
-
-    src += '\n    {';
-    src += "\n        color = texture2D(uTexture[".concat(i, "], vTextureCoord);");
-    src += '\n    }';
-  }
-
-  return src;
+    return src;
 }
-
-function bunnymarkNoColor () {
-  var resolution = {
-    x: 800,
-    y: 600
-  };
-  var bounds = {
-    left: 0,
-    top: 0,
-    right: resolution.x,
-    bottom: resolution.y
-  };
-  var canvas = document.getElementById('game');
-  canvas.width = resolution.x;
-  canvas.height = resolution.y;
-  var contextOptions = {
-    alpha: false,
-    antialias: true,
-    premultipliedAlpha: false,
-    stencil: false,
-    preserveDrawingBuffer: false
-  };
-  var gl = canvas.getContext('webgl', contextOptions);
-  var maxTextures = checkMaxIfStatementsInShader(gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS), gl);
-  console.log('maxTextures', maxTextures, 'out of', gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS));
-
-  for (var i = 0; i < maxTextures; i++) {
-    var tempTexture = gl.createTexture();
-    gl.activeTexture(gl.TEXTURE0 + i);
-    gl.bindTexture(gl.TEXTURE_2D, tempTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 255, 255]));
-  }
-
-  var uTextureLocationIndex = Array.from(Array(maxTextures).keys());
-  var fragmentShaderSource = MultiTexturedQuadShader.fragmentShader;
-  fragmentShaderSource = fragmentShaderSource.replace(/%count%/gi, "".concat(maxTextures));
-  fragmentShaderSource = fragmentShaderSource.replace(/%forloop%/gi, generateSampleSrc(maxTextures));
-  var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-  gl.shaderSource(fragmentShader, fragmentShaderSource);
-  gl.compileShader(fragmentShader);
-  var vertexShader = gl.createShader(gl.VERTEX_SHADER);
-  gl.shaderSource(vertexShader, MultiTexturedQuadShader.vertexShader);
-  gl.compileShader(vertexShader);
-  var program = gl.createProgram();
-  gl.attachShader(program, vertexShader);
-  gl.attachShader(program, fragmentShader);
-  gl.linkProgram(program);
-  gl.useProgram(program);
-  var vertexPositionAttrib = gl.getAttribLocation(program, 'aVertexPosition');
-  var vertexTextureCoord = gl.getAttribLocation(program, 'aTextureCoord');
-  var vertexTextureIndex = gl.getAttribLocation(program, 'aTextureId');
-  var uProjectionMatrix = gl.getUniformLocation(program, 'uProjectionMatrix');
-  var uTextureLocation = gl.getUniformLocation(program, 'uTexture');
-  gl.enableVertexAttribArray(vertexPositionAttrib);
-  gl.enableVertexAttribArray(vertexTextureCoord);
-  gl.enableVertexAttribArray(vertexTextureIndex);
-  var count = 0;
-  var maxCount = 200000;
-  var amount = 200;
-  var isAdding = false;
-  var startBunnyCount = 2000;
-  var maxSpritesPerBatch = 2000;
-  var size = 4;
-  var singleVertexSize = 20;
-  var singleSpriteSize = 20;
-  var singleSpriteByteSize = singleVertexSize * size;
-  var singleIndexByteSize = 4;
-  var singleSpriteIndexSize = 6;
-  var bufferByteSize = maxSpritesPerBatch * singleSpriteByteSize;
-  var dataTA = new Float32Array(bufferByteSize);
-  var ibo = [];
-
-  for (var _i = 0; _i < maxSpritesPerBatch * singleIndexByteSize; _i += singleIndexByteSize) {
-    ibo.push(_i + 0, _i + 1, _i + 2, _i + 2, _i + 3, _i + 0);
-  }
-
-  var vertexBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.DYNAMIC_DRAW);
-  gl.bindBuffer(gl.ARRAY_BUFFER, null);
-  var indexBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(ibo), gl.STATIC_DRAW);
-  gl.bindBuffer(gl.ARRAY_BUFFER, null);
-  var projectionMatrix = Ortho(0, resolution.x, resolution.y, 0, -1000, 1000);
-  var stride = 20;
-  var textures = [];
-
-  function loadTextures(urls) {
-    var texturesLeft = urls.length;
-
-    var onLoadCallback = () => {
-      texturesLeft--;
-
-      if (texturesLeft === 0) {
-        create();
-      }
+function bunnymarkNoColorMerged () {
+    const resolution = { x: 800, y: 600 };
+    const bounds = { left: 0, top: 0, right: resolution.x, bottom: resolution.y };
+    const canvas = document.getElementById('game');
+    canvas.width = resolution.x;
+    canvas.height = resolution.y;
+    const contextOptions = {
+        alpha: false,
+        antialias: true,
+        premultipliedAlpha: false,
+        stencil: false,
+        preserveDrawingBuffer: false
     };
-
-    urls.forEach((url, index) => {
-      var texture = new Texture(url, gl, textures.length);
-      texture.load('../assets/bunnies/' + url, onLoadCallback);
-      textures.push(texture);
-    });
-  }
-
-  loadTextures(['rabbitv3.png', 'rabbitv3_ash.png', 'rabbitv3_batman.png', 'rabbitv3_bb8.png', 'rabbitv3_frankenstein.png', 'rabbitv3_neo.png', 'rabbitv3_sonic.png', 'rabbitv3_spidey.png', 'rabbitv3_stormtrooper.png', 'rabbitv3_superman.png', 'rabbitv3_tron.png', 'rabbitv3_wolverine.png']);
-  var bunnies = [];
-
-  function addBunnies(num) {
-    for (var _i2 = 0; _i2 < num; _i2++) {
-      var texture = textures[count % textures.length];
-      var x = count % 2 * 800;
-      var bunny = new Sprite(x, 0, 25, 32);
-      bunny.bounds = bounds;
-      bunny.setTexture(texture);
-      bunnies.push(bunny);
-      count++;
+    const gl = canvas.getContext('webgl', contextOptions);
+    //  Multi-texture support
+    let maxTextures = checkMaxIfStatementsInShader(gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS), gl);
+    console.log('maxTextures', maxTextures, 'out of', gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS));
+    //  Create temp textures to stop WebGL errors on mac os
+    for (let i = 0; i < maxTextures; i++) {
+        let tempTexture = gl.createTexture();
+        gl.activeTexture(gl.TEXTURE0 + i);
+        gl.bindTexture(gl.TEXTURE_2D, tempTexture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 255, 255]));
     }
-  }
-
-  function create() {
-    {
-      addBunnies(startBunnyCount);
+    const uTextureLocationIndex = Array.from(Array(maxTextures).keys());
+    let fragmentShaderSource = MultiTexturedQuadShader.fragmentShader;
+    fragmentShaderSource = fragmentShaderSource.replace(/%count%/gi, `${maxTextures}`);
+    fragmentShaderSource = fragmentShaderSource.replace(/%forloop%/gi, generateSampleSrc(maxTextures));
+    // console.log(fragmentShaderSource);
+    //  Create the shaders
+    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fragmentShader, fragmentShaderSource);
+    gl.compileShader(fragmentShader);
+    const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertexShader, MultiTexturedQuadShader.vertexShader);
+    gl.compileShader(vertexShader);
+    const program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+    gl.useProgram(program);
+    const vertexPositionAttrib = gl.getAttribLocation(program, 'aVertexPosition');
+    const vertexTextureCoord = gl.getAttribLocation(program, 'aTextureCoord');
+    const vertexTextureIndex = gl.getAttribLocation(program, 'aTextureId');
+    const uProjectionMatrix = gl.getUniformLocation(program, 'uProjectionMatrix');
+    const uTextureLocation = gl.getUniformLocation(program, 'uTexture');
+    gl.enableVertexAttribArray(vertexPositionAttrib);
+    gl.enableVertexAttribArray(vertexTextureCoord);
+    gl.enableVertexAttribArray(vertexTextureIndex);
+    //  number of bunnies on the stage
+    let count = 0;
+    //  The maximum number of bunnies to render
+    let maxCount = 200000;
+    //  Number of bunnies to add each frame
+    let amount = 200;
+    //  Are we adding bunnies or not?
+    let isAdding = false;
+    //  Number of bunnies to start with
+    let startBunnyCount = 1000;
+    // const maxSpritesPerBatch = 2000;
+    const maxSpritesPerBatch = 10000;
+    //  The size in bytes per element in the dataArray
+    const size = 4;
+    //  Size in bytes of a single vertex
+    /**
+     * Each vertex contains:
+     *
+     *  position (x,y - 2 floats)
+     *  texture coord (x,y - 2 floats)
+     *  texture index (float)
+     */
+    const singleVertexSize = 20;
+    //  Size of a single sprite in array elements
+    //  Each vertex = 9 elements, so 9 * 4
+    const singleSpriteSize = 20;
+    //  Size in bytes of a single sprite
+    const singleSpriteByteSize = singleVertexSize * size;
+    //  Size in bytes of a single vertex indicies
+    const singleIndexByteSize = 4;
+    //  Size in bytes of a single vertex indicies
+    const singleSpriteIndexSize = 6;
+    //  The size of our ArrayBuffer
+    const bufferByteSize = maxSpritesPerBatch * singleSpriteByteSize;
+    //  Our ArrayBuffer + View
+    const dataTA = new Float32Array(bufferByteSize);
+    let ibo = [];
+    //  Seed the index buffer
+    for (let i = 0; i < (maxSpritesPerBatch * singleIndexByteSize); i += singleIndexByteSize) {
+        ibo.push(i + 0, i + 1, i + 2, i + 2, i + 3, i + 0);
     }
-
-    window.addEventListener('mousedown', () => {
-      isAdding = true;
-    });
-    window.addEventListener('mouseup', () => {
-      isAdding = false;
-    });
-
-    for (var _i3 = 0; _i3 < textures.length; _i3++) {
-      gl.activeTexture(gl.TEXTURE0 + _i3);
-      gl.bindTexture(gl.TEXTURE_2D, textures[_i3].glTexture);
-    }
-
-    render();
-  }
-
-  function flush(count) {
-    var offset = count * singleSpriteByteSize;
-
-    if (offset === bufferByteSize) {
-      gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.DYNAMIC_DRAW);
-    } else {
-      var view = dataTA.subarray(0, offset);
-      gl.bufferSubData(gl.ARRAY_BUFFER, 0, view);
-    }
-
-    gl.drawElements(gl.TRIANGLES, count * singleSpriteIndexSize, gl.UNSIGNED_SHORT, 0);
-  }
-
-  function render() {
-    if (isAdding && count < maxCount) {
-      addBunnies(amount);
-    }
-
-    gl.clearColor(0, 0, 0, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
-    gl.uniform1iv(uTextureLocation, uTextureLocationIndex);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    //  Our buffers
+    const vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.vertexAttribPointer(vertexPositionAttrib, 2, gl.FLOAT, false, stride, 0);
-    gl.vertexAttribPointer(vertexTextureCoord, 2, gl.FLOAT, false, stride, 8);
-    gl.vertexAttribPointer(vertexTextureIndex, 1, gl.FLOAT, false, stride, 8 + 8);
-    var size = 0;
-
-    for (var _i4 = 0; _i4 < bunnies.length; _i4++) {
-      var bunny = bunnies[_i4];
-      bunny.step();
-      bunny.batchMultiTextureNoColor(dataTA, size * singleSpriteSize);
-
-      if (size === maxSpritesPerBatch) {
-        flush(size);
-        size = 0;
-      } else {
-        size++;
-      }
+    gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.DYNAMIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    const indexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(ibo), gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    //  This matrix will convert from pixels to clip space - it only needs to be set when the canvas is sized
+    const projectionMatrix = Ortho(0, resolution.x, resolution.y, 0, -1000, 1000);
+    const stride = 20;
+    //  Textures ...
+    const textures = [];
+    function loadTextures(urls) {
+        let texturesLeft = urls.length;
+        const onLoadCallback = () => {
+            texturesLeft--;
+            if (texturesLeft === 0) {
+                create();
+            }
+        };
+        urls.forEach((url) => {
+            let texture = new Texture(url, gl, textures.length);
+            // texture.load('../assets/bunnies/half/' + url, onLoadCallback);
+            texture.load('../assets/bunnies/' + url, onLoadCallback);
+            textures.push(texture);
+        });
     }
-
-    if (size > 0) {
-      flush(size);
+    loadTextures([
+        'rabbitv3.png',
+        'rabbitv3_ash.png',
+        'rabbitv3_batman.png',
+        'rabbitv3_bb8.png',
+        'rabbitv3_frankenstein.png',
+        'rabbitv3_neo.png',
+        'rabbitv3_sonic.png',
+        'rabbitv3_spidey.png',
+        'rabbitv3_stormtrooper.png',
+        'rabbitv3_superman.png',
+        'rabbitv3_tron.png',
+        'rabbitv3_wolverine.png'
+    ]);
+    const bunnies = [];
+    function addBunnies(num) {
+        for (let i = 0; i < num; i++) {
+            let texture = textures[count % textures.length];
+            let x = (count % 2) * 800;
+            let bunny = new BunnyMergedTransform(x, 0, texture);
+            bunny.bounds = bounds;
+            bunnies.push(bunny);
+            count++;
+        }
     }
-
-    requestAnimationFrame(render);
-  }
+    let stats;
+    let counter;
+    let paused = false;
+    window['bunnies'] = bunnies;
+    console.log('max', maxSpritesPerBatch, 'size', bufferByteSize);
+    function create() {
+        {
+            addBunnies(startBunnyCount);
+        }
+        let parent = document.getElementById('gameParent');
+        stats = new window['Stats']();
+        stats.domElement.id = 'stats';
+        document.body.append(stats.domElement);
+        counter = document.createElement('div');
+        counter.innerText = count.toString();
+        parent.append(counter);
+        let toggle = document.getElementById('toggle');
+        toggle.addEventListener('click', () => {
+            paused = (paused) ? false : true;
+        });
+        let game = document.getElementById('game');
+        game.addEventListener('mousedown', () => {
+            isAdding = true;
+        });
+        game.addEventListener('mouseup', () => {
+            isAdding = false;
+        });
+        //  Prepare textures
+        for (let i = 0; i < textures.length; i++) {
+            gl.activeTexture(gl.TEXTURE0 + i);
+            gl.bindTexture(gl.TEXTURE_2D, textures[i].glTexture);
+        }
+        render();
+    }
+    function flush(count) {
+        const offset = count * singleSpriteByteSize;
+        if (offset === bufferByteSize) {
+            gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.DYNAMIC_DRAW);
+        }
+        else {
+            let view = dataTA.subarray(0, offset);
+            gl.bufferSubData(gl.ARRAY_BUFFER, 0, view);
+        }
+        gl.drawElements(gl.TRIANGLES, count * singleSpriteIndexSize, gl.UNSIGNED_SHORT, 0);
+    }
+    function render() {
+        if (paused) {
+            requestAnimationFrame(render);
+            return;
+        }
+        stats.begin();
+        if (isAdding && count < maxCount) {
+            addBunnies(amount);
+            counter.innerText = count.toString();
+        }
+        // const activeTextures = Array(maxTextures).fill(0);
+        gl.clearColor(0, 0, 0, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
+        gl.uniform1iv(uTextureLocation, uTextureLocationIndex);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+        /**
+         * Each vertex contains:
+         *
+         *  position (x,y - 2 floats)
+         *  texture coord (x,y - 2 floats)
+         *  texture index (float)
+         *
+         * 5 floats = 5 * 4 bytes = 20 bytes per vertex. This is our stride.
+         *
+         * The offset is how much data should be skipped at the start of each chunk.
+         *
+         * In our index, the color data is right after the position data.
+         * Position is 2 floats, so the offset for the coord is 2 * 4 bytes = 8 bytes.
+         * Texture Coord is 2 floats, so the offset for Texture Index is 2 * 4 bytes = 8 bytes, plus the 8 from position
+         */
+        gl.vertexAttribPointer(vertexPositionAttrib, 2, gl.FLOAT, false, stride, 0); // size = 8
+        gl.vertexAttribPointer(vertexTextureCoord, 2, gl.FLOAT, false, stride, 8); // size = 8
+        gl.vertexAttribPointer(vertexTextureIndex, 1, gl.FLOAT, false, stride, 8 + 8); // size = 4
+        let size = 0;
+        for (let i = 0; i < bunnies.length; i++) {
+            let bunny = bunnies[i];
+            //  The offset here is the offset into the array, NOT a byte size!
+            bunny.step(dataTA, size * singleSpriteSize);
+            //  if size = batch limit, flush here
+            if (size === maxSpritesPerBatch) {
+                flush(size);
+                size = 0;
+            }
+            else {
+                size++;
+            }
+        }
+        if (size > 0) {
+            flush(size);
+        }
+        requestAnimationFrame(render);
+        stats.end();
+    }
 }
 
-bunnymarkNoColor();
+bunnymarkNoColorMerged();
+// bunnymarkSingleTexture();
+//  Next steps:
+//  X Bunny mark (because, why not?)
+//  * Multi Textures keep index 0 free for exceeding max
+//  * Multi Textures round-robin, don't use glIndex
+//  X Multi Textures assigned at run-time up to max
+//  X Multi-texture support
+//  * Texture Frames (UV) support
+//  * Camera matrix, added to the shader (projection * camera * vertex pos), so we can move the camera around, rotate it, etc.
+//  X Sub-data buffer with batch flush, like current renderer handles it
+//  * Transform stack test (Quad with children, children of children, etc)
+//  * Instead of a Quad class, try a class that can have any number of vertices in it (ala Rope), or any vertex moved
+//  * Encode color as a single float, rather than a vec4
+//  X Add a basic display list, so the buffer is cleared each frame and populated via the list
+//  X Try adding all quads to a single huge buffer on creation (remove on destruction), then in the render loop
+//    copy chunks from this buffer to the gl buffer - depends how fast typed array copies are vs. pushing elements by index
 //# sourceMappingURL=test035.js.map

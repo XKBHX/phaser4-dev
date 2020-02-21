@@ -20,9 +20,11 @@ import part19 from './part19';
 import part20 from './part20';
 import bunnymark from './bunnymark';
 import bunnymarkNoColor from './bunnymark-nocolor';
+import bunnymarkNoColorMerged from './bunnymark-nocolor-merged';
+import bunnymarkSingleTexture from './bunnymark-single-texture';
 
-// bunnymark();
-bunnymarkNoColor();
+bunnymarkNoColorMerged();
+// bunnymarkSingleTexture();
 
 //  Next steps:
 

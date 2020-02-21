@@ -109,7 +109,7 @@ export default function ()
 
     console.log('maxTextures', maxTextures, 'out of', gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS));
 
-    //  Create temp textures to stop WebGL errors
+    //  Create temp textures to stop WebGL errors on mac os
     for (let i = 0; i < maxTextures; i++)
     {
         let tempTexture = gl.createTexture();
@@ -170,15 +170,14 @@ export default function ()
     //  Number of bunnies to add each frame
     let amount = 200;
 
+    //  Are we adding bunnies or not?
     let isAdding = false;
 
     //  Number of bunnies to start with
-    let startBunnyCount = 2000;
+    let startBunnyCount = 1000;
 
-
-
-
-    const maxSpritesPerBatch = 2000;
+    // const maxSpritesPerBatch = 2000;
+    const maxSpritesPerBatch = 10000;
 
     //  The size in bytes per element in the dataArray
     const size = 4;
@@ -256,10 +255,11 @@ export default function ()
 
         }
 
-        urls.forEach((url, index) => {
+        urls.forEach((url) => {
 
             let texture = new Texture(url, gl, textures.length);
 
+            // texture.load('../assets/bunnies/half/' + url, onLoadCallback);
             texture.load('../assets/bunnies/' + url, onLoadCallback);
 
             textures.push(texture);
@@ -291,11 +291,9 @@ export default function ()
             let texture = textures[count % textures.length];
             let x = (count % 2) * 800;
 
-            let bunny = new Bunny(x, 0, 25, 32);
+            let bunny = new Bunny(x, 0, texture);
 
             bunny.bounds = bounds;
-
-            bunny.setTexture(texture);
 
             bunnies.push(bunny);
 
@@ -306,6 +304,12 @@ export default function ()
     let stats;
     let counter: HTMLSpanElement;
 
+    let paused: boolean = false;
+
+    window['bunnies'] = bunnies;
+
+    console.log('max', maxSpritesPerBatch, 'size', bufferByteSize);
+
     function create ()
     {
         if (startBunnyCount > 0)
@@ -313,19 +317,31 @@ export default function ()
             addBunnies(startBunnyCount);
         }
 
-        // stats = new window['Stats']();
-        // stats.domElement.id = 'stats';
-        // document.body.append(stats.domElement);
+        let parent = document.getElementById('gameParent');
 
-        counter = document.createElement('span');
+        stats = new window['Stats']();
+        stats.domElement.id = 'stats';
+        document.body.append(stats.domElement);
+
+        counter = document.createElement('div');
         counter.innerText = count.toString();
-        document.body.append(counter);
+        parent.append(counter);
 
-        window.addEventListener('mousedown', () => {
+        let toggle = document.getElementById('toggle');
+
+        toggle.addEventListener('click', () => {
+
+            paused = (paused) ? false: true;
+
+        });
+
+        let game = document.getElementById('game');
+
+        game.addEventListener('mousedown', () => {
             isAdding = true;
         });
 
-        window.addEventListener('mouseup', () => {
+        game.addEventListener('mouseup', () => {
             isAdding = false;
         });
 
@@ -359,7 +375,14 @@ export default function ()
 
     function render ()
     {
-        // stats.begin();
+        if (paused)
+        {
+            requestAnimationFrame(render);
+
+            return;
+        }
+
+        stats.begin();
 
         if (isAdding && count < maxCount)
         {
@@ -409,10 +432,8 @@ export default function ()
         {
             let bunny = bunnies[i];
 
-            bunny.step();
-
             //  The offset here is the offset into the array, NOT a byte size!
-            bunny.batchMultiTextureNoColor(dataTA, size * singleSpriteSize);
+            bunny.step(dataTA, size * singleSpriteSize);
 
             //  if size = batch limit, flush here
             if (size === maxSpritesPerBatch)
@@ -434,6 +455,6 @@ export default function ()
 
         requestAnimationFrame(render);
 
-        // stats.end();
+        stats.end();
     }
 }
