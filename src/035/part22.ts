@@ -1,17 +1,45 @@
-import Bunny from './BunnyMergedTransform';
+import Sprite from './SpriteMergedTransform';
 import Texture from './Texture';
 import SingleTexturedQuadShaderColor from './SingleTexturedQuadShaderColor';
 import { Ortho } from '@phaserjs/math-matrix4-funcs';
 
-//  Using a single texture (so no massive if statement in the shader source)
-//  gains us 6fps when rendering 150,000 bunnies. Without the 'if' it's 46fps. With, it's 40fps.
-//  200,000 bunnies = 30fps (with multi texture), 35fps with single texture.
-//  100,000 bunnies = 57-60fps (with multi texture), 60fps with single texture.
+//  Static buffer but use bufferSubData to update just a small part of it (i.e. a single moving quad in a static buffer)
+
+function getQueryString (parameter: string = '', defaultValue: any = '', context = location): string
+{
+    var output = null;
+    var result = null;
+    var keyValues = context.search.substring(1).split('&');
+
+    for (var i in keyValues)
+    {
+        var key = keyValues[i].split('=');
+
+        if (key.length > 1)
+        {
+            if (parameter && parameter === decodeURI(key[0]))
+            {
+                result = decodeURI(key[1]);
+                break;
+            }
+            else
+            {
+                if (!output)
+                {
+                    output = {};
+                }
+
+                output[decodeURI(key[0])] = decodeURI(key[1]);
+            }
+        }
+    }
+
+    return (result) ? result : defaultValue;
+}
 
 export default function ()
 {
     const resolution = { x: 800, y: 600 };
-    const bounds = { left: 0, top: 0, right: resolution.x, bottom: resolution.y };
 
     const canvas = document.getElementById('game') as HTMLCanvasElement;
 
@@ -57,26 +85,10 @@ export default function ()
     gl.enableVertexAttribArray(vertexPositionAttrib);
     gl.enableVertexAttribArray(vertexTextureCoord);
 
-    //  number of bunnies on the stage
-    let count = 0;
-
-    //  The maximum number of bunnies to render
-    let maxCount = 200000;
-
-    //  Number of bunnies to add each frame
-    let amount = 200;
-
-    //  Are we adding bunnies or not?
-    let isAdding = false;
-
-    //  Number of bunnies to start with
-    let startBunnyCount = 1000;
-
-    const maxSpritesPerBatch = 2000;
-    // const maxSpritesPerBatch = 10000;
-
     //  The size in bytes per element in the dataArray
     const size = 4;
+
+    const maxSpritesPerBatch = 9;
 
     //  Size in bytes of a single vertex
 
@@ -94,11 +106,11 @@ export default function ()
     //  Size in bytes of a single sprite
     const singleSpriteByteSize = singleVertexSize * size;
 
-    //  Size in bytes of a single vertex indicies
-    const singleIndexByteSize = 4;
+    //  The offset amount between each sprite in the index array
+    const singleSpriteElementOffset = 4;
 
     //  Size in bytes of a single vertex indicies
-    const singleSpriteIndexSize = 6;
+    const singleSpriteIndexCount = 6;
 
     //  The size of our ArrayBuffer
     const bufferByteSize = maxSpritesPerBatch * singleSpriteByteSize;
@@ -109,21 +121,36 @@ export default function ()
     let ibo = [];
 
     //  Seed the index buffer
-    for (let i = 0; i < (maxSpritesPerBatch * singleIndexByteSize); i += singleIndexByteSize)
+    let offset = 0;
+
+    for (let i = 0; i < maxSpritesPerBatch; i++)
     {
-        ibo.push(i + 0, i + 1, i + 2, i + 2, i + 3, i + 0);
+        ibo.push(offset + 0, offset + 1, offset + 2, offset + 2, offset + 3, offset + 0);
+
+        offset += singleSpriteElementOffset;
     }
 
-    //  Our buffers
+    let elementIndexExtension = gl.getExtension('OES_element_index_uint');
 
+    if (!elementIndexExtension)
+    {
+        throw new Error('OES_element_index_uint unsupported. Aborting');
+    }
+
+    const indexTA = new Uint32Array(ibo);
+
+    //  Free willy
+    ibo = [];
+
+    //  Our buffers
     const vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.DYNAMIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.STATIC_DRAW);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     
     const indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(ibo), gl.STATIC_DRAW);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indexTA, gl.STATIC_DRAW);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
     //  This matrix will convert from pixels to clip space - it only needs to be set when the canvas is sized
@@ -154,7 +181,7 @@ export default function ()
             let texture = new Texture(url, gl, textures.length);
 
             // texture.load('../assets/bunnies/half/' + url, onLoadCallback);
-            texture.load('../assets/bunnies/' + url, onLoadCallback);
+            texture.load('../assets/' + url, onLoadCallback);
 
             textures.push(texture);
 
@@ -162,52 +189,21 @@ export default function ()
     }
 
     loadTextures([
-        'rabbitv3.png'
+        'beball1.png'
     ]);
 
-    const bunnies: Bunny[] = [];
-
-    function addBunnies (num: number)
-    {
-        for (let i = 0; i < num; i++)
-        {
-            let x = (count % 2) * 800;
-
-            let bunny = new Bunny(x, 0, textures[0]);
-
-            bunny.bounds = bounds;
-
-            bunnies.push(bunny);
-
-            count++;
-        }
-    }
+    const sprites: Sprite[] = [];
 
     let stats;
-    let counter: HTMLSpanElement;
-
     let paused: boolean = false;
-
-    window['bunnies'] = bunnies;
-
-    console.log('max', maxSpritesPerBatch, 'size', bufferByteSize);
+    let movingSprite: Sprite;
+    let movingSpriteIndex: number;
 
     function create ()
     {
-        if (startBunnyCount > 0)
-        {
-            addBunnies(startBunnyCount);
-        }
-
-        let parent = document.getElementById('gameParent');
-
         stats = new window['Stats']();
         stats.domElement.id = 'stats';
         document.body.append(stats.domElement);
-
-        counter = document.createElement('div');
-        counter.innerText = count.toString();
-        parent.append(counter);
 
         let toggle = document.getElementById('toggle');
 
@@ -217,16 +213,6 @@ export default function ()
 
         });
 
-        let game = document.getElementById('game');
-
-        game.addEventListener('mousedown', () => {
-            isAdding = true;
-        });
-
-        game.addEventListener('mouseup', () => {
-            isAdding = false;
-        });
-
         //  Prepare textures
         for (let i = 0; i < textures.length; i++)
         {
@@ -234,42 +220,58 @@ export default function ()
             gl.bindTexture(gl.TEXTURE_2D, textures[i].glTexture);
         }
 
+        for (let i = 0; i < maxSpritesPerBatch; i++)
+        {
+            let x = 128;
+            let y = i * 64;
+    
+            let sprite = new Sprite(x, y, textures[0]);
+    
+            sprite.batchNoTexture(dataTA, i * singleSpriteSize);
+
+            console.log('sprite', i, 'offset', i * singleSpriteSize);
+    
+            sprites.push(sprite);
+        }
+
+        //  We'll move this one
+        movingSpriteIndex = 3;
+        movingSprite = sprites[movingSpriteIndex];
+        
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.STATIC_DRAW);
+
         render();
-    }
-
-    function flush (count: number)
-    {
-        const offset = count * singleSpriteByteSize;
-
-        if (offset === bufferByteSize)
-        {
-            gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.DYNAMIC_DRAW);
-        }
-        else
-        {
-            let view = dataTA.subarray(0, offset);
-
-            gl.bufferSubData(gl.ARRAY_BUFFER, 0, view);
-        }
-
-        gl.drawElements(gl.TRIANGLES, count * singleSpriteIndexSize, gl.UNSIGNED_SHORT, 0);
     }
 
     function render ()
     {
+        stats.begin();
+
         if (paused)
         {
             requestAnimationFrame(render);
 
+            stats.end();
+
             return;
         }
 
-        stats.begin();
+        //  Move it
+        movingSprite.x += 2;
 
-        if (isAdding && count < maxCount)
+        let offset = movingSpriteIndex * 16;
+
+        movingSprite.batchNoTexture(dataTA, offset);
+
+        //  Update JUST this one sprite in the buffer
+        let view = dataTA.subarray(offset, offset + 16);
+
+        gl.bufferSubData(gl.ARRAY_BUFFER, offset * size, view);
+
+        if (movingSprite.x >= 800)
         {
-            addBunnies(amount);
-            counter.innerText = count.toString();
+            movingSprite.x = -32;
         }
 
         gl.clearColor(0, 0, 0, 1);
@@ -283,55 +285,10 @@ export default function ()
         gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
         gl.uniform1i(uTextureLocation, 0);
 
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-
-        // gl.activeTexture(gl.TEXTURE0);
-
-        /**
-         * Each vertex contains:
-         * 
-         *  position (x,y - 2 floats)
-         *  texture coord (x,y - 2 floats)
-         * 
-         * 4 floats = 4 * 4 bytes = 16 bytes per vertex. This is our stride.
-         * 
-         * The offset is how much data should be skipped at the start of each chunk.
-         * 
-         * In our index, the color data is right after the position data.
-         * Position is 2 floats, so the offset for the coord is 2 * 4 bytes = 8 bytes.
-         * Texture Coord is 2 floats, so the offset for Texture Index is 2 * 4 bytes = 8 bytes, plus the 8 from position
-         */
-
         gl.vertexAttribPointer(vertexPositionAttrib, 2, gl.FLOAT, false, stride, 0);    // size = 8
         gl.vertexAttribPointer(vertexTextureCoord, 2, gl.FLOAT, false, stride, 8);      // size = 8
 
-        let size = 0;
-
-        for (let i = 0; i < bunnies.length; i++)
-        {
-            let bunny = bunnies[i];
-
-            //  The offset here is the offset into the array, NOT a byte size!
-            bunny.stepNoTexture(dataTA, size * singleSpriteSize);
-
-            //  if size = batch limit, flush here
-            if (size === maxSpritesPerBatch)
-            {
-                flush(size);
-
-                size = 0;
-            }
-            else
-            {
-                size++;
-            }
-        }
-
-        if (size > 0)
-        {
-            flush(size);
-        }
+        gl.drawElements(gl.TRIANGLES, maxSpritesPerBatch * singleSpriteIndexCount, gl.UNSIGNED_INT, 0);
 
         requestAnimationFrame(render);
 

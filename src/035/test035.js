@@ -59,7 +59,7 @@ class Vec2 {
 }
 //# sourceMappingURL=Vec2.js.map
 
-class BunnyMergedTransform {
+class SpriteMergedTransform {
     constructor(x, y, texture) {
         this.rgba = { r: 1, g: 1, b: 1, a: 1 };
         this.visible = true;
@@ -70,16 +70,12 @@ class BunnyMergedTransform {
             bottomLeft: { x: 0, y: 1 },
             bottomRight: { x: 1, y: 1 }
         };
-        this.bounds = null;
         this._a = 1;
         this._b = 0;
         this._c = 0;
         this._d = 1;
         this._tx = 0;
         this._ty = 0;
-        this.gravity = 0.75;
-        this.speedX = Math.random() * 10;
-        this.speedY = (Math.random() * 10) - 5;
         this.texture = texture;
         this._size = new Vec2(texture.width, texture.height);
         this.topLeft = new Vec2();
@@ -91,8 +87,9 @@ class BunnyMergedTransform {
         this._skew = new Vec2(0, 0);
         this._origin = new Vec2(0, 0);
         this._rotation = 0;
-        this.setOrigin(0.5, 1);
-        // this.updateVertices();
+        //  Transform.update:
+        this._tx = x;
+        this._ty = y;
     }
     setOrigin(originX, originY = originX) {
         this._origin.set(originX, originY);
@@ -108,36 +105,9 @@ class BunnyMergedTransform {
     setTexture(texture) {
         this.texture = texture;
         this._size.set(texture.width, texture.height);
-        // this.dirty = true;
-        // this.updateVertices();
         return this;
     }
-    step(dataTA, offset) {
-        this.x += this.speedX;
-        this.y += this.speedY;
-        this.speedY += this.gravity;
-        if (this.x > this.bounds.right) {
-            this.speedX *= -1;
-            this.x = this.bounds.right;
-        }
-        else if (this.x < this.bounds.left) {
-            this.speedX *= -1;
-            this.x = this.bounds.left;
-        }
-        if (this.y > this.bounds.bottom) {
-            this.speedY *= -0.85;
-            this.y = this.bounds.bottom;
-            if (Math.random() > 0.5) {
-                this.speedY -= Math.random() * 6;
-            }
-        }
-        else if (this.y < this.bounds.top) {
-            this.speedY = 0;
-            this.y = this.bounds.top;
-        }
-        //  Transform.update:
-        this._tx = this.x;
-        this._ty = this.y;
+    batch(dataTA, offset) {
         //  Update Vertices:
         const w = this._size.x;
         const h = this._size.y;
@@ -182,29 +152,7 @@ class BunnyMergedTransform {
         dataTA[offset + 18] = this.uv.topRight.y;
         dataTA[offset + 19] = textureIndex;
     }
-    stepNoTexture(dataTA, offset) {
-        this.x += this.speedX;
-        this.y += this.speedY;
-        this.speedY += this.gravity;
-        if (this.x > this.bounds.right) {
-            this.speedX *= -1;
-            this.x = this.bounds.right;
-        }
-        else if (this.x < this.bounds.left) {
-            this.speedX *= -1;
-            this.x = this.bounds.left;
-        }
-        if (this.y > this.bounds.bottom) {
-            this.speedY *= -0.85;
-            this.y = this.bounds.bottom;
-            if (Math.random() > 0.5) {
-                this.speedY -= Math.random() * 6;
-            }
-        }
-        else if (this.y < this.bounds.top) {
-            this.speedY = 0;
-            this.y = this.bounds.top;
-        }
+    batchNoTexture(dataTA, offset) {
         //  Transform.update:
         this._tx = this.x;
         this._ty = this.y;
@@ -305,37 +253,29 @@ class Texture {
     }
 }
 
-var MultiTexturedQuadShader = {
+var SingleTexturedQuadShaderColor = {
     fragmentShader: `
 precision mediump float;
 
 varying vec2 vTextureCoord;
-varying float vTextureId;
 
-uniform sampler2D uTexture[%count%];
+uniform sampler2D uTexture;
 
 void main (void)
 {
-    vec4 color;
-
-    %forloop%
-
-    gl_FragColor = color;
+    gl_FragColor = texture2D(uTexture, vTextureCoord);
 }`,
     vertexShader: `
 attribute vec2 aVertexPosition;
 attribute vec2 aTextureCoord;
-attribute float aTextureId;
 
 uniform mat4 uProjectionMatrix;
 
 varying vec2 vTextureCoord;
-varying float vTextureId;
 
 void main (void)
 {
     vTextureCoord = aTextureCoord;
-    vTextureId = aTextureId;
 
     gl_Position = uProjectionMatrix * vec4(aVertexPosition, 0.0, 1.0);
 }`
@@ -471,62 +411,8 @@ function Ortho(left, right, bottom, top, near, far) {
 }
 //# sourceMappingURL=Ortho.js.map
 
-//  Multi-Texture Assigned at run-time, not hard coded into render
-const fragTemplate = [
-    'precision mediump float;',
-    'void main(void){',
-    'float test = 0.1;',
-    '%forloop%',
-    'gl_FragColor = vec4(0.0);',
-    '}',
-].join('\n');
-//  From Pixi v5:
-function checkMaxIfStatementsInShader(maxIfs, gl) {
-    const shader = gl.createShader(gl.FRAGMENT_SHADER);
-    while (true) {
-        const fragmentSrc = fragTemplate.replace(/%forloop%/gi, generateIfTestSrc(maxIfs));
-        gl.shaderSource(shader, fragmentSrc);
-        gl.compileShader(shader);
-        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-            maxIfs = (maxIfs / 2) | 0;
-        }
-        else {
-            // valid!
-            break;
-        }
-    }
-    return maxIfs;
-}
-function generateIfTestSrc(maxIfs) {
-    let src = '';
-    for (let i = 0; i < maxIfs; ++i) {
-        if (i > 0) {
-            src += '\nelse ';
-        }
-        if (i < maxIfs - 1) {
-            src += `if(test == ${i}.0){}`;
-        }
-    }
-    return src;
-}
-function generateSampleSrc(maxTextures) {
-    let src = '';
-    for (let i = 0; i < maxTextures; i++) {
-        if (i > 0) {
-            src += '\n    else ';
-        }
-        if (i < maxTextures - 1) {
-            src += `if (vTextureId < ${i}.5)`;
-        }
-        src += '\n    {';
-        src += `\n        color = texture2D(uTexture[${i}], vTextureCoord);`;
-        src += '\n    }';
-    }
-    return src;
-}
-function bunnymarkNoColorMerged () {
+function part22 () {
     const resolution = { x: 800, y: 600 };
-    const bounds = { left: 0, top: 0, right: resolution.x, bottom: resolution.y };
     const canvas = document.getElementById('game');
     canvas.width = resolution.x;
     canvas.height = resolution.y;
@@ -538,27 +424,12 @@ function bunnymarkNoColorMerged () {
         preserveDrawingBuffer: false
     };
     const gl = canvas.getContext('webgl', contextOptions);
-    //  Multi-texture support
-    let maxTextures = checkMaxIfStatementsInShader(gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS), gl);
-    console.log('maxTextures', maxTextures, 'out of', gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS));
-    //  Create temp textures to stop WebGL errors on mac os
-    for (let i = 0; i < maxTextures; i++) {
-        let tempTexture = gl.createTexture();
-        gl.activeTexture(gl.TEXTURE0 + i);
-        gl.bindTexture(gl.TEXTURE_2D, tempTexture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 255, 255]));
-    }
-    const uTextureLocationIndex = Array.from(Array(maxTextures).keys());
-    let fragmentShaderSource = MultiTexturedQuadShader.fragmentShader;
-    fragmentShaderSource = fragmentShaderSource.replace(/%count%/gi, `${maxTextures}`);
-    fragmentShaderSource = fragmentShaderSource.replace(/%forloop%/gi, generateSampleSrc(maxTextures));
-    // console.log(fragmentShaderSource);
     //  Create the shaders
     const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragmentShader, fragmentShaderSource);
+    gl.shaderSource(fragmentShader, SingleTexturedQuadShaderColor.fragmentShader);
     gl.compileShader(fragmentShader);
     const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vertexShader, MultiTexturedQuadShader.vertexShader);
+    gl.shaderSource(vertexShader, SingleTexturedQuadShaderColor.vertexShader);
     gl.compileShader(vertexShader);
     const program = gl.createProgram();
     gl.attachShader(program, vertexShader);
@@ -567,65 +438,59 @@ function bunnymarkNoColorMerged () {
     gl.useProgram(program);
     const vertexPositionAttrib = gl.getAttribLocation(program, 'aVertexPosition');
     const vertexTextureCoord = gl.getAttribLocation(program, 'aTextureCoord');
-    const vertexTextureIndex = gl.getAttribLocation(program, 'aTextureId');
     const uProjectionMatrix = gl.getUniformLocation(program, 'uProjectionMatrix');
     const uTextureLocation = gl.getUniformLocation(program, 'uTexture');
     gl.enableVertexAttribArray(vertexPositionAttrib);
     gl.enableVertexAttribArray(vertexTextureCoord);
-    gl.enableVertexAttribArray(vertexTextureIndex);
-    //  number of bunnies on the stage
-    let count = 0;
-    //  The maximum number of bunnies to render
-    let maxCount = 200000;
-    //  Number of bunnies to add each frame
-    let amount = 200;
-    //  Are we adding bunnies or not?
-    let isAdding = false;
-    //  Number of bunnies to start with
-    let startBunnyCount = 1000;
-    // const maxSpritesPerBatch = 2000;
-    const maxSpritesPerBatch = 10000;
     //  The size in bytes per element in the dataArray
     const size = 4;
+    const maxSpritesPerBatch = 9;
     //  Size in bytes of a single vertex
     /**
      * Each vertex contains:
      *
      *  position (x,y - 2 floats)
      *  texture coord (x,y - 2 floats)
-     *  texture index (float)
      */
-    const singleVertexSize = 20;
+    const singleVertexSize = 16;
     //  Size of a single sprite in array elements
-    //  Each vertex = 9 elements, so 9 * 4
-    const singleSpriteSize = 20;
+    const singleSpriteSize = 16;
     //  Size in bytes of a single sprite
     const singleSpriteByteSize = singleVertexSize * size;
+    //  The offset amount between each sprite in the index array
+    const singleSpriteElementOffset = 4;
     //  Size in bytes of a single vertex indicies
-    const singleIndexByteSize = 4;
-    //  Size in bytes of a single vertex indicies
-    const singleSpriteIndexSize = 6;
+    const singleSpriteIndexCount = 6;
     //  The size of our ArrayBuffer
     const bufferByteSize = maxSpritesPerBatch * singleSpriteByteSize;
     //  Our ArrayBuffer + View
     const dataTA = new Float32Array(bufferByteSize);
     let ibo = [];
     //  Seed the index buffer
-    for (let i = 0; i < (maxSpritesPerBatch * singleIndexByteSize); i += singleIndexByteSize) {
-        ibo.push(i + 0, i + 1, i + 2, i + 2, i + 3, i + 0);
+    let offset = 0;
+    for (let i = 0; i < maxSpritesPerBatch; i++) {
+        ibo.push(offset + 0, offset + 1, offset + 2, offset + 2, offset + 3, offset + 0);
+        offset += singleSpriteElementOffset;
     }
+    let elementIndexExtension = gl.getExtension('OES_element_index_uint');
+    if (!elementIndexExtension) {
+        throw new Error('OES_element_index_uint unsupported. Aborting');
+    }
+    const indexTA = new Uint32Array(ibo);
+    //  Free willy
+    ibo = [];
     //  Our buffers
     const vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.DYNAMIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.STATIC_DRAW);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     const indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(ibo), gl.STATIC_DRAW);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indexTA, gl.STATIC_DRAW);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     //  This matrix will convert from pixels to clip space - it only needs to be set when the canvas is sized
     const projectionMatrix = Ortho(0, resolution.x, resolution.y, 0, -1000, 1000);
-    const stride = 20;
+    const stride = singleVertexSize;
     //  Textures ...
     const textures = [];
     function loadTextures(urls) {
@@ -639,154 +504,93 @@ function bunnymarkNoColorMerged () {
         urls.forEach((url) => {
             let texture = new Texture(url, gl, textures.length);
             // texture.load('../assets/bunnies/half/' + url, onLoadCallback);
-            texture.load('../assets/bunnies/' + url, onLoadCallback);
+            texture.load('../assets/' + url, onLoadCallback);
             textures.push(texture);
         });
     }
     loadTextures([
-        'rabbitv3.png',
-        'rabbitv3_ash.png',
-        'rabbitv3_batman.png',
-        'rabbitv3_bb8.png',
-        'rabbitv3_frankenstein.png',
-        'rabbitv3_neo.png',
-        'rabbitv3_sonic.png',
-        'rabbitv3_spidey.png',
-        'rabbitv3_stormtrooper.png',
-        'rabbitv3_superman.png',
-        'rabbitv3_tron.png',
-        'rabbitv3_wolverine.png'
+        'beball1.png'
     ]);
-    const bunnies = [];
-    function addBunnies(num) {
-        for (let i = 0; i < num; i++) {
-            let texture = textures[count % textures.length];
-            let x = (count % 2) * 800;
-            let bunny = new BunnyMergedTransform(x, 0, texture);
-            bunny.bounds = bounds;
-            bunnies.push(bunny);
-            count++;
-        }
-    }
+    const sprites = [];
     let stats;
-    let counter;
     let paused = false;
-    window['bunnies'] = bunnies;
-    console.log('max', maxSpritesPerBatch, 'size', bufferByteSize);
+    let movingSprite;
+    let movingSpriteIndex;
     function create() {
-        {
-            addBunnies(startBunnyCount);
-        }
-        let parent = document.getElementById('gameParent');
         stats = new window['Stats']();
         stats.domElement.id = 'stats';
         document.body.append(stats.domElement);
-        counter = document.createElement('div');
-        counter.innerText = count.toString();
-        parent.append(counter);
         let toggle = document.getElementById('toggle');
         toggle.addEventListener('click', () => {
             paused = (paused) ? false : true;
-        });
-        let game = document.getElementById('game');
-        game.addEventListener('mousedown', () => {
-            isAdding = true;
-        });
-        game.addEventListener('mouseup', () => {
-            isAdding = false;
         });
         //  Prepare textures
         for (let i = 0; i < textures.length; i++) {
             gl.activeTexture(gl.TEXTURE0 + i);
             gl.bindTexture(gl.TEXTURE_2D, textures[i].glTexture);
         }
+        for (let i = 0; i < maxSpritesPerBatch; i++) {
+            let x = 128;
+            let y = i * 64;
+            let sprite = new SpriteMergedTransform(x, y, textures[0]);
+            sprite.batchNoTexture(dataTA, i * singleSpriteSize);
+            console.log('sprite', i, 'offset', i * singleSpriteSize);
+            sprites.push(sprite);
+        }
+        //  We'll move this one
+        movingSpriteIndex = 3;
+        movingSprite = sprites[movingSpriteIndex];
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.STATIC_DRAW);
         render();
     }
-    function flush(count) {
-        const offset = count * singleSpriteByteSize;
-        if (offset === bufferByteSize) {
-            gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.DYNAMIC_DRAW);
-        }
-        else {
-            let view = dataTA.subarray(0, offset);
-            gl.bufferSubData(gl.ARRAY_BUFFER, 0, view);
-        }
-        gl.drawElements(gl.TRIANGLES, count * singleSpriteIndexSize, gl.UNSIGNED_SHORT, 0);
-    }
     function render() {
+        stats.begin();
         if (paused) {
             requestAnimationFrame(render);
+            stats.end();
             return;
         }
-        stats.begin();
-        if (isAdding && count < maxCount) {
-            addBunnies(amount);
-            counter.innerText = count.toString();
+        //  Move it
+        movingSprite.x += 2;
+        let offset = movingSpriteIndex * 16;
+        movingSprite.batchNoTexture(dataTA, offset);
+        //  Update JUST this one sprite in the buffer
+        let view = dataTA.subarray(offset, offset + 16);
+        gl.bufferSubData(gl.ARRAY_BUFFER, offset * size, view);
+        if (movingSprite.x >= 800) {
+            movingSprite.x = -32;
         }
-        // const activeTextures = Array(maxTextures).fill(0);
         gl.clearColor(0, 0, 0, 1);
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         gl.viewport(0, 0, canvas.width, canvas.height);
         gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
-        gl.uniform1iv(uTextureLocation, uTextureLocationIndex);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-        /**
-         * Each vertex contains:
-         *
-         *  position (x,y - 2 floats)
-         *  texture coord (x,y - 2 floats)
-         *  texture index (float)
-         *
-         * 5 floats = 5 * 4 bytes = 20 bytes per vertex. This is our stride.
-         *
-         * The offset is how much data should be skipped at the start of each chunk.
-         *
-         * In our index, the color data is right after the position data.
-         * Position is 2 floats, so the offset for the coord is 2 * 4 bytes = 8 bytes.
-         * Texture Coord is 2 floats, so the offset for Texture Index is 2 * 4 bytes = 8 bytes, plus the 8 from position
-         */
+        gl.uniform1i(uTextureLocation, 0);
         gl.vertexAttribPointer(vertexPositionAttrib, 2, gl.FLOAT, false, stride, 0); // size = 8
         gl.vertexAttribPointer(vertexTextureCoord, 2, gl.FLOAT, false, stride, 8); // size = 8
-        gl.vertexAttribPointer(vertexTextureIndex, 1, gl.FLOAT, false, stride, 8 + 8); // size = 4
-        let size = 0;
-        for (let i = 0; i < bunnies.length; i++) {
-            let bunny = bunnies[i];
-            //  The offset here is the offset into the array, NOT a byte size!
-            bunny.step(dataTA, size * singleSpriteSize);
-            //  if size = batch limit, flush here
-            if (size === maxSpritesPerBatch) {
-                flush(size);
-                size = 0;
-            }
-            else {
-                size++;
-            }
-        }
-        if (size > 0) {
-            flush(size);
-        }
+        gl.drawElements(gl.TRIANGLES, maxSpritesPerBatch * singleSpriteIndexCount, gl.UNSIGNED_INT, 0);
         requestAnimationFrame(render);
         stats.end();
     }
 }
 
-bunnymarkNoColorMerged();
-// bunnymarkSingleTexture();
+part22();
 //  Next steps:
-//  X Bunny mark (because, why not?)
-//  * Multi Textures keep index 0 free for exceeding max
+//  X Static buffer but use bufferSubData to update just a small part of it (i.e. a single moving quad in a static buffer)
 //  * Multi Textures round-robin, don't use glIndex
-//  X Multi Textures assigned at run-time up to max
-//  X Multi-texture support
 //  * Texture Frames (UV) support
 //  * Camera matrix, added to the shader (projection * camera * vertex pos), so we can move the camera around, rotate it, etc.
-//  X Sub-data buffer with batch flush, like current renderer handles it
 //  * Transform stack test (Quad with children, children of children, etc)
 //  * Instead of a Quad class, try a class that can have any number of vertices in it (ala Rope), or any vertex moved
 //  * Encode color as a single float, rather than a vec4
+//  Done:
+//  X Static test using sprites
+//  X Bunny mark (because, why not?)
+//  X Multi Textures assigned at run-time up to max
+//  X Multi-texture support
+//  X Sub-data buffer with batch flush, like current renderer handles it
 //  X Add a basic display list, so the buffer is cleared each frame and populated via the list
 //  X Try adding all quads to a single huge buffer on creation (remove on destruction), then in the render loop
 //    copy chunks from this buffer to the gl buffer - depends how fast typed array copies are vs. pushing elements by index
