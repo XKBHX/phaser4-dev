@@ -1,41 +1,11 @@
-import Sprite from './SpriteMergedTransform';
+import Sprite from './SpriteMergedTransformCamera';
 import Texture from './Texture';
-import SingleTexturedQuadShaderColor from './SingleTexturedQuadShaderColor';
+import Frame from './Frame';
+import SingleTexturedQuadShaderColor from './SingleTexturedQuadShaderColorCamera';
+import { Matrix4, Translate, Rotate } from '@phaserjs/math-matrix4';
 import { Ortho } from '@phaserjs/math-matrix4-funcs';
 
-//  Static buffer but use bufferSubData to update just a small part of it (i.e. a single moving quad in a static buffer)
-
-function getQueryString (parameter: string = '', defaultValue: any = '', context = location): string
-{
-    var output = null;
-    var result = null;
-    var keyValues = context.search.substring(1).split('&');
-
-    for (var i in keyValues)
-    {
-        var key = keyValues[i].split('=');
-
-        if (key.length > 1)
-        {
-            if (parameter && parameter === decodeURI(key[0]))
-            {
-                result = decodeURI(key[1]);
-                break;
-            }
-            else
-            {
-                if (!output)
-                {
-                    output = {};
-                }
-
-                output[decodeURI(key[0])] = decodeURI(key[1]);
-            }
-        }
-    }
-
-    return (result) ? result : defaultValue;
-}
+//  Texture Frames (UV) support
 
 export default function ()
 {
@@ -80,6 +50,7 @@ export default function ()
     const vertexTextureCoord = gl.getAttribLocation(program, 'aTextureCoord');
 
     const uProjectionMatrix = gl.getUniformLocation(program, 'uProjectionMatrix');
+    const uCameraMatrix = gl.getUniformLocation(program, 'uCameraMatrix');
     const uTextureLocation = gl.getUniformLocation(program, 'uTexture');
 
     gl.enableVertexAttribArray(vertexPositionAttrib);
@@ -88,7 +59,10 @@ export default function ()
     //  The size in bytes per element in the dataArray
     const size = 4;
 
-    const maxSpritesPerBatch = 9;
+    const spriteCols = 30;
+    const spriteRows = 30;
+
+    const maxSpritesPerBatch = spriteCols * spriteRows;
 
     //  Size in bytes of a single vertex
 
@@ -155,11 +129,14 @@ export default function ()
 
     //  This matrix will convert from pixels to clip space - it only needs to be set when the canvas is sized
     const projectionMatrix = Ortho(0, resolution.x, resolution.y, 0, -1000, 1000);
+
+    const cameraMatrix = new Matrix4();
     
     const stride = singleVertexByteSize;
 
     //  Textures ...
     const textures: Texture[] = [];
+    const frames: Frame[] = [];
 
     function loadTextures (urls: string[])
     {
@@ -180,7 +157,6 @@ export default function ()
 
             let texture = new Texture(url, gl, textures.length);
 
-            // texture.load('../assets/bunnies/half/' + url, onLoadCallback);
             texture.load('../assets/' + url, onLoadCallback);
 
             textures.push(texture);
@@ -189,15 +165,15 @@ export default function ()
     }
 
     loadTextures([
-        'beball1.png'
+        'diamonds32x24x5.png'
     ]);
 
     const sprites: Sprite[] = [];
 
     let stats;
     let paused: boolean = false;
-    let movingSprite: Sprite;
-    let movingSpriteIndex: number;
+
+    let cx = 0;
 
     function create ()
     {
@@ -220,23 +196,31 @@ export default function ()
             gl.bindTexture(gl.TEXTURE_2D, textures[i].glTexture);
         }
 
-        for (let i = 0; i < maxSpritesPerBatch; i++)
-        {
-            let x = 128;
-            let y = i * 64;
-    
-            let sprite = new Sprite(x, y, textures[0]);
-    
-            sprite.batchNoTexture(dataTA, i * singleSpriteSize);
+        //  Create the Frames
 
-            console.log('sprite', i, 'offset', i * singleSpriteSize);
-    
-            sprites.push(sprite);
+        let baseTexture = textures[0];
+
+        for (let x: number = 0; x < 160; x += 32)
+        {
+            frames.push(new Frame(baseTexture, x, 0, 32, 24));
         }
 
-        //  We'll move this one
-        movingSpriteIndex = 3;
-        movingSprite = sprites[movingSpriteIndex];
+        let i = 0;
+
+        for (let y: number = 0; y < spriteCols; y++)
+        {
+            for (let x: number = 0; x < spriteRows; x++)
+            {
+                let frame = frames[Math.floor(Math.random() * frames.length)];
+                let sprite = new Sprite(x * 32, y * 24, frame);
+    
+                sprite.batchNoTexture(dataTA, i * singleSpriteSize);
+        
+                sprites.push(sprite);
+
+                i++;
+            }
+        }
         
         gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.STATIC_DRAW);
@@ -257,23 +241,13 @@ export default function ()
             return;
         }
 
-        //  Move it
-        movingSprite.x += 2;
+        //  Move the camera
 
-        let offset = movingSpriteIndex * singleSpriteSize;
+        Translate(cameraMatrix, Math.sin(cx) * 2, Math.cos(cx) * 2, 0);
 
-        movingSprite.batchNoTexture(dataTA, offset);
+        cx += 0.01;
 
-        //  Update JUST this one sprite in the buffer
-        let view = dataTA.subarray(offset, offset + singleSpriteSize);
-
-        //  * size because the value given here is in bytes, not array element amounts
-        gl.bufferSubData(gl.ARRAY_BUFFER, offset * size, view);
-
-        if (movingSprite.x >= 800)
-        {
-            movingSprite.x = -32;
-        }
+        //  Render ...
 
         gl.clearColor(0, 0, 0, 1);
         gl.clear(gl.COLOR_BUFFER_BIT);
@@ -284,6 +258,7 @@ export default function ()
         gl.viewport(0, 0, canvas.width, canvas.height);
 
         gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
+        gl.uniformMatrix4fv(uCameraMatrix, false, cameraMatrix);
         gl.uniform1i(uTextureLocation, 0);
 
         gl.vertexAttribPointer(vertexPositionAttrib, 2, gl.FLOAT, false, stride, 0);    // size = 8

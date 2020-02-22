@@ -23,22 +23,24 @@ import bunnymarkNoColor from './bunnymark-nocolor';
 import bunnymarkNoColorMerged from './bunnymark-nocolor-merged';
 import bunnymarkSingleTexture from './bunnymark-single-texture';
 import part21 from './part21'; // static sprite test
-import part22 from './part22';
+import part22 from './part22'; // subData test into a static buffer
+import part23 from './part23'; // Camera matrix
+import part24 from './part24'; // Texture Frame
 
-part22();
+part24();
 
 //  Next steps:
 
-//  X Static buffer but use bufferSubData to update just a small part of it (i.e. a single moving quad in a static buffer)
+//  * Encode color as a single float, rather than a vec4
 //  * Multi Textures round-robin, don't use glIndex
-//  * Texture Frames (UV) support
-//  * Camera matrix, added to the shader (projection * camera * vertex pos), so we can move the camera around, rotate it, etc.
 //  * Transform stack test (Quad with children, children of children, etc)
 //  * Instead of a Quad class, try a class that can have any number of vertices in it (ala Rope), or any vertex moved
-//  * Encode color as a single float, rather than a vec4
 
 //  Done:
 
+//  X Texture Frames (UV) support
+//  X Camera matrix, added to the shader (projection * camera * vertex pos), so we can move the camera around, rotate it, etc.
+//  X Static buffer but use bufferSubData to update just a small part of it (i.e. a single moving quad in a static buffer)
 //  X Static test using sprites
 //  X Bunny mark (because, why not?)
 //  X Multi Textures assigned at run-time up to max
