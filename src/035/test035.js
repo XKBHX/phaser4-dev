@@ -624,9 +624,11 @@ function part24 () {
 part24();
 //  Next steps:
 //  * Encode color as a single float, rather than a vec4
+//  * Update Merged Transform to cache rotation and scale
 //  * Multi Textures round-robin, don't use glIndex
-//  * Transform stack test (Quad with children, children of children, etc)
+//  * Container class - Transform stack test (Quad with children, children of children, etc)
 //  * Instead of a Quad class, try a class that can have any number of vertices in it (ala Rope), or any vertex moved
+//  * Tidy-up all of the classes, boil down into tiny WebGL1 + Sprite + Container + StaticContainer renderer package
 //  Done:
 //  X Texture Frames (UV) support
 //  X Camera matrix, added to the shader (projection * camera * vertex pos), so we can move the camera around, rotate it, etc.
