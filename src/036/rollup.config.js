@@ -8,18 +8,18 @@ const extensions = [
 
 export default {
 
-    input: './src/035/test035.ts',
+    input: './src/036/test036.ts',
 
     output: [
         {
-            file: './src/035/test035.js',
+            file: './src/036/test036.js',
             format: 'es',
             sourcemap: true
         },
         // {
-        //     file: './src/035/test035.min.js',
+        //     file: './src/036/test036.min.js',
         //     format: 'iife',
-        //     name: 'Phaser4',
+        //     name: 'Phaser4Test36',
         //     plugins: [ terser() ]
         // }
     ],
@@ -31,7 +31,7 @@ export default {
         }),
 
         typescript({
-            tsconfig: './src/035/tsconfig.json'
+            tsconfig: './src/036/tsconfig.json'
         })
 
     ]

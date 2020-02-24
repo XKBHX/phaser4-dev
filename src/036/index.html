@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>Phaser 4</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+        <script src="Stats.min.js"></script>
+        <style>
+            body {
+                margin: 0;
+            }
+
+            #stats, #gameParent {
+                top: 0;
+                position: absolute;
+            }
+
+            #gameParent div {
+                top: 48px;
+                position: absolute;
+                font-size: 14px;
+                font-family: 'Courier New', Courier, monospace;
+                background-color: midnightblue;
+                width: 80px;
+                color: white;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="gameParent"><canvas id="game" width="800" height="600"></div>
+        <input type="button" id="toggle" value="Play / Pause" style="margin-top: 600px">
+        <script src="test036.js"></script>
+    </body>
+</html>

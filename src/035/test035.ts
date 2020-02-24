@@ -17,7 +17,7 @@ import part16 from './part16';
 import part17 from './part17';
 import part18 from './part18';
 import part19 from './part19';
-import part20 from './part20';
+import part20 from './part20'; // Multi-Texture Assigned at run-time, not hard coded into render
 import bunnymark from './bunnymark';
 import bunnymarkNoColor from './bunnymark-nocolor';
 import bunnymarkNoColorMerged from './bunnymark-nocolor-merged';
@@ -26,8 +26,10 @@ import part21 from './part21'; // static sprite test
 import part22 from './part22'; // subData test into a static buffer
 import part23 from './part23'; // Camera matrix
 import part24 from './part24'; // Texture Frame
+import part25 from './part25'; // Single quad + single custom shader
+import part26 from './part26'; // Update Merged Transform to cache rotation and scale
 
-part24();
+part26();
 
 //  Next steps:
 
