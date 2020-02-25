@@ -1,12 +1,13 @@
 import { DOMContentLoaded, AddToDOM } from '@phaserjs/dom';
 import WebGLRenderer from 'WebGLRenderer';
-import Texture from 'Texture';
 import Loader from 'Loader';
 import Scene from 'Scene';
+import TextureManager from 'TextureManager';
+import IGameConfig from 'IGameConfig';
 
 export default class Game
 {
-    VERSION: string = '4.0.0 Nano 1';
+    VERSION: string = '4.0.0-beta1';
 
     renderer: WebGLRenderer;
 
@@ -14,14 +15,11 @@ export default class Game
     isBooted: boolean = false;
 
     loader: Loader;
-
-    textures: Map<string, Texture>;
+    textures: TextureManager;
 
     scene: Scene;
 
-    sprites = [];
-
-    constructor (config?)
+    constructor (config?: IGameConfig)
     {
         const {
             width = 800,
@@ -36,11 +34,11 @@ export default class Game
         DOMContentLoaded(() => this.boot(width, height, backgroundColor, parent));
     }
 
-    boot (width: number, height: number, backgroundColor: number, parent: string)
+    boot (width: number, height: number, backgroundColor: number, parent: string | HTMLElement)
     {
         this.isBooted = true;
 
-        this.textures = new Map();
+        this.textures = new TextureManager(this);
         this.loader = new Loader(this);
 
         const renderer = new WebGLRenderer(width, height);
@@ -136,11 +134,11 @@ export default class Game
         const args: string[] = [ c ];
 
         const bannerColor = [
-            '#ff0000',
-            '#ffff00',
-            '#00ff00',
-            '#00ffff',
-            '#000000'
+            '#e000e0',
+            '#8000e0',
+            '#2000e0',
+            '#0000c0',
+            '#000080'
         ];
 
         const bannerTextColor: string = '#ffffff';
@@ -161,9 +159,9 @@ export default class Game
         args[args.length - 1] = 'color: ' + bannerTextColor + '; background: ' + lastColor;
 
         //  URL link background color (always white)
-        args.push('background: #fff');
+        args.push('background: rgba(0,0,0,0)');
 
-        c = c.concat('Phaser v' + version);
+        c = c.concat('Phaser Nano v' + version);
         c = c.concat(' %c ' + 'https://phaser4.io');
 
         //  Inject the new string back into the args array
@@ -183,7 +181,7 @@ export default class Game
 
         this.scene.update(time);
 
-        this.renderer.render(this.sprites);
+        this.renderer.render(this.scene.children.list);
 
         requestAnimationFrame((time) => this.step(time));
     }

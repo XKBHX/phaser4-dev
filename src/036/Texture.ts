@@ -17,6 +17,8 @@ export default class Texture
     glIndex: number = 0;
     glIndexCounter: number = -1;
 
+    firstFrame: Frame;
+
     frames: Map<string | number, Frame>;
 
     constructor (key: string, image: HTMLImageElement)
@@ -30,13 +32,46 @@ export default class Texture
         this.width = this.image.width;
         this.height = this.image.height;
 
-        //  Add default frame
-        this.frames.set('__base', new Frame(this, 0, 0, this.width, this.height));
+        this.add('__BASE', 0, 0, this.width, this.height);
     }
 
-    get (key: string | number = '__base')
+    add (key: string | number, x: number, y: number, width: number, height: number): Frame
     {
-        return this.frames.get(key);
+        if (this.frames.has(key))
+        {
+            return null;
+        }
+
+        let frame = new Frame(this, key, x, y, width, height);
+
+        this.frames.set(key, frame);
+
+        if (!this.firstFrame || this.firstFrame.key === '__BASE')
+        {
+            this.firstFrame = frame;
+        }
+
+        return frame;
+    }
+
+    get (key?: string | number)
+    {
+        //  null, undefined, empty string, zero
+        if (!key)
+        {
+            return this.firstFrame;
+        }
+
+        let frame: Frame = this.frames.get(key);
+
+        if (!frame)
+        {
+            console.warn('Texture.frame missing: ' + key);
+
+            frame = this.firstFrame;
+        }
+
+        return frame;
     }
 
 }

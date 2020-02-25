@@ -3,6 +3,7 @@ import Texture from 'Texture';
 export default class Frame
 {
     texture: Texture;
+    key: string | number;
     x: number;
     y: number;
     width: number;
@@ -13,9 +14,10 @@ export default class Frame
     u1: number;
     v1: number;
 
-    constructor (texture: Texture, x: number, y: number, width: number, height: number)
+    constructor (texture: Texture, key: string | number, x: number, y: number, width: number, height: number)
     {
         this.texture = texture;
+        this.key = key;
         this.x = x;
         this.y = y;
         this.width = width;

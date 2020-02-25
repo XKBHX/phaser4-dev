@@ -16,12 +16,12 @@ export default {
             format: 'es',
             sourcemap: true
         },
-        // {
-        //     file: './src/036/test036.min.js',
-        //     format: 'iife',
-        //     name: 'Phaser4Test36',
-        //     plugins: [ terser() ]
-        // }
+        {
+            file: './src/036/test036.min.js',
+            format: 'iife',
+            name: 'Phaser4Nano',
+            plugins: [ terser() ]
+        }
     ],
 
     plugins: [

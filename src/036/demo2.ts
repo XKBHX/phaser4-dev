@@ -5,6 +5,7 @@ import Scene from 'Scene';
 class Demo extends Scene
 {
     sprite1: Sprite;
+    sprite2: Sprite;
 
     constructor (game: Game)
     {
@@ -13,7 +14,11 @@ class Demo extends Scene
 
     preload ()
     {
-        this.load.image('logo', '../assets/logo.png');
+        this.load.setPath('../assets');
+
+        this.load.image('logo', 'logo.png');
+        this.load.image('labs', '512x512.png');
+        this.load.image('brain', 'brain.png');
     }
 
     create ()
@@ -22,12 +27,22 @@ class Demo extends Scene
             this.game.isPaused = (this.game.isPaused) ? false: true;
         });
 
+        this.add.sprite(400, 300, 'labs');
+
         this.sprite1 = this.add.sprite(400, 300, 'logo');
+        this.sprite2 = this.add.sprite(400, 300, 'brain');
     }
 
     update (time: DOMHighResTimeStamp)
     {
         this.sprite1.rotation += 0.02;
+
+        this.sprite2.y += 2;
+
+        if (this.sprite2.y > 650)
+        {
+            this.sprite2.y = -50;
+        }
     }
 }
 

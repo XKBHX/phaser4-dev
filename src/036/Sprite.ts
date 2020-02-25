@@ -1,27 +1,35 @@
 import Texture from './Texture';
 import Frame from './Frame';
 import { Vec2 } from '@phaserjs/math-vec2';
+import Scene from 'Scene';
 
 export default class Sprite
 {
-    readonly topLeft: Vec2;
-    readonly topRight: Vec2;
-    readonly bottomLeft: Vec2;
-    readonly bottomRight: Vec2;
+    readonly scene: Scene;
 
     readonly rgba = { r: 1, g: 1, b: 1, a: 1 };
-
-    protected _position: Vec2;
-    protected _scale: Vec2;
-    protected _skew: Vec2;
-    protected _origin: Vec2;
-    protected _rotation: number;
 
     visible: boolean = true;
     texture: Texture = null;
     frame: Frame = null;
 
-    private _size: Vec2;
+    vertices: number[] = [
+        //  top left
+        0, 0,
+        //  top right
+        0, 0,
+        //  bottom left
+        0, 0,
+        //  bottom right
+        0, 0
+    ];
+
+    private _size: Vec2 = new Vec2();
+    private _position: Vec2 = new Vec2();
+    private _scale: Vec2 = new Vec2(1, 1);
+    private _skew: Vec2 = new Vec2();
+    private _origin: Vec2 = new Vec2(0.5, 0.5);
+    private _rotation: number = 0;
 
     private _a: number = 1;
     private _b: number = 0;
@@ -30,27 +38,40 @@ export default class Sprite
     private _tx: number = 0;
     private _ty: number = 0;
 
-    constructor (x: number, y: number, frame: Frame)
+    constructor (scene: Scene, x: number, y: number, texture: string, frame?: string | number)
     {
-        this.frame = frame;
-        this.texture = frame.texture;
+        this.scene = scene;
 
-        this._size = new Vec2(frame.width, frame.height);
+        this.setTexture(texture, frame);
 
-        this.topLeft = new Vec2();
-        this.topRight = new Vec2();
-        this.bottomLeft = new Vec2();
-        this.bottomRight = new Vec2();
-
-        this._position = new Vec2(x, y);
-        this._scale = new Vec2(1, 1);
-        this._skew = new Vec2(0, 0);
-        this._origin = new Vec2(0, 0);
-        this._rotation = 0;
+        this._position.set(x, y);
 
         //  Transform.update:
         this._tx = x;
         this._ty = y;
+    }
+
+    setTexture (key: string | Texture, frame?: string | number)
+    {
+        if (key instanceof Texture)
+        {
+            this.texture = key;
+        }
+        else
+        {
+            this.texture = this.scene.textures.get(key);
+        }
+
+        return this.setFrame(frame);
+    }
+
+    setFrame (key?: string | number)
+    {
+        this.frame = this.texture.get(key);
+
+        this._size.set(this.frame.width, this.frame.height);
+
+        return this;
     }
 
     setPosition (x: number, y: number)
@@ -100,15 +121,6 @@ export default class Sprite
         return this;
     }
 
-    setTexture (texture: Texture)
-    {
-        this.texture = texture;
-
-        this._size.set(texture.width, texture.height);
-
-        return this;
-    }
-
     update ()
     {
         //  Transform.update:
@@ -140,10 +152,23 @@ export default class Sprite
         const y1c: number = y1 * _c;
         const y1d: number = y1 * _d;
 
-        this.topLeft.set(x0a + y0c + _tx, x0b + y0d + _ty);
-        this.topRight.set(x1a + y0c + _tx, x1b + y0d + _ty);
-        this.bottomLeft.set(x0a + y1c + _tx, x0b + y1d + _ty);
-        this.bottomRight.set(x1a + y1c + _tx, x1b + y1d + _ty);
+        const vertices = this.vertices;
+
+        //  top left
+        vertices[0] = x0a + y0c + _tx;
+        vertices[1] = x0b + y0d + _ty;
+
+        //  top right
+        vertices[2] = x1a + y0c + _tx;
+        vertices[3] = x1b + y0d + _ty;
+
+        //  bottom left
+        vertices[4] = x0a + y1c + _tx;
+        vertices[5] = x0b + y1d + _ty;
+
+        //  bottom right
+        vertices[6] = x1a + y1c + _tx;
+        vertices[7] = x1b + y1d + _ty;
     }
 
     set x (value: number)

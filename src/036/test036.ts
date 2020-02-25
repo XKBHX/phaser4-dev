@@ -1,20 +1,22 @@
-//  Moved all code to WebGL Renderer and supporting classes
-//  Game class, single Scene, Loader, DOM Content Load handler, Texture Cache
+// import demo1 from './demo1'; // test single sprite
+// import demo2 from './demo2'; // test multiple images with multiple sprites
+import demo3 from './demo3'; // test sprite sheet loader and display
 
-import demo1 from './demo1'; 
-
-demo1();
+demo3();
 
 //  Next steps:
 
+//  * Texture Atlas Loader
 //  * Encode color as a single float, rather than a vec4 and add back to the shader
 //  * Multi Texture re-use old texture IDs when count > max supported
-//  * Encapsulate a Simple asset loader (images + json) and remove responsibility from the Texture class
 //  * Container class - Transform stack test (Quad with children, children of children, etc)
 //  * Instead of a Quad class, try a class that can have any number of vertices in it (ala Rope), or any vertex moved
 
 //  Done:
 
+//  X Moved all code to WebGL Renderer and supporting classes
+//  X Game class, single Scene, Loader, DOM Content Load handler, Texture Cache
+//  X Encapsulate a Simple asset loader (images + json) and remove responsibility from the Texture class
 //  X DOM Loaded handler + small boot = Game class
 //  X Basic Scene class
 //  X Tidy-up all of the classes, boil down into tiny WebGL1 + Sprite + Container + StaticContainer renderer package

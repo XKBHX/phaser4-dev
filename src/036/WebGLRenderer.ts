@@ -52,6 +52,8 @@ export default class WebGLRenderer
 
         this.projectionMatrix = Ortho(0, width, height, 0, -1000, 1000);
         this.cameraMatrix = new Matrix4();
+
+        this.startActiveTexture = 0;
     }
 
     setBackgroundColor (color: number)
@@ -99,7 +101,6 @@ export default class WebGLRenderer
         const glTexture: WebGLTexture = gl.createTexture();
 
         gl.activeTexture(gl.TEXTURE0);
-
         gl.bindTexture(gl.TEXTURE_2D, glTexture);
 
         gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
@@ -123,6 +124,7 @@ export default class WebGLRenderer
         this.startActiveTexture++;
 
         let startActiveTexture = this.startActiveTexture;
+
         let currentActiveTexture = 0;
 
         const shader = this.shader;
@@ -147,12 +149,7 @@ export default class WebGLRenderer
         for (let i: number = 0; i < sprites.length; i++)
         {
             let sprite = sprites[i];
-            let texture = sprite.frame.texture;
-
-            if (!texture.glTexture)
-            {
-                texture.glTexture = this.createGLTexture(texture.image);
-            }
+            let texture = sprite.texture;
 
             if (texture.glIndexCounter < startActiveTexture)
             {

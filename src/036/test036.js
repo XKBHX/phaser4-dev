@@ -307,19 +307,19 @@ class MultiTextureQuadShader {
         gl.linkProgram(program);
         gl.useProgram(program);
         this.program = program;
-        const vertexPositionAttrib = gl.getAttribLocation(program, 'aVertexPosition');
+        const vertexPosition = gl.getAttribLocation(program, 'aVertexPosition');
         const vertexTextureCoord = gl.getAttribLocation(program, 'aTextureCoord');
         const vertexTextureIndex = gl.getAttribLocation(program, 'aTextureId');
         const uProjectionMatrix = gl.getUniformLocation(program, 'uProjectionMatrix');
         const uCameraMatrix = gl.getUniformLocation(program, 'uCameraMatrix');
         const uTextureLocation = gl.getUniformLocation(program, 'uTexture');
-        gl.enableVertexAttribArray(vertexPositionAttrib);
+        gl.enableVertexAttribArray(vertexPosition);
         gl.enableVertexAttribArray(vertexTextureCoord);
         gl.enableVertexAttribArray(vertexTextureIndex);
         this.attribs = {
-            position: vertexPositionAttrib,
+            position: vertexPosition,
             textureCoord: vertexTextureCoord,
-            textureIndex: vertexTextureIndex,
+            textureIndex: vertexTextureIndex
         };
         this.uniforms = {
             projectionMatrix: uProjectionMatrix,
@@ -352,23 +352,24 @@ class MultiTextureQuadShader {
         const data = this.data;
         const frame = sprite.frame;
         const textureIndex = frame.texture.glIndex;
-        data[offset++] = sprite.topLeft.x;
-        data[offset++] = sprite.topLeft.y;
+        const vertices = sprite.vertices;
+        data[offset++] = vertices[0];
+        data[offset++] = vertices[1];
         data[offset++] = frame.u0;
         data[offset++] = frame.v0;
         data[offset++] = textureIndex;
-        data[offset++] = sprite.bottomLeft.x;
-        data[offset++] = sprite.bottomLeft.y;
+        data[offset++] = vertices[4];
+        data[offset++] = vertices[5];
         data[offset++] = frame.u0;
         data[offset++] = frame.v1;
         data[offset++] = textureIndex;
-        data[offset++] = sprite.bottomRight.x;
-        data[offset++] = sprite.bottomRight.y;
+        data[offset++] = vertices[6];
+        data[offset++] = vertices[7];
         data[offset++] = frame.u1;
         data[offset++] = frame.v1;
         data[offset++] = textureIndex;
-        data[offset++] = sprite.topRight.x;
-        data[offset++] = sprite.topRight.y;
+        data[offset++] = vertices[2];
+        data[offset++] = vertices[3];
         data[offset++] = frame.u1;
         data[offset++] = frame.v0;
         data[offset++] = textureIndex;
@@ -430,6 +431,7 @@ class WebGLRenderer {
         this.activeTextures = Array(this.maxTextures);
         this.projectionMatrix = Ortho(0, width, height, 0, -1000, 1000);
         this.cameraMatrix = new Matrix4();
+        this.startActiveTexture = 0;
     }
     setBackgroundColor(color) {
         const clearColor = this.clearColor;
@@ -489,10 +491,7 @@ class WebGLRenderer {
         shader.bind();
         for (let i = 0; i < sprites.length; i++) {
             let sprite = sprites[i];
-            let texture = sprite.frame.texture;
-            if (!texture.glTexture) {
-                texture.glTexture = this.createGLTexture(texture.image);
-            }
+            let texture = sprite.texture;
             if (texture.glIndexCounter < startActiveTexture) {
                 texture.glIndexCounter = startActiveTexture;
                 if (currentActiveTexture < maxTextures) {
@@ -514,49 +513,13 @@ class WebGLRenderer {
 }
 
 class File {
-    constructor(key, url, loadHandler) {
+    constructor(type, key, url, loadHandler, config) {
         this.hasLoaded = false;
+        this.type = type;
         this.key = key;
         this.url = url;
         this.loadHandler = loadHandler;
-    }
-}
-
-class Frame {
-    constructor(texture, x, y, width, height) {
-        this.texture = texture;
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-        this.updateUVs();
-    }
-    updateUVs() {
-        const { x, y, width, height } = this;
-        const sourceWidth = this.texture.width;
-        const sourceHeight = this.texture.height;
-        this.u0 = x / sourceWidth;
-        this.v0 = y / sourceHeight;
-        this.u1 = (x + width) / sourceWidth;
-        this.v1 = (y + height) / sourceHeight;
-    }
-}
-
-//  Base Texture
-class Texture {
-    constructor(key, image) {
-        this.glIndex = 0;
-        this.glIndexCounter = -1;
-        this.key = key;
-        this.image = image;
-        this.frames = new Map();
-        this.width = this.image.width;
-        this.height = this.image.height;
-        //  Add default frame
-        this.frames.set('__base', new Frame(this, 0, 0, this.width, this.height));
-    }
-    get(key = '__base') {
-        return this.frames.get(key);
+        this.config = config;
     }
 }
 
@@ -619,7 +582,13 @@ class Loader {
         return this.queue.length + this.inflight.size;
     }
     image(key, url) {
-        let file = new File(key, this.getURL(key, url, '.png'), (file) => this.imageTagLoader(file));
+        let file = new File('image', key, this.getURL(key, url, '.png'), (file) => this.imageTagLoader(file));
+        this.queue.push(file);
+        return this;
+    }
+    spritesheet(key, url, frameConfig) {
+        let file = new File('spritesheet', key, this.getURL(key, url, '.png'), (file) => this.imageTagLoader(file));
+        file.config = frameConfig;
         this.queue.push(file);
         return this;
     }
@@ -635,7 +604,12 @@ class Loader {
             file.data.onload = null;
             file.data.onerror = null;
             file.hasLoaded = true;
-            this.game.textures.set(file.key, new Texture(file.key, file.data));
+            if (file.type === 'image') {
+                this.game.textures.addImage(file.key, file.data);
+            }
+            else if (file.type === 'spritesheet') {
+                this.game.textures.addSpriteSheet(file.key, file.data, file.config);
+            }
             this.fileComplete(file);
         };
         file.data.onerror = () => {
@@ -651,7 +625,12 @@ class Loader {
             file.data.onload = null;
             file.data.onerror = null;
             file.hasLoaded = true;
-            this.game.textures.set(file.key, new Texture(file.key, file.data));
+            if (file.type === 'image') {
+                this.game.textures.addImage(file.key, file.data);
+            }
+            else if (file.type === 'spritesheet') {
+                this.game.textures.addSpriteSheet(file.key, file.data, file.config);
+            }
             this.fileComplete(file);
         }
     }
@@ -681,123 +660,84 @@ class Loader {
     }
 }
 
-class Scene {
-    constructor(game) {
-        this.game = game;
-        this.load = game.loader;
+class DisplayList {
+    constructor(scene) {
+        this.scene = scene;
+        this.game = scene.game;
+        this.list = [];
     }
-    init() {
+    add(child) {
+        const list = this.list;
+        if (list.indexOf(child) === -1) {
+            list.push(child);
+        }
+        return this;
     }
-    preload() {
-    }
-    create() {
-    }
-    update(time) {
+    remove(child) {
+        const list = this.list;
+        const index = list.indexOf(child);
+        if (index !== -1) {
+            list.splice(index, 1);
+        }
+        return this;
     }
 }
 
-class Game {
-    constructor(config) {
-        this.VERSION = '4.0.0 Nano 1';
-        this.isPaused = false;
-        this.isBooted = false;
-        this.sprites = [];
-        const { width = 800, height = 600, backgroundColor = 0x00000, parent = document.body, scene = new Scene(this) } = config;
-        this.scene = scene;
-        DOMContentLoaded(() => this.boot(width, height, backgroundColor, parent));
+class Frame {
+    constructor(texture, key, x, y, width, height) {
+        this.texture = texture;
+        this.key = key;
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.updateUVs();
     }
-    boot(width, height, backgroundColor, parent) {
-        this.isBooted = true;
-        this.textures = new Map();
-        this.loader = new Loader(this);
-        const renderer = new WebGLRenderer(width, height);
-        renderer.setBackgroundColor(backgroundColor);
-        AddToDOM(renderer.canvas, parent);
-        this.renderer = renderer;
-        this.banner(this.VERSION);
-        const scene = this.scene;
-        if (scene instanceof Scene) {
-            this.scene = this.createSceneFromInstance(scene);
-        }
-        else if (typeof scene === 'object') {
-            this.scene = this.createSceneFromObject(scene);
-        }
-        else if (typeof scene === 'function') {
-            this.scene = this.createSceneFromFunction(scene);
-        }
-        this.scene.init();
-        this.scene.preload();
-        if (this.loader.totalFilesToLoad() > 0) {
-            this.loader.start(() => this.start());
-        }
-        else {
-            this.start();
-        }
+    updateUVs() {
+        const { x, y, width, height } = this;
+        const sourceWidth = this.texture.width;
+        const sourceHeight = this.texture.height;
+        this.u0 = x / sourceWidth;
+        this.v0 = y / sourceHeight;
+        this.u1 = (x + width) / sourceWidth;
+        this.v1 = (y + height) / sourceHeight;
     }
-    createSceneFromInstance(newScene) {
-        newScene.game = this;
-        newScene.load = this.loader;
-        return newScene;
+}
+
+//  Base Texture
+class Texture {
+    constructor(key, image) {
+        this.glIndex = 0;
+        this.glIndexCounter = -1;
+        this.key = key;
+        this.image = image;
+        this.frames = new Map();
+        this.width = this.image.width;
+        this.height = this.image.height;
+        this.add('__BASE', 0, 0, this.width, this.height);
     }
-    createSceneFromObject(scene) {
-        let newScene = new Scene(this);
-        //  Extract callbacks
-        const defaults = ['init', 'preload', 'create', 'update', 'render'];
-        defaults.forEach((method) => {
-            if (scene.hasOwnProperty(method)) {
-                newScene[method] = scene[method];
-            }
-        });
-        return newScene;
-    }
-    createSceneFromFunction(scene) {
-        var newScene = new scene(this);
-        if (newScene instanceof Scene) {
-            return this.createSceneFromInstance(newScene);
+    add(key, x, y, width, height) {
+        if (this.frames.has(key)) {
+            return null;
         }
-        else {
-            return newScene;
+        let frame = new Frame(this, key, x, y, width, height);
+        this.frames.set(key, frame);
+        if (!this.firstFrame || this.firstFrame.key === '__BASE') {
+            this.firstFrame = frame;
         }
+        return frame;
     }
-    start() {
-        this.scene.create();
-        requestAnimationFrame((time) => this.step(time));
-    }
-    banner(version) {
-        let c = '';
-        const args = [c];
-        const bannerColor = [
-            '#ff0000',
-            '#ffff00',
-            '#00ff00',
-            '#00ffff',
-            '#000000'
-        ];
-        const bannerTextColor = '#ffffff';
-        let lastColor;
-        bannerColor.forEach((color) => {
-            c = c.concat('%c ');
-            args.push('background: ' + color);
-            lastColor = color;
-        });
-        //  inject the text color
-        args[args.length - 1] = 'color: ' + bannerTextColor + '; background: ' + lastColor;
-        //  URL link background color (always white)
-        args.push('background: #fff');
-        c = c.concat('Phaser v' + version);
-        c = c.concat(' %c ' + 'https://phaser4.io');
-        //  Inject the new string back into the args array
-        args[0] = c;
-        console.log.apply(console, args);
-    }
-    step(time) {
-        if (this.isPaused) {
-            requestAnimationFrame((time) => this.step(time));
-            return;
+    get(key) {
+        //  null, undefined, empty string, zero
+        if (!key) {
+            return this.firstFrame;
         }
-        this.scene.update(time);
-        this.renderer.render(this.sprites);
-        requestAnimationFrame((time) => this.step(time));
+        let frame = this.frames.get(key);
+        if (!frame) {
+            console.warn('Texture.frame missing: ' + key);
+            frame = this.firstFrame;
+        }
+        return frame;
     }
 }
 
@@ -863,32 +803,53 @@ class Vec2 {
 //# sourceMappingURL=Vec2.js.map
 
 class Sprite {
-    constructor(x, y, frame) {
+    constructor(scene, x, y, texture, frame) {
         this.rgba = { r: 1, g: 1, b: 1, a: 1 };
         this.visible = true;
         this.texture = null;
         this.frame = null;
+        this.vertices = [
+            //  top left
+            0, 0,
+            //  top right
+            0, 0,
+            //  bottom left
+            0, 0,
+            //  bottom right
+            0, 0
+        ];
+        this._size = new Vec2();
+        this._position = new Vec2();
+        this._scale = new Vec2(1, 1);
+        this._skew = new Vec2();
+        this._origin = new Vec2(0.5, 0.5);
+        this._rotation = 0;
         this._a = 1;
         this._b = 0;
         this._c = 0;
         this._d = 1;
         this._tx = 0;
         this._ty = 0;
-        this.frame = frame;
-        this.texture = frame.texture;
-        this._size = new Vec2(frame.width, frame.height);
-        this.topLeft = new Vec2();
-        this.topRight = new Vec2();
-        this.bottomLeft = new Vec2();
-        this.bottomRight = new Vec2();
-        this._position = new Vec2(x, y);
-        this._scale = new Vec2(1, 1);
-        this._skew = new Vec2(0, 0);
-        this._origin = new Vec2(0, 0);
-        this._rotation = 0;
+        this.scene = scene;
+        this.setTexture(texture, frame);
+        this._position.set(x, y);
         //  Transform.update:
         this._tx = x;
         this._ty = y;
+    }
+    setTexture(key, frame) {
+        if (key instanceof Texture) {
+            this.texture = key;
+        }
+        else {
+            this.texture = this.scene.textures.get(key);
+        }
+        return this.setFrame(frame);
+    }
+    setFrame(key) {
+        this.frame = this.texture.get(key);
+        this._size.set(this.frame.width, this.frame.height);
+        return this;
     }
     setPosition(x, y) {
         this._position.set(x, y);
@@ -918,11 +879,6 @@ class Sprite {
         this._d = Math.cos(_rotation - _skew.x) * _scale.y;
         return this;
     }
-    setTexture(texture) {
-        this.texture = texture;
-        this._size.set(texture.width, texture.height);
-        return this;
-    }
     update() {
         //  Transform.update:
         this._tx = this.x;
@@ -944,10 +900,19 @@ class Sprite {
         const x1b = x1 * _b;
         const y1c = y1 * _c;
         const y1d = y1 * _d;
-        this.topLeft.set(x0a + y0c + _tx, x0b + y0d + _ty);
-        this.topRight.set(x1a + y0c + _tx, x1b + y0d + _ty);
-        this.bottomLeft.set(x0a + y1c + _tx, x0b + y1d + _ty);
-        this.bottomRight.set(x1a + y1c + _tx, x1b + y1d + _ty);
+        const vertices = this.vertices;
+        //  top left
+        vertices[0] = x0a + y0c + _tx;
+        vertices[1] = x0b + y0d + _ty;
+        //  top right
+        vertices[2] = x1a + y0c + _tx;
+        vertices[3] = x1b + y0d + _ty;
+        //  bottom left
+        vertices[4] = x0a + y1c + _tx;
+        vertices[5] = x0b + y1d + _ty;
+        //  bottom right
+        vertices[6] = x1a + y1c + _tx;
+        vertices[7] = x1b + y1d + _ty;
     }
     set x(value) {
         this._position.x = value;
@@ -998,28 +963,290 @@ class Sprite {
     }
 }
 
+class GameObjectFactory {
+    constructor(scene) {
+        this.scene = scene;
+        this.displayList = scene.children;
+    }
+    sprite(x, y, texture, frame) {
+        let sprite = new Sprite(this.scene, x, y, texture, frame);
+        this.displayList.add(sprite);
+        return sprite;
+    }
+}
+
+class Scene {
+    constructor(game) {
+        this.game = game;
+        this.load = game.loader;
+        this.textures = game.textures;
+        this.children = new DisplayList(this);
+        this.add = new GameObjectFactory(this);
+    }
+    init() {
+    }
+    preload() {
+    }
+    create() {
+    }
+    update(time) {
+    }
+}
+
+//  Base Texture
+class Texture$1 {
+    constructor(key, image) {
+        this.glIndex = 0;
+        this.glIndexCounter = -1;
+        this.key = key;
+        this.image = image;
+        this.frames = new Map();
+        this.width = this.image.width;
+        this.height = this.image.height;
+        this.add('__BASE', 0, 0, this.width, this.height);
+    }
+    add(key, x, y, width, height) {
+        if (this.frames.has(key)) {
+            return null;
+        }
+        let frame = new Frame(this, key, x, y, width, height);
+        this.frames.set(key, frame);
+        if (!this.firstFrame || this.firstFrame.key === '__BASE') {
+            this.firstFrame = frame;
+        }
+        return frame;
+    }
+    get(key) {
+        //  null, undefined, empty string, zero
+        if (!key) {
+            return this.firstFrame;
+        }
+        let frame = this.frames.get(key);
+        if (!frame) {
+            console.warn('Texture.frame missing: ' + key);
+            frame = this.firstFrame;
+        }
+        return frame;
+    }
+}
+
+function SpriteSheetParser (texture, x, y, width, height, frameConfig) {
+    let { frameWidth = null, frameHeight = null, startFrame = 0, endFrame = -1, margin = 0, spacing = 0 } = frameConfig;
+    if (!frameHeight) {
+        frameHeight = frameWidth;
+    }
+    //  If missing we can't proceed
+    if (frameWidth === null) {
+        throw new Error('TextureManager.SpriteSheet: Invalid frameWidth given.');
+    }
+    const row = Math.floor((width - margin + spacing) / (frameWidth + spacing));
+    const column = Math.floor((height - margin + spacing) / (frameHeight + spacing));
+    let total = row * column;
+    if (total === 0) {
+        console.warn('SpriteSheet frame dimensions will result in zero frames.');
+    }
+    if (startFrame > total || startFrame < -total) {
+        startFrame = 0;
+    }
+    if (startFrame < 0) {
+        //  Allow negative skipframes.
+        startFrame = total + startFrame;
+    }
+    if (endFrame !== -1) {
+        total = startFrame + (endFrame + 1);
+    }
+    let fx = margin;
+    let fy = margin;
+    let ax = 0;
+    let ay = 0;
+    for (let i = 0; i < total; i++) {
+        ax = 0;
+        ay = 0;
+        let w = fx + frameWidth;
+        let h = fy + frameHeight;
+        if (w > width) {
+            ax = w - width;
+        }
+        if (h > height) {
+            ay = h - height;
+        }
+        texture.add(i, x + fx, y + fy, frameWidth - ax, frameHeight - ay);
+        fx += frameWidth + spacing;
+        if (fx + frameWidth > width) {
+            fx = margin;
+            fy += frameHeight + spacing;
+        }
+    }
+}
+
+class TextureManager {
+    constructor(game) {
+        this.game = game;
+        this.textures = new Map();
+    }
+    get(key) {
+        if (this.textures.has(key)) {
+            return this.textures.get(key);
+        }
+        else {
+            return this.textures.get('__MISSING');
+        }
+    }
+    addImage(key, source) {
+        let texture = null;
+        if (!this.textures.has(key)) {
+            texture = new Texture$1(key, source);
+            texture.glTexture = this.game.renderer.createGLTexture(texture.image);
+            this.textures.set(key, texture);
+        }
+        return texture;
+    }
+    addSpriteSheet(key, source, frameConfig) {
+        let texture = null;
+        if (!this.textures.has(key)) {
+            texture = new Texture$1(key, source);
+            texture.glTexture = this.game.renderer.createGLTexture(texture.image);
+            SpriteSheetParser(texture, 0, 0, texture.width, texture.height, frameConfig);
+            this.textures.set(key, texture);
+        }
+        return texture;
+    }
+}
+
+class Game {
+    constructor(config) {
+        this.VERSION = '4.0.0-beta1';
+        this.isPaused = false;
+        this.isBooted = false;
+        const { width = 800, height = 600, backgroundColor = 0x00000, parent = document.body, scene = new Scene(this) } = config;
+        this.scene = scene;
+        DOMContentLoaded(() => this.boot(width, height, backgroundColor, parent));
+    }
+    boot(width, height, backgroundColor, parent) {
+        this.isBooted = true;
+        this.textures = new TextureManager(this);
+        this.loader = new Loader(this);
+        const renderer = new WebGLRenderer(width, height);
+        renderer.setBackgroundColor(backgroundColor);
+        AddToDOM(renderer.canvas, parent);
+        this.renderer = renderer;
+        this.banner(this.VERSION);
+        const scene = this.scene;
+        if (scene instanceof Scene) {
+            this.scene = this.createSceneFromInstance(scene);
+        }
+        else if (typeof scene === 'object') {
+            this.scene = this.createSceneFromObject(scene);
+        }
+        else if (typeof scene === 'function') {
+            this.scene = this.createSceneFromFunction(scene);
+        }
+        this.scene.init();
+        this.scene.preload();
+        if (this.loader.totalFilesToLoad() > 0) {
+            this.loader.start(() => this.start());
+        }
+        else {
+            this.start();
+        }
+    }
+    createSceneFromInstance(newScene) {
+        newScene.game = this;
+        newScene.load = this.loader;
+        return newScene;
+    }
+    createSceneFromObject(scene) {
+        let newScene = new Scene(this);
+        //  Extract callbacks
+        const defaults = ['init', 'preload', 'create', 'update', 'render'];
+        defaults.forEach((method) => {
+            if (scene.hasOwnProperty(method)) {
+                newScene[method] = scene[method];
+            }
+        });
+        return newScene;
+    }
+    createSceneFromFunction(scene) {
+        var newScene = new scene(this);
+        if (newScene instanceof Scene) {
+            return this.createSceneFromInstance(newScene);
+        }
+        else {
+            return newScene;
+        }
+    }
+    start() {
+        this.scene.create();
+        requestAnimationFrame((time) => this.step(time));
+    }
+    banner(version) {
+        let c = '';
+        const args = [c];
+        const bannerColor = [
+            '#e000e0',
+            '#8000e0',
+            '#2000e0',
+            '#0000c0',
+            '#000080'
+        ];
+        const bannerTextColor = '#ffffff';
+        let lastColor;
+        bannerColor.forEach((color) => {
+            c = c.concat('%c ');
+            args.push('background: ' + color);
+            lastColor = color;
+        });
+        //  inject the text color
+        args[args.length - 1] = 'color: ' + bannerTextColor + '; background: ' + lastColor;
+        //  URL link background color (always white)
+        args.push('background: rgba(0,0,0,0)');
+        c = c.concat('Phaser Nano v' + version);
+        c = c.concat(' %c ' + 'https://phaser4.io');
+        //  Inject the new string back into the args array
+        args[0] = c;
+        console.log.apply(console, args);
+    }
+    step(time) {
+        if (this.isPaused) {
+            requestAnimationFrame((time) => this.step(time));
+            return;
+        }
+        this.scene.update(time);
+        this.renderer.render(this.scene.children.list);
+        requestAnimationFrame((time) => this.step(time));
+    }
+}
+
 class Demo extends Scene {
     constructor(game) {
         super(game);
     }
     preload() {
-        this.load.image('logo', '../assets/logo.png');
+        this.load.setPath('../assets');
+        this.load.spritesheet('diamonds', 'diamonds32x24x5.png', { frameWidth: 32, frameHeight: 24 });
+        this.load.spritesheet('pack', '32x32-item-pack.png', { frameWidth: 32, frameHeight: 32 });
     }
     create() {
         document.getElementById('toggle').addEventListener('click', () => {
             this.game.isPaused = (this.game.isPaused) ? false : true;
         });
-        const texture = this.game.textures.get('logo');
-        const frame = texture.get();
-        const sprite1 = new Sprite(400, 300, frame).setOrigin(0.5);
-        this.game.sprites.push(sprite1);
-        this.sprite1 = sprite1;
-    }
-    update(time) {
-        this.sprite1.rotation += 0.02;
+        const totalDiamondFrames = this.textures.get('diamonds').frames.size - 1;
+        const totalPackFrames = this.textures.get('pack').frames.size - 1;
+        for (let i = 0; i < 128; i++) {
+            let x = Math.floor(Math.random() * this.game.renderer.resolution.x);
+            let y = Math.floor(Math.random() * this.game.renderer.resolution.y);
+            let frame = Math.floor(Math.random() * totalPackFrames);
+            this.add.sprite(x, y, 'pack', frame);
+        }
+        for (let i = 0; i < 64; i++) {
+            let x = Math.floor(Math.random() * this.game.renderer.resolution.x);
+            let y = Math.floor(Math.random() * this.game.renderer.resolution.y);
+            let frame = Math.floor(Math.random() * totalDiamondFrames);
+            this.add.sprite(x, y, 'diamonds', frame);
+        }
     }
 }
-function demo1 () {
+function demo3 () {
     new Game({
         width: 800,
         height: 600,
@@ -1029,15 +1256,18 @@ function demo1 () {
     });
 }
 
-//  Moved all code to WebGL Renderer and supporting classes
-demo1();
+// import demo1 from './demo1'; // test single sprite
+demo3();
 //  Next steps:
+//  * Texture Atlas Loader
 //  * Encode color as a single float, rather than a vec4 and add back to the shader
 //  * Multi Texture re-use old texture IDs when count > max supported
-//  * Encapsulate a Simple asset loader (images + json) and remove responsibility from the Texture class
 //  * Container class - Transform stack test (Quad with children, children of children, etc)
 //  * Instead of a Quad class, try a class that can have any number of vertices in it (ala Rope), or any vertex moved
 //  Done:
+//  X Moved all code to WebGL Renderer and supporting classes
+//  X Game class, single Scene, Loader, DOM Content Load handler, Texture Cache
+//  X Encapsulate a Simple asset loader (images + json) and remove responsibility from the Texture class
 //  X DOM Loaded handler + small boot = Game class
 //  X Basic Scene class
 //  X Tidy-up all of the classes, boil down into tiny WebGL1 + Sprite + Container + StaticContainer renderer package

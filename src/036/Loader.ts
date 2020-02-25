@@ -1,6 +1,7 @@
 import File from './File';
 import Game from 'Game';
 import Texture from 'Texture';
+import IFrameConfig from 'IFrameConfig';
 
 export default class Loader
 {
@@ -107,7 +108,18 @@ export default class Loader
 
     image (key: string, url?: string)
     {
-        let file = new File(key, this.getURL(key, url, '.png'), (file: File) => this.imageTagLoader(file));
+        let file = new File('image', key, this.getURL(key, url, '.png'), (file: File) => this.imageTagLoader(file));
+
+        this.queue.push(file);
+
+        return this;
+    }
+
+    spritesheet (key: string, url: string, frameConfig: IFrameConfig)
+    {
+        let file = new File('spritesheet', key, this.getURL(key, url, '.png'), (file: File) => this.imageTagLoader(file));
+
+        file.config = frameConfig;
 
         this.queue.push(file);
 
@@ -134,7 +146,14 @@ export default class Loader
             file.data.onerror = null;
             file.hasLoaded = true;
 
-            this.game.textures.set(file.key, new Texture(file.key, file.data));
+            if (file.type === 'image')
+            {
+                this.game.textures.addImage(file.key, file.data);
+            }
+            else if (file.type === 'spritesheet')
+            {
+                this.game.textures.addSpriteSheet(file.key, file.data, file.config);
+            }
 
             this.fileComplete(file);
 
@@ -161,7 +180,14 @@ export default class Loader
             file.data.onerror = null;
             file.hasLoaded = true;
 
-            this.game.textures.set(file.key, new Texture(file.key, file.data));
+            if (file.type === 'image')
+            {
+                this.game.textures.addImage(file.key, file.data);
+            }
+            else if (file.type === 'spritesheet')
+            {
+                this.game.textures.addSpriteSheet(file.key, file.data, file.config);
+            }
 
             this.fileComplete(file);
         }

@@ -287,7 +287,7 @@ export default class MultiTextureQuadShader
 
         this.program = program;
         
-        const vertexPositionAttrib = gl.getAttribLocation(program, 'aVertexPosition');
+        const vertexPosition = gl.getAttribLocation(program, 'aVertexPosition');
         const vertexTextureCoord = gl.getAttribLocation(program, 'aTextureCoord');
         const vertexTextureIndex = gl.getAttribLocation(program, 'aTextureId');
 
@@ -295,14 +295,14 @@ export default class MultiTextureQuadShader
         const uCameraMatrix = gl.getUniformLocation(program, 'uCameraMatrix');
         const uTextureLocation = gl.getUniformLocation(program, 'uTexture');
 
-        gl.enableVertexAttribArray(vertexPositionAttrib);
+        gl.enableVertexAttribArray(vertexPosition);
         gl.enableVertexAttribArray(vertexTextureCoord);
         gl.enableVertexAttribArray(vertexTextureIndex);
 
         this.attribs = {
-            position: vertexPositionAttrib,
+            position: vertexPosition,
             textureCoord: vertexTextureCoord,
-            textureIndex: vertexTextureIndex,
+            textureIndex: vertexTextureIndex
         };
 
         this.uniforms = {
@@ -348,27 +348,28 @@ export default class MultiTextureQuadShader
         const data = this.data;
         const frame = sprite.frame;
         const textureIndex = frame.texture.glIndex;
+        const vertices = sprite.vertices;
 
-        data[offset++] = sprite.topLeft.x;
-        data[offset++] = sprite.topLeft.y;
+        data[offset++] = vertices[0];
+        data[offset++] = vertices[1];
         data[offset++] = frame.u0;
         data[offset++] = frame.v0;
         data[offset++] = textureIndex;
 
-        data[offset++] = sprite.bottomLeft.x;
-        data[offset++] = sprite.bottomLeft.y;
+        data[offset++] = vertices[4];
+        data[offset++] = vertices[5];
         data[offset++] = frame.u0;
         data[offset++] = frame.v1;
         data[offset++] = textureIndex;
 
-        data[offset++] = sprite.bottomRight.x;
-        data[offset++] = sprite.bottomRight.y;
+        data[offset++] = vertices[6];
+        data[offset++] = vertices[7];
         data[offset++] = frame.u1;
         data[offset++] = frame.v1;
         data[offset++] = textureIndex;
 
-        data[offset++] = sprite.topRight.x;
-        data[offset++] = sprite.topRight.y;
+        data[offset++] = vertices[2];
+        data[offset++] = vertices[3];
         data[offset++] = frame.u1;
         data[offset++] = frame.v0;
         data[offset++] = textureIndex;
