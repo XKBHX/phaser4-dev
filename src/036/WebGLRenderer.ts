@@ -18,6 +18,8 @@ export default class WebGLRenderer
         preserveDrawingBuffer: false
     };
 
+    clearColor = [ 0, 0, 0, 1 ];
+
     shader: MultiTextureQuadShader;
 
     resolution = { x: 0, y: 0 };
@@ -27,12 +29,11 @@ export default class WebGLRenderer
     cameraMatrix: Matrix4;
     textureIndex: number[];
 
-    textures: Map<string, Texture>;
-
     activeTextures: Texture[];
     currentActiveTexture: number;
+    startActiveTexture: number;
 
-    constructor (width: number, height: number, parent: HTMLElement | string = document.body)
+    constructor (width: number, height: number)
     {
         this.resolution.x = width;
         this.resolution.y = height;
@@ -43,22 +44,30 @@ export default class WebGLRenderer
 
         this.gl = this.canvas.getContext('webgl', this.contextOptions);
 
-        if (typeof parent === 'string')
-        {
-            parent = document.getElementById(parent);
-        }
-
-        parent.appendChild(this.canvas);
-
         this.getMaxTextures();
 
         this.shader = new MultiTextureQuadShader(this);
 
-        this.textures = new Map();
         this.activeTextures = Array(this.maxTextures);
 
         this.projectionMatrix = Ortho(0, width, height, 0, -1000, 1000);
         this.cameraMatrix = new Matrix4();
+    }
+
+    setBackgroundColor (color: number)
+    {
+        const clearColor = this.clearColor;
+        let r: number = color >> 16 & 0xFF;
+        let g: number = color >> 8 & 0xFF;
+        let b: number = color & 0xFF;
+        let a: number = (color > 16777215) ? color >>> 24 : 255;
+    
+        clearColor[0] = r / 255;
+        clearColor[1] = g / 255;
+        clearColor[2] = b / 255;
+        clearColor[3] = a / 255;
+
+        return this;
     }
 
     private getMaxTextures ()
@@ -81,13 +90,6 @@ export default class WebGLRenderer
 
         this.maxTextures = maxTextures;
         this.textureIndex = Array.from(Array(maxTextures).keys());
-    }
-
-    addTexture (texture: Texture)
-    {
-        this.textures.set(texture.key, texture);
-
-        return this;
     }
 
     createGLTexture (source: TexImageSource): WebGLTexture
@@ -118,12 +120,9 @@ export default class WebGLRenderer
 
     render (sprites: Sprite[])
     {
-        //  Reset textures
+        this.startActiveTexture++;
 
-        this.textures.forEach((texture) => {
-            texture.glIndex = -1;
-        });
-
+        let startActiveTexture = this.startActiveTexture;
         let currentActiveTexture = 0;
 
         const shader = this.shader;
@@ -133,8 +132,9 @@ export default class WebGLRenderer
         //  CLS
 
         const gl = this.gl;
+        const cls = this.clearColor;
 
-        gl.clearColor(0, 0, 0, 1);
+        gl.clearColor(cls[0], cls[1], cls[2], cls[3]);
         gl.clear(gl.COLOR_BUFFER_BIT);
 
         gl.enable(gl.BLEND);
@@ -149,8 +149,15 @@ export default class WebGLRenderer
             let sprite = sprites[i];
             let texture = sprite.frame.texture;
 
-            if (texture.glIndex === -1)
+            if (!texture.glTexture)
             {
+                texture.glTexture = this.createGLTexture(texture.image);
+            }
+
+            if (texture.glIndexCounter < startActiveTexture)
+            {
+                texture.glIndexCounter = startActiveTexture;
+
                 if (currentActiveTexture < maxTextures)
                 {
                     //  Make this texture active

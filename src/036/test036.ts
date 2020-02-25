@@ -1,6 +1,7 @@
-// import part26 from './part26'; // Update Merged Transform to cache rotation and scale
+//  Moved all code to WebGL Renderer and supporting classes
+//  Game class, single Scene, Loader, DOM Content Load handler, Texture Cache
 
-import demo1 from './demo1'; // Moved all code to WebGL Renderer and supporting classes
+import demo1 from './demo1'; 
 
 demo1();
 
@@ -8,15 +9,15 @@ demo1();
 
 //  * Encode color as a single float, rather than a vec4 and add back to the shader
 //  * Multi Texture re-use old texture IDs when count > max supported
-//  * DOM Loaded handler + small boot
-//  * Basic Scene class
 //  * Encapsulate a Simple asset loader (images + json) and remove responsibility from the Texture class
 //  * Container class - Transform stack test (Quad with children, children of children, etc)
 //  * Instead of a Quad class, try a class that can have any number of vertices in it (ala Rope), or any vertex moved
-//  * Tidy-up all of the classes, boil down into tiny WebGL1 + Sprite + Container + StaticContainer renderer package
 
 //  Done:
 
+//  X DOM Loaded handler + small boot = Game class
+//  X Basic Scene class
+//  X Tidy-up all of the classes, boil down into tiny WebGL1 + Sprite + Container + StaticContainer renderer package
 //  X Update Merged Transform to cache rotation and scale
 //  X Multi Textures round-robin, don't use glIndex
 //  X Texture Frames (UV) support
