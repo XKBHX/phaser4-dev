@@ -36,6 +36,480 @@ function CheckShaderMaxIfStatements (maxIfs, gl) {
     return maxIfs;
 }
 
+class Matrix4 {
+    /**
+     * Creates an instance of a Matrix4.
+     *
+     * Format: column-major, when typed out it looks like row-major.
+     *
+     * @param {number} [m00=1] - Component in column 0, row 0 position (index 0)
+     * @param {number} [m01=0] - Component in column 0, row 1 position (index 1)
+     * @param {number} [m02=0] - Component in column 0, row 2 position (index 2)
+     * @param {number} [m03=0] - Component in column 0, row 3 position (index 3)
+     * @param {number} [m10=0] - Component in column 1, row 0 position (index 4)
+     * @param {number} [m11=1] - Component in column 1, row 1 position (index 5)
+     * @param {number} [m12=0] - Component in column 1, row 2 position (index 6)
+     * @param {number} [m13=0] - Component in column 1, row 3 position (index 7)
+     * @param {number} [m20=0] - Component in column 2, row 0 position (index 8)
+     * @param {number} [m21=0] - Component in column 2, row 1 position (index 9)
+     * @param {number} [m22=1] - Component in column 2, row 2 position (index 10)
+     * @param {number} [m23=0] - Component in column 2, row 3 position (index 11)
+     * @param {number} [m30=0] - Component in column 3, row 0 position (index 12)
+     * @param {number} [m31=0] - Component in column 3, row 1 position (index 13)
+     * @param {number} [m32=0] - Component in column 3, row 2 position (index 14)
+     * @param {number} [m33=1] - Component in column 3, row 3 position (index 15)
+     * @memberof Matrix4
+     */
+    constructor(m00 = 1, m01 = 0, m02 = 0, m03 = 0, m10 = 0, m11 = 1, m12 = 0, m13 = 0, m20 = 0, m21 = 0, m22 = 1, m23 = 0, m30 = 0, m31 = 0, m32 = 0, m33 = 1) {
+        this.set(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33);
+    }
+    /**
+     * Sets the components of this Matrix4.
+     *
+     * If no parameters are given it resets this Matrix4 to an identity matrix.
+     *
+     * @param {number} [m00=1] - Component in column 0, row 0 position (index 0)
+     * @param {number} [m01=0] - Component in column 0, row 1 position (index 1)
+     * @param {number} [m02=0] - Component in column 0, row 2 position (index 2)
+     * @param {number} [m03=0] - Component in column 0, row 3 position (index 3)
+     * @param {number} [m10=0] - Component in column 1, row 0 position (index 4)
+     * @param {number} [m11=1] - Component in column 1, row 1 position (index 5)
+     * @param {number} [m12=0] - Component in column 1, row 2 position (index 6)
+     * @param {number} [m13=0] - Component in column 1, row 3 position (index 7)
+     * @param {number} [m20=0] - Component in column 2, row 0 position (index 8)
+     * @param {number} [m21=0] - Component in column 2, row 1 position (index 9)
+     * @param {number} [m22=1] - Component in column 2, row 2 position (index 10)
+     * @param {number} [m23=0] - Component in column 2, row 3 position (index 11)
+     * @param {number} [m30=0] - Component in column 3, row 0 position (index 12)
+     * @param {number} [m31=0] - Component in column 3, row 1 position (index 13)
+     * @param {number} [m32=0] - Component in column 3, row 2 position (index 14)
+     * @param {number} [m33=1] - Component in column 3, row 3 position (index 15)
+     * @returns {Matrix4}
+     * @memberof Matrix4
+     */
+    set(m00 = 1, m01 = 0, m02 = 0, m03 = 0, m10 = 0, m11 = 1, m12 = 0, m13 = 0, m20 = 0, m21 = 0, m22 = 1, m23 = 0, m30 = 0, m31 = 0, m32 = 0, m33 = 1) {
+        this.m00 = m00;
+        this.m01 = m01;
+        this.m02 = m02;
+        this.m03 = m03;
+        this.m10 = m10;
+        this.m11 = m11;
+        this.m12 = m12;
+        this.m13 = m13;
+        this.m20 = m20;
+        this.m21 = m21;
+        this.m22 = m22;
+        this.m23 = m23;
+        this.m30 = m30;
+        this.m31 = m31;
+        this.m32 = m32;
+        this.m33 = m33;
+        return this;
+    }
+    /**
+     * Sets all components of this Matrix4 to zero.
+     *
+     * @returns {Matrix4}
+     * @memberof Matrix4
+     */
+    zero() {
+        return this.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    }
+    /**
+     * Resets this Matrix4 to an identity matrix.
+     *
+     * @returns {Matrix4}
+     * @memberof Matrix4
+     */
+    identity() {
+        return this.set();
+    }
+    /**
+     * Returns a new array containg the Matrix4 component values in column-major format.
+     *
+     * @returns {number[]}
+     * @memberof Matrix4
+     */
+    getArray() {
+        return [this.m00, this.m01, this.m02, this.m03, this.m10, this.m11, this.m12, this.m13, this.m20, this.m21, this.m22, this.m23, this.m30, this.m31, this.m32, this.m33];
+    }
+    /**
+     * Sets the values of this Matrix4 based on the given array, or array-like object, such as a Float32.
+     *
+     * The source must have 16 elements, starting from index 0 through to index 15.
+     *
+     * @param {number[]} src - The source array to copy the values from.
+     * @returns {Matrix4}
+     * @memberof Matrix4
+     */
+    fromArray(src) {
+        return this.set(src[0], src[1], src[2], src[3], src[4], src[5], src[6], src[7], src[8], src[9], src[10], src[11], src[12], src[13], src[14], src[15]);
+    }
+    [Symbol.iterator]() {
+        const data = this.getArray();
+        return data[Symbol.iterator]();
+    }
+}
+//# sourceMappingURL=Matrix4.js.map
+
+const shaderSource = {
+    fragmentShader: `
+precision mediump float;
+
+varying vec2 vTextureCoord;
+varying float vTextureId;
+
+uniform sampler2D uTexture[%count%];
+
+void main (void)
+{
+    vec4 color;
+
+    %forloop%
+
+    gl_FragColor = color;
+}`,
+    vertexShader: `
+attribute vec2 aVertexPosition;
+attribute vec2 aTextureCoord;
+attribute float aTextureId;
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uCameraMatrix;
+
+varying vec2 vTextureCoord;
+varying float vTextureId;
+
+void main (void)
+{
+    vTextureCoord = aTextureCoord;
+    vTextureId = aTextureId;
+
+    gl_Position = uProjectionMatrix * uCameraMatrix * vec4(aVertexPosition, 0.0, 1.0);
+}`
+};
+class MultiTextureQuadShader {
+    constructor(renderer, config = {}) {
+        this.renderer = renderer;
+        this.gl = renderer.gl;
+        const { batchSize = 2000, dataSize = 4, indexSize = 4, vertexElementSize = 5, quadIndexSize = 6, fragmentShader = shaderSource.fragmentShader, vertexShader = shaderSource.vertexShader } = config;
+        this.batchSize = batchSize;
+        this.dataSize = dataSize;
+        this.indexSize = indexSize;
+        this.vertexElementSize = vertexElementSize;
+        this.vertexByteSize = vertexElementSize * dataSize;
+        this.quadByteSize = this.vertexByteSize * 4;
+        this.quadElementSize = vertexElementSize * 4;
+        this.quadIndexSize = quadIndexSize;
+        this.bufferByteSize = batchSize * this.quadByteSize;
+        this.createBuffers();
+        this.createShaders(fragmentShader, vertexShader);
+    }
+    createBuffers() {
+        let ibo = [];
+        //  Seed the index buffer
+        for (let i = 0; i < (this.batchSize * this.indexSize); i += this.indexSize) {
+            ibo.push(i + 0, i + 1, i + 2, i + 2, i + 3, i + 0);
+        }
+        this.data = new Float32Array(this.bufferByteSize);
+        this.index = new Uint16Array(ibo);
+        const gl = this.gl;
+        this.vertexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, this.data, gl.DYNAMIC_DRAW);
+        this.indexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.index, gl.STATIC_DRAW);
+        //  Tidy-up
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        ibo = [];
+    }
+    createShaders(fragmentShaderSource, vertexShaderSource) {
+        const gl = this.gl;
+        const maxTextures = this.renderer.maxTextures;
+        let src = '';
+        for (let i = 0; i < maxTextures; i++) {
+            if (i > 0) {
+                src += '\n    else ';
+            }
+            if (i < maxTextures - 1) {
+                src += `if (vTextureId < ${i}.5)`;
+            }
+            src += '\n    {';
+            src += `\n        color = texture2D(uTexture[${i}], vTextureCoord);`;
+            src += '\n    }';
+        }
+        fragmentShaderSource = fragmentShaderSource.replace(/%count%/gi, `${maxTextures}`);
+        fragmentShaderSource = fragmentShaderSource.replace(/%forloop%/gi, src);
+        //  Create the shaders
+        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fragmentShader, fragmentShaderSource);
+        gl.compileShader(fragmentShader);
+        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vertexShader, vertexShaderSource);
+        gl.compileShader(vertexShader);
+        const program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+        gl.useProgram(program);
+        this.program = program;
+        const vertexPositionAttrib = gl.getAttribLocation(program, 'aVertexPosition');
+        const vertexTextureCoord = gl.getAttribLocation(program, 'aTextureCoord');
+        const vertexTextureIndex = gl.getAttribLocation(program, 'aTextureId');
+        const uProjectionMatrix = gl.getUniformLocation(program, 'uProjectionMatrix');
+        const uCameraMatrix = gl.getUniformLocation(program, 'uCameraMatrix');
+        const uTextureLocation = gl.getUniformLocation(program, 'uTexture');
+        gl.enableVertexAttribArray(vertexPositionAttrib);
+        gl.enableVertexAttribArray(vertexTextureCoord);
+        gl.enableVertexAttribArray(vertexTextureIndex);
+        this.attribs = {
+            position: vertexPositionAttrib,
+            textureCoord: vertexTextureCoord,
+            textureIndex: vertexTextureIndex,
+        };
+        this.uniforms = {
+            projectionMatrix: uProjectionMatrix,
+            cameraMatrix: uCameraMatrix,
+            textureLocation: uTextureLocation
+        };
+    }
+    bind() {
+        const gl = this.gl;
+        const renderer = this.renderer;
+        const stride = this.vertexByteSize;
+        const uniforms = this.uniforms;
+        const attribs = this.attribs;
+        gl.useProgram(this.program);
+        gl.uniformMatrix4fv(uniforms.projectionMatrix, false, renderer.projectionMatrix);
+        gl.uniformMatrix4fv(uniforms.cameraMatrix, false, renderer.cameraMatrix);
+        gl.uniform1iv(uniforms.textureLocation, renderer.textureIndex);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+        gl.vertexAttribPointer(attribs.position, 2, gl.FLOAT, false, stride, 0); // size = 8
+        gl.vertexAttribPointer(attribs.textureCoord, 2, gl.FLOAT, false, stride, 8); // size = 8
+        gl.vertexAttribPointer(attribs.textureIndex, 1, gl.FLOAT, false, stride, 8 + 8); // size = 4
+        this.count = 0;
+    }
+    batchSprite(sprite) {
+        if (this.count === this.batchSize) {
+            this.flush();
+        }
+        let offset = this.count * this.quadElementSize;
+        const data = this.data;
+        const frame = sprite.frame;
+        const textureIndex = frame.texture.glIndex;
+        data[offset++] = sprite.topLeft.x;
+        data[offset++] = sprite.topLeft.y;
+        data[offset++] = frame.u0;
+        data[offset++] = frame.v0;
+        data[offset++] = textureIndex;
+        data[offset++] = sprite.bottomLeft.x;
+        data[offset++] = sprite.bottomLeft.y;
+        data[offset++] = frame.u0;
+        data[offset++] = frame.v1;
+        data[offset++] = textureIndex;
+        data[offset++] = sprite.bottomRight.x;
+        data[offset++] = sprite.bottomRight.y;
+        data[offset++] = frame.u1;
+        data[offset++] = frame.v1;
+        data[offset++] = textureIndex;
+        data[offset++] = sprite.topRight.x;
+        data[offset++] = sprite.topRight.y;
+        data[offset++] = frame.u1;
+        data[offset++] = frame.v0;
+        data[offset++] = textureIndex;
+        this.count++;
+    }
+    flush() {
+        const count = this.count;
+        if (count === 0) {
+            return;
+        }
+        const gl = this.gl;
+        const offset = count * this.quadByteSize;
+        if (offset === this.bufferByteSize) {
+            gl.bufferData(gl.ARRAY_BUFFER, this.data, gl.DYNAMIC_DRAW);
+        }
+        else {
+            let view = this.data.subarray(0, offset);
+            gl.bufferSubData(gl.ARRAY_BUFFER, 0, view);
+        }
+        gl.drawElements(gl.TRIANGLES, count * this.quadIndexSize, gl.UNSIGNED_SHORT, 0);
+        this.count = 0;
+    }
+}
+
+function Ortho(left, right, bottom, top, near, far) {
+    const lr = 1 / (left - right);
+    const bt = 1 / (bottom - top);
+    const nf = 1 / (near - far);
+    const m00 = -2 * lr;
+    const m11 = -2 * bt;
+    const m22 = 2 * nf;
+    const m30 = (left + right) * lr;
+    const m31 = (top + bottom) * bt;
+    const m32 = (far + near) * nf;
+    return new Matrix4(m00, 0, 0, 0, 0, m11, 0, 0, 0, 0, m22, 0, m30, m31, m32, 1);
+}
+//# sourceMappingURL=Ortho.js.map
+
+class WebGLRenderer {
+    constructor(width, height, parent = document.body) {
+        this.contextOptions = {
+            alpha: false,
+            antialias: true,
+            premultipliedAlpha: false,
+            stencil: false,
+            preserveDrawingBuffer: false
+        };
+        this.resolution = { x: 0, y: 0 };
+        this.maxTextures = 0;
+        this.resolution.x = width;
+        this.resolution.y = height;
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.gl = this.canvas.getContext('webgl', this.contextOptions);
+        if (typeof parent === 'string') {
+            parent = document.getElementById(parent);
+        }
+        parent.appendChild(this.canvas);
+        this.getMaxTextures();
+        this.shader = new MultiTextureQuadShader(this);
+        this.textures = new Map();
+        this.activeTextures = Array(this.maxTextures);
+        this.projectionMatrix = Ortho(0, width, height, 0, -1000, 1000);
+        this.cameraMatrix = new Matrix4();
+    }
+    getMaxTextures() {
+        const gl = this.gl;
+        let maxTextures = CheckShaderMaxIfStatements(gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS), gl);
+        //  Create temp textures to stop WebGL errors on mac os
+        for (let i = 0; i < maxTextures; i++) {
+            let tempTexture = gl.createTexture();
+            gl.activeTexture(gl.TEXTURE0 + i);
+            gl.bindTexture(gl.TEXTURE_2D, tempTexture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 255, 255]));
+        }
+        this.maxTextures = maxTextures;
+        this.textureIndex = Array.from(Array(maxTextures).keys());
+    }
+    addTexture(texture) {
+        this.textures.set(texture.key, texture);
+        return this;
+    }
+    createGLTexture(source) {
+        const gl = this.gl;
+        const glTexture = gl.createTexture();
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, glTexture);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        //  POT only
+        // gl.generateMipmap(gl.TEXTURE_2D);
+        return glTexture;
+    }
+    render(sprites) {
+        //  Reset textures
+        this.textures.forEach((texture) => {
+            texture.glIndex = -1;
+        });
+        let currentActiveTexture = 0;
+        const shader = this.shader;
+        const maxTextures = this.maxTextures;
+        const activeTextures = this.activeTextures;
+        //  CLS
+        const gl = this.gl;
+        gl.clearColor(0, 0, 0, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        gl.viewport(0, 0, this.resolution.x, this.resolution.y);
+        shader.bind();
+        for (let i = 0; i < sprites.length; i++) {
+            let sprite = sprites[i];
+            let texture = sprite.frame.texture;
+            if (texture.glIndex === -1) {
+                if (currentActiveTexture < maxTextures) {
+                    //  Make this texture active
+                    activeTextures[currentActiveTexture] = texture;
+                    texture.glIndex = currentActiveTexture;
+                    gl.activeTexture(gl.TEXTURE0 + currentActiveTexture);
+                    gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
+                    currentActiveTexture++;
+                }
+            }
+            sprite.update();
+            if (sprite.visible) {
+                shader.batchSprite(sprite);
+            }
+        }
+        shader.flush();
+    }
+}
+
+class Frame {
+    constructor(texture, x, y, width, height) {
+        this.texture = texture;
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.updateUVs();
+    }
+    updateUVs() {
+        const { x, y, width, height } = this;
+        const sourceWidth = this.texture.width;
+        const sourceHeight = this.texture.height;
+        this.u0 = x / sourceWidth;
+        this.v0 = y / sourceHeight;
+        this.u1 = (x + width) / sourceWidth;
+        this.v1 = (y + height) / sourceHeight;
+    }
+}
+
+//  Base Texture
+class Texture {
+    constructor(key, renderer) {
+        this.glIndex = 0;
+        this.key = key;
+        this.renderer = renderer;
+        this.frames = new Map();
+    }
+    load(url, callback) {
+        this.image = new Image();
+        this.image.onload = () => this.onLoad();
+        this.image.src = url;
+        if (callback) {
+            this._onLoadCallback = callback;
+        }
+        // Image is immediately-available / cached
+        if (this.image.complete && this.image.width && this.image.height) {
+            this.onLoad();
+        }
+    }
+    onLoad() {
+        this.glTexture = this.renderer.createGLTexture(this.image);
+        this.width = this.image.width;
+        this.height = this.image.height;
+        //  Add default frame
+        this.frames.set('__base', new Frame(this, 0, 0, this.width, this.height));
+        this.image.onload = null;
+        this.renderer.addTexture(this);
+        if (this._onLoadCallback) {
+            this._onLoadCallback(this);
+        }
+    }
+    get(key = '__base') {
+        return this.frames.get(key);
+    }
+}
+
 class Vec2 {
     /**
      * Creates an instance of a Vector2.
@@ -158,7 +632,7 @@ class Sprite {
         this._size.set(texture.width, texture.height);
         return this;
     }
-    batch(dataTA, offset) {
+    update() {
         //  Transform.update:
         this._tx = this.x;
         this._ty = this.y;
@@ -183,29 +657,6 @@ class Sprite {
         this.topRight.set(x1a + y0c + _tx, x1b + y0d + _ty);
         this.bottomLeft.set(x0a + y1c + _tx, x0b + y1d + _ty);
         this.bottomRight.set(x1a + y1c + _tx, x1b + y1d + _ty);
-        //  Batch:
-        const frame = this.frame;
-        const textureIndex = frame.texture.glIndex;
-        dataTA[offset++] = this.topLeft.x;
-        dataTA[offset++] = this.topLeft.y;
-        dataTA[offset++] = frame.u0;
-        dataTA[offset++] = frame.v0;
-        dataTA[offset++] = textureIndex;
-        dataTA[offset++] = this.bottomLeft.x;
-        dataTA[offset++] = this.bottomLeft.y;
-        dataTA[offset++] = frame.u0;
-        dataTA[offset++] = frame.v1;
-        dataTA[offset++] = textureIndex;
-        dataTA[offset++] = this.bottomRight.x;
-        dataTA[offset++] = this.bottomRight.y;
-        dataTA[offset++] = frame.u1;
-        dataTA[offset++] = frame.v1;
-        dataTA[offset++] = textureIndex;
-        dataTA[offset++] = this.topRight.x;
-        dataTA[offset++] = this.topRight.y;
-        dataTA[offset++] = frame.u1;
-        dataTA[offset++] = frame.v0;
-        dataTA[offset++] = textureIndex;
     }
     set x(value) {
         this._position.x = value;
@@ -255,237 +706,6 @@ class Sprite {
         return this._skew.y;
     }
 }
-
-//  Base Texture
-class Texture {
-    constructor(key, gl, glIndex = 0) {
-        this.glIndex = 0;
-        this.key = key;
-        this.gl = gl;
-        this.glIndex = glIndex;
-    }
-    onLoad() {
-        // console.log(this.key, 'loaded');
-        const gl = this.gl;
-        this.glTexture = this.gl.createTexture();
-        gl.activeTexture(gl.TEXTURE0 + this.glIndex);
-        gl.bindTexture(gl.TEXTURE_2D, this.glTexture);
-        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.image);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        this.width = this.image.width;
-        this.height = this.image.height;
-        //  POT only
-        // gl.generateMipmap(gl.TEXTURE_2D);
-        this.image.onload = null;
-        if (this._onLoadCallback) {
-            this._onLoadCallback(this);
-        }
-    }
-    load(url, callback) {
-        // console.log(this.key, 'loading');
-        this.image = new Image();
-        this.image.onload = () => this.onLoad();
-        this.image.src = url;
-        if (callback) {
-            this._onLoadCallback = callback;
-        }
-        // Image is immediately-available / cached
-        if (this.image.complete && this.image.width && this.image.height) {
-            this.onLoad();
-        }
-    }
-}
-
-class Frame {
-    constructor(texture, x, y, width, height) {
-        this.texture = texture;
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-        this.updateUVs();
-    }
-    updateUVs() {
-        const { x, y, width, height } = this;
-        const sourceWidth = this.texture.width;
-        const sourceHeight = this.texture.height;
-        this.u0 = x / sourceWidth;
-        this.v0 = y / sourceHeight;
-        this.u1 = (x + width) / sourceWidth;
-        this.v1 = (y + height) / sourceHeight;
-    }
-}
-
-var SpriteShader = {
-    fragmentShader: `
-precision mediump float;
-
-varying vec2 vTextureCoord;
-varying float vTextureId;
-
-uniform sampler2D uTexture[%count%];
-
-void main (void)
-{
-    vec4 color;
-
-    %forloop%
-
-    gl_FragColor = color;
-}`,
-    vertexShader: `
-attribute vec2 aVertexPosition;
-attribute vec2 aTextureCoord;
-attribute float aTextureId;
-
-uniform mat4 uProjectionMatrix;
-uniform mat4 uCameraMatrix;
-
-varying vec2 vTextureCoord;
-varying float vTextureId;
-
-void main (void)
-{
-    vTextureCoord = aTextureCoord;
-    vTextureId = aTextureId;
-
-    gl_Position = uProjectionMatrix * uCameraMatrix * vec4(aVertexPosition, 0.0, 1.0);
-}`
-};
-
-class Matrix4 {
-    /**
-     * Creates an instance of a Matrix4.
-     *
-     * Format: column-major, when typed out it looks like row-major.
-     *
-     * @param {number} [m00=1] - Component in column 0, row 0 position (index 0)
-     * @param {number} [m01=0] - Component in column 0, row 1 position (index 1)
-     * @param {number} [m02=0] - Component in column 0, row 2 position (index 2)
-     * @param {number} [m03=0] - Component in column 0, row 3 position (index 3)
-     * @param {number} [m10=0] - Component in column 1, row 0 position (index 4)
-     * @param {number} [m11=1] - Component in column 1, row 1 position (index 5)
-     * @param {number} [m12=0] - Component in column 1, row 2 position (index 6)
-     * @param {number} [m13=0] - Component in column 1, row 3 position (index 7)
-     * @param {number} [m20=0] - Component in column 2, row 0 position (index 8)
-     * @param {number} [m21=0] - Component in column 2, row 1 position (index 9)
-     * @param {number} [m22=1] - Component in column 2, row 2 position (index 10)
-     * @param {number} [m23=0] - Component in column 2, row 3 position (index 11)
-     * @param {number} [m30=0] - Component in column 3, row 0 position (index 12)
-     * @param {number} [m31=0] - Component in column 3, row 1 position (index 13)
-     * @param {number} [m32=0] - Component in column 3, row 2 position (index 14)
-     * @param {number} [m33=1] - Component in column 3, row 3 position (index 15)
-     * @memberof Matrix4
-     */
-    constructor(m00 = 1, m01 = 0, m02 = 0, m03 = 0, m10 = 0, m11 = 1, m12 = 0, m13 = 0, m20 = 0, m21 = 0, m22 = 1, m23 = 0, m30 = 0, m31 = 0, m32 = 0, m33 = 1) {
-        this.set(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33);
-    }
-    /**
-     * Sets the components of this Matrix4.
-     *
-     * If no parameters are given it resets this Matrix4 to an identity matrix.
-     *
-     * @param {number} [m00=1] - Component in column 0, row 0 position (index 0)
-     * @param {number} [m01=0] - Component in column 0, row 1 position (index 1)
-     * @param {number} [m02=0] - Component in column 0, row 2 position (index 2)
-     * @param {number} [m03=0] - Component in column 0, row 3 position (index 3)
-     * @param {number} [m10=0] - Component in column 1, row 0 position (index 4)
-     * @param {number} [m11=1] - Component in column 1, row 1 position (index 5)
-     * @param {number} [m12=0] - Component in column 1, row 2 position (index 6)
-     * @param {number} [m13=0] - Component in column 1, row 3 position (index 7)
-     * @param {number} [m20=0] - Component in column 2, row 0 position (index 8)
-     * @param {number} [m21=0] - Component in column 2, row 1 position (index 9)
-     * @param {number} [m22=1] - Component in column 2, row 2 position (index 10)
-     * @param {number} [m23=0] - Component in column 2, row 3 position (index 11)
-     * @param {number} [m30=0] - Component in column 3, row 0 position (index 12)
-     * @param {number} [m31=0] - Component in column 3, row 1 position (index 13)
-     * @param {number} [m32=0] - Component in column 3, row 2 position (index 14)
-     * @param {number} [m33=1] - Component in column 3, row 3 position (index 15)
-     * @returns {Matrix4}
-     * @memberof Matrix4
-     */
-    set(m00 = 1, m01 = 0, m02 = 0, m03 = 0, m10 = 0, m11 = 1, m12 = 0, m13 = 0, m20 = 0, m21 = 0, m22 = 1, m23 = 0, m30 = 0, m31 = 0, m32 = 0, m33 = 1) {
-        this.m00 = m00;
-        this.m01 = m01;
-        this.m02 = m02;
-        this.m03 = m03;
-        this.m10 = m10;
-        this.m11 = m11;
-        this.m12 = m12;
-        this.m13 = m13;
-        this.m20 = m20;
-        this.m21 = m21;
-        this.m22 = m22;
-        this.m23 = m23;
-        this.m30 = m30;
-        this.m31 = m31;
-        this.m32 = m32;
-        this.m33 = m33;
-        return this;
-    }
-    /**
-     * Sets all components of this Matrix4 to zero.
-     *
-     * @returns {Matrix4}
-     * @memberof Matrix4
-     */
-    zero() {
-        return this.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    }
-    /**
-     * Resets this Matrix4 to an identity matrix.
-     *
-     * @returns {Matrix4}
-     * @memberof Matrix4
-     */
-    identity() {
-        return this.set();
-    }
-    /**
-     * Returns a new array containg the Matrix4 component values in column-major format.
-     *
-     * @returns {number[]}
-     * @memberof Matrix4
-     */
-    getArray() {
-        return [this.m00, this.m01, this.m02, this.m03, this.m10, this.m11, this.m12, this.m13, this.m20, this.m21, this.m22, this.m23, this.m30, this.m31, this.m32, this.m33];
-    }
-    /**
-     * Sets the values of this Matrix4 based on the given array, or array-like object, such as a Float32.
-     *
-     * The source must have 16 elements, starting from index 0 through to index 15.
-     *
-     * @param {number[]} src - The source array to copy the values from.
-     * @returns {Matrix4}
-     * @memberof Matrix4
-     */
-    fromArray(src) {
-        return this.set(src[0], src[1], src[2], src[3], src[4], src[5], src[6], src[7], src[8], src[9], src[10], src[11], src[12], src[13], src[14], src[15]);
-    }
-    [Symbol.iterator]() {
-        const data = this.getArray();
-        return data[Symbol.iterator]();
-    }
-}
-//# sourceMappingURL=Matrix4.js.map
-
-function Ortho(left, right, bottom, top, near, far) {
-    const lr = 1 / (left - right);
-    const bt = 1 / (bottom - top);
-    const nf = 1 / (near - far);
-    const m00 = -2 * lr;
-    const m11 = -2 * bt;
-    const m22 = 2 * nf;
-    const m30 = (left + right) * lr;
-    const m31 = (top + bottom) * bt;
-    const m32 = (far + near) * nf;
-    return new Matrix4(m00, 0, 0, 0, 0, m11, 0, 0, 0, 0, m22, 0, m30, m31, m32, 1);
-}
-//# sourceMappingURL=Ortho.js.map
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
@@ -5766,128 +5986,8 @@ var gsapWithCSS = gsap.registerPlugin(CSSPlugin) || gsap,
     // to protect from tree shaking
 TweenMaxWithCSS = gsapWithCSS.core.Tween;
 
-//  Update Merged Transform to cache rotation and scale
-function generateSampleSrc(maxTextures) {
-    let src = '';
-    for (let i = 0; i < maxTextures; i++) {
-        if (i > 0) {
-            src += '\n    else ';
-        }
-        if (i < maxTextures - 1) {
-            src += `if (vTextureId < ${i}.5)`;
-        }
-        src += '\n    {';
-        src += `\n        color = texture2D(uTexture[${i}], vTextureCoord);`;
-        src += '\n    }';
-    }
-    return src;
-}
-function part26 () {
-    const resolution = { x: 800, y: 600 };
-    const canvas = document.getElementById('game');
-    canvas.width = resolution.x;
-    canvas.height = resolution.y;
-    const contextOptions = {
-        alpha: false,
-        antialias: true,
-        premultipliedAlpha: false,
-        stencil: false,
-        preserveDrawingBuffer: false
-    };
-    const gl = canvas.getContext('webgl', contextOptions);
-    let maxTextures = CheckShaderMaxIfStatements(gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS), gl);
-    //  Create temp textures to stop WebGL errors on mac os
-    for (let i = 0; i < maxTextures; i++) {
-        let tempTexture = gl.createTexture();
-        gl.activeTexture(gl.TEXTURE0 + i);
-        gl.bindTexture(gl.TEXTURE_2D, tempTexture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 255, 255]));
-    }
-    const uTextureLocationIndex = Array.from(Array(maxTextures).keys());
-    let fragmentShaderSource = SpriteShader.fragmentShader;
-    fragmentShaderSource = fragmentShaderSource.replace(/%count%/gi, `${maxTextures}`);
-    fragmentShaderSource = fragmentShaderSource.replace(/%forloop%/gi, generateSampleSrc(maxTextures));
-    //  Create the shaders
-    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragmentShader, fragmentShaderSource);
-    gl.compileShader(fragmentShader);
-    const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vertexShader, SpriteShader.vertexShader);
-    gl.compileShader(vertexShader);
-    const program = gl.createProgram();
-    gl.attachShader(program, vertexShader);
-    gl.attachShader(program, fragmentShader);
-    gl.linkProgram(program);
-    gl.useProgram(program);
-    const vertexPositionAttrib = gl.getAttribLocation(program, 'aVertexPosition');
-    const vertexTextureCoord = gl.getAttribLocation(program, 'aTextureCoord');
-    const vertexTextureIndex = gl.getAttribLocation(program, 'aTextureId');
-    const uProjectionMatrix = gl.getUniformLocation(program, 'uProjectionMatrix');
-    const uCameraMatrix = gl.getUniformLocation(program, 'uCameraMatrix');
-    const uTextureLocation = gl.getUniformLocation(program, 'uTexture');
-    gl.enableVertexAttribArray(vertexPositionAttrib);
-    gl.enableVertexAttribArray(vertexTextureCoord);
-    gl.enableVertexAttribArray(vertexTextureIndex);
-    //  The size in bytes per element in the dataArray
-    const size = 4;
-    // const spriteCols = 30;
-    // const spriteRows = 30;
-    const maxSpritesPerBatch = 2000;
-    //  Size in bytes of a single vertex
-    /**
-     * Each vertex contains:
-     *
-     *  position (x,y - 2 floats)
-     *  texture coord (x,y - 2 floats)
-     *  texture index (float)
-     */
-    const singleVertexByteSize = 20;
-    //  Size of a single sprite in array elements
-    //  Each vertex = 5 elements, so 5 * 4
-    const singleSpriteSize = 20;
-    //  Size in bytes of a single sprite
-    const singleSpriteByteSize = singleVertexByteSize * size;
-    //  Size in bytes of a single vertex indicies
-    const singleIndexByteSize = 4;
-    //  Number of elements per sprite index
-    const singleSpriteIndexSize = 6;
-    //  The size of our ArrayBuffer
-    const bufferByteSize = maxSpritesPerBatch * singleSpriteByteSize;
-    //  Our ArrayBuffer + View
-    const dataTA = new Float32Array(bufferByteSize);
-    let ibo = [];
-    //  Seed the index buffer
-    for (let i = 0; i < (maxSpritesPerBatch * singleIndexByteSize); i += singleIndexByteSize) {
-        ibo.push(i + 0, i + 1, i + 2, i + 2, i + 3, i + 0);
-    }
-    /*
-    let elementIndexExtension = gl.getExtension('OES_element_index_uint');
-
-    if (!elementIndexExtension)
-    {
-        throw new Error('OES_element_index_uint unsupported. Aborting');
-    }
-
-    const indexTA = new Uint32Array(ibo);
-    */
-    //  Our buffers
-    const vertexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.DYNAMIC_DRAW);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    const indexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(ibo), gl.STATIC_DRAW);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    //  Free willy
-    ibo = [];
-    //  This matrix will convert from pixels to clip space - it only needs to be set when the canvas is sized
-    const projectionMatrix = Ortho(0, resolution.x, resolution.y, 0, -1000, 1000);
-    const cameraMatrix = new Matrix4();
-    const stride = singleVertexByteSize;
-    //  Textures ...
-    const textures = [];
-    const frames = [];
+function demo1 () {
+    let renderer = new WebGLRenderer(800, 600, 'gameParent');
     function loadTextures(urls) {
         let texturesLeft = urls.length;
         const onLoadCallback = () => {
@@ -5897,118 +5997,38 @@ function part26 () {
             }
         };
         urls.forEach((url) => {
-            let texture = new Texture(url, gl, textures.length);
+            let texture = new Texture(url, renderer);
             texture.load('../assets/' + url, onLoadCallback);
-            textures.push(texture);
         });
     }
     loadTextures([
-        'diamonds32x24x5.png'
+        'logo.png'
     ]);
     const sprites = [];
-    let stats;
     let paused = false;
     function create() {
-        stats = new window['Stats']();
-        stats.domElement.id = 'stats';
-        document.body.append(stats.domElement);
-        let toggle = document.getElementById('toggle');
-        toggle.addEventListener('click', () => {
+        document.getElementById('toggle').addEventListener('click', () => {
             paused = (paused) ? false : true;
         });
-        //  Create the Frames
-        let baseTexture = textures[0];
-        for (let x = 0; x < 160; x += 32) {
-            frames.push(new Frame(baseTexture, x, 0, 32, 24));
-        }
-        //  Create some sprites
-        const sprite1 = new Sprite(100, 100, frames[0]).setOrigin(0.5);
-        const sprite2 = new Sprite(300, 100, frames[1]).setOrigin(0.5);
-        const sprite3 = new Sprite(500, 100, frames[2]).setOrigin(0.5);
-        sprites.push(sprite1, sprite2, sprite3);
-        gsapWithCSS.to(sprite1, { duration: 1, scaleX: 2, scaleY: 2, ease: 'sine.inOut', yoyo: true, repeat: -1 });
-        gsapWithCSS.to(sprite2, { duration: 1, rotation: Math.PI * 2, ease: 'linear', repeat: -1 });
-        gsapWithCSS.to(sprite3, { duration: 1, y: 300, yoyo: true, ease: 'sine.inOut', repeat: -1 });
-        //  Start ...
-        render();
+        const texture = renderer.textures.get('logo.png');
+        const frame = texture.get();
+        const sprite1 = new Sprite(400, 300, frame).setOrigin(0.5);
+        sprites.push(sprite1);
+        gsapWithCSS.to(sprite1, { duration: 4, rotation: Math.PI * 2, ease: 'linear', repeat: -1 });
+        step();
     }
-    function flush(count) {
-        const offset = count * singleSpriteByteSize;
-        if (offset === bufferByteSize) {
-            gl.bufferData(gl.ARRAY_BUFFER, dataTA, gl.DYNAMIC_DRAW);
-        }
-        else {
-            let view = dataTA.subarray(0, offset);
-            gl.bufferSubData(gl.ARRAY_BUFFER, 0, view);
-        }
-        gl.drawElements(gl.TRIANGLES, count * singleSpriteIndexSize, gl.UNSIGNED_SHORT, 0);
-    }
-    const activeTextures = Array(maxTextures);
-    let currentActiveTexture = 0;
-    function render() {
-        stats.begin();
+    function step() {
         if (paused) {
-            requestAnimationFrame(render);
-            stats.end();
+            requestAnimationFrame(step);
             return;
         }
-        //  Move the camera
-        // Translate(cameraMatrix, Math.sin(cx) * 2, Math.cos(cx) * 2, 0);
-        // cx += 0.01;
-        //  Render ...
-        //  Reset textures
-        currentActiveTexture = 0;
-        textures.forEach((texture) => {
-            texture.glIndex = -1;
-        });
-        //  CLS
-        gl.clearColor(0, 0, 0, 1);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-        gl.viewport(0, 0, canvas.width, canvas.height);
-        gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
-        gl.uniformMatrix4fv(uCameraMatrix, false, cameraMatrix);
-        gl.uniform1iv(uTextureLocation, uTextureLocationIndex);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-        gl.vertexAttribPointer(vertexPositionAttrib, 2, gl.FLOAT, false, stride, 0); // size = 8
-        gl.vertexAttribPointer(vertexTextureCoord, 2, gl.FLOAT, false, stride, 8); // size = 8
-        gl.vertexAttribPointer(vertexTextureIndex, 1, gl.FLOAT, false, stride, 8 + 8); // size = 4
-        let total = 0;
-        for (let i = 0; i < sprites.length; i++) {
-            let sprite = sprites[i];
-            let texture = sprite.frame.texture;
-            if (texture.glIndex === -1) {
-                if (currentActiveTexture < maxTextures) {
-                    //  Make this texture active
-                    activeTextures[currentActiveTexture] = texture;
-                    texture.glIndex = currentActiveTexture;
-                    gl.activeTexture(gl.TEXTURE0 + currentActiveTexture);
-                    gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
-                    currentActiveTexture++;
-                }
-            }
-            //  The offset here is the offset into the array, NOT a byte size!
-            sprite.batch(dataTA, total * singleSpriteSize);
-            //  if size = batch limit, flush here
-            if (total === maxSpritesPerBatch) {
-                flush(total);
-                total = 0;
-            }
-            else {
-                total++;
-            }
-        }
-        if (total > 0) {
-            flush(total);
-        }
-        requestAnimationFrame(render);
-        stats.end();
+        renderer.render(sprites);
+        requestAnimationFrame(step);
     }
 }
 
-part26();
+// import part26 from './part26'; // Update Merged Transform to cache rotation and scale
+demo1();
 //  Next steps:
 //  * Encode color as a single float, rather than a vec4 and add back to the shader
 //  * Multi Texture re-use old texture IDs when count > max supported

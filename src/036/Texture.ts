@@ -1,5 +1,8 @@
 //  Base Texture
 
+import WebGLRenderer from 'WebGLRenderer';
+import Frame from 'Frame';
+
 export default class Texture
 {
     key: string;
@@ -9,60 +12,25 @@ export default class Texture
 
     image: HTMLImageElement;
 
-    gl: WebGLRenderingContext;
+    renderer: WebGLRenderer;
     glTexture: WebGLTexture;
     glIndex: number = 0;
 
+    frames: Map<string | number, Frame>;
+
     _onLoadCallback: Function;
 
-    constructor (key: string, gl: WebGLRenderingContext, glIndex: number = 0)
+    constructor (key: string, renderer: WebGLRenderer)
     {
         this.key = key;
 
-        this.gl = gl;
-        this.glIndex = glIndex;
-    }
+        this.renderer = renderer;
 
-    onLoad ()
-    {
-        // console.log(this.key, 'loaded');
-
-        const gl = this.gl;
-
-        this.glTexture = this.gl.createTexture();
-
-        gl.activeTexture(gl.TEXTURE0 + this.glIndex);
-
-        gl.bindTexture(gl.TEXTURE_2D, this.glTexture);
-
-        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.image);
-
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
-        this.width = this.image.width;
-        this.height = this.image.height;
-
-        //  POT only
-        // gl.generateMipmap(gl.TEXTURE_2D);
-
-        this.image.onload = null;
-
-        if (this._onLoadCallback)
-        {
-            this._onLoadCallback(this);
-        }
+        this.frames = new Map();
     }
 
     load (url: string, callback?: Function)
     {
-        // console.log(this.key, 'loading');
-
         this.image = new Image();
 
         this.image.onload = () => this.onLoad();
@@ -80,4 +48,30 @@ export default class Texture
             this.onLoad();
         }
     }
+
+    onLoad ()
+    {
+        this.glTexture = this.renderer.createGLTexture(this.image);
+
+        this.width = this.image.width;
+        this.height = this.image.height;
+
+        //  Add default frame
+        this.frames.set('__base', new Frame(this, 0, 0, this.width, this.height));
+
+        this.image.onload = null;
+
+        this.renderer.addTexture(this);
+
+        if (this._onLoadCallback)
+        {
+            this._onLoadCallback(this);
+        }
+    }
+
+    get (key: string | number = '__base')
+    {
+        return this.frames.get(key);
+    }
+
 }

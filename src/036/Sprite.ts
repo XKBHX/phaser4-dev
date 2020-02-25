@@ -109,7 +109,7 @@ export default class Sprite
         return this;
     }
 
-    batch (dataTA: Float32Array, offset: number)
+    update ()
     {
         //  Transform.update:
 
@@ -144,35 +144,6 @@ export default class Sprite
         this.topRight.set(x1a + y0c + _tx, x1b + y0d + _ty);
         this.bottomLeft.set(x0a + y1c + _tx, x0b + y1d + _ty);
         this.bottomRight.set(x1a + y1c + _tx, x1b + y1d + _ty);
-
-        //  Batch:
-
-        const frame = this.frame;
-        const textureIndex = frame.texture.glIndex;
-
-        dataTA[offset++] = this.topLeft.x;
-        dataTA[offset++] = this.topLeft.y;
-        dataTA[offset++] = frame.u0;
-        dataTA[offset++] = frame.v0;
-        dataTA[offset++] = textureIndex;
-
-        dataTA[offset++] = this.bottomLeft.x;
-        dataTA[offset++] = this.bottomLeft.y;
-        dataTA[offset++] = frame.u0;
-        dataTA[offset++] = frame.v1;
-        dataTA[offset++] = textureIndex;
-
-        dataTA[offset++] = this.bottomRight.x;
-        dataTA[offset++] = this.bottomRight.y;
-        dataTA[offset++] = frame.u1;
-        dataTA[offset++] = frame.v1;
-        dataTA[offset++] = textureIndex;
-
-        dataTA[offset++] = this.topRight.x;
-        dataTA[offset++] = this.topRight.y;
-        dataTA[offset++] = frame.u1;
-        dataTA[offset++] = frame.v0;
-        dataTA[offset++] = textureIndex;
     }
 
     set x (value: number)

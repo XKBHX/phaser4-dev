@@ -1,6 +1,8 @@
-import part26 from './part26'; // Update Merged Transform to cache rotation and scale
+// import part26 from './part26'; // Update Merged Transform to cache rotation and scale
 
-part26();
+import demo1 from './demo1'; // Moved all code to WebGL Renderer and supporting classes
+
+demo1();
 
 //  Next steps:
 
