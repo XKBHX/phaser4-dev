@@ -8,12 +8,12 @@ export default class Sprite extends DisplayObjectContainer
 {
     readonly scene: Scene;
 
-    texture: Texture = null;
-    frame: Frame = null;
+    // texture: Texture = null;
+    // frame: Frame = null;
 
     vertices: Vertex[] = [ new Vertex(), new Vertex(), new Vertex(), new Vertex() ];
 
-    private _alpha: number = 1;
+    // private _alpha: number = 1;
     private _tint: number = 0xffffff;
 
     constructor (scene: Scene, x: number, y: number, texture: string, frame?: string | number)
@@ -74,10 +74,6 @@ export default class Sprite extends DisplayObjectContainer
         return this;
     }
 
-    update ()
-    {
-    }
-
     updateTransform ()
     {
         super.updateTransform();
@@ -123,11 +119,6 @@ export default class Sprite extends DisplayObjectContainer
         //  bottom right
         vertices[3].x = x1a + y1c + tx;
         vertices[3].y = x1b + y1d + ty;
-    }
-
-    get alpha (): number
-    {
-        return this._alpha;
     }
 
     set alpha (value: number)

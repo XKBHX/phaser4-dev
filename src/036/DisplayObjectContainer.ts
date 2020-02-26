@@ -1,20 +1,27 @@
 import DisplayObject from 'DisplayObject';
+import { Container } from 'Container';
 
 export default class DisplayObjectContainer extends DisplayObject
 {
-    children: DisplayObject[] = [];
+    children: Container[] = [];
 
     constructor ()
     {
         super();
     }
 
-    addChild (child: DisplayObject)
+    addChild (...child: Container[])
     {
-        return this.addChildAt(child, this.children.length);
+        child.forEach((entity) => {
+
+            this.addChildAt(entity, this.children.length);
+
+        });
+
+        return this;
     }
 
-    addChildAt (child: DisplayObject, index: number): DisplayObject
+    addChildAt (child: Container, index: number): Container
     {
         if (index >= 0 && index <= this.children.length)
         {
@@ -31,7 +38,7 @@ export default class DisplayObjectContainer extends DisplayObject
         return child;
     }
 
-    swapChildren (child1: DisplayObject, child2: DisplayObject)
+    swapChildren (child1: Container, child2: Container)
     {
         if (child1 !== child2)
         {
@@ -50,7 +57,7 @@ export default class DisplayObjectContainer extends DisplayObject
         this.children[index2] = child1;
     }
 
-    getChildIndex (child: DisplayObject): number
+    getChildIndex (child: Container): number
     {
         const index = this.children.indexOf(child);
 
@@ -62,7 +69,7 @@ export default class DisplayObjectContainer extends DisplayObject
         return index;
     }
 
-    setChildIndex (child: DisplayObject, index: number)
+    setChildIndex (child: Container, index: number)
     {
         const children = this.children;
 
@@ -77,17 +84,17 @@ export default class DisplayObjectContainer extends DisplayObject
         children.splice(index, 0, child);
     }
 
-    getChildAt (index: number): DisplayObject
+    getChildAt (index: number): Container
     {
-        if (index < 0 || index >= this.children.length)
+        if (index < 0 || index >= this.size)
         {
             throw new Error('Index ' + index + ' out of bounds');
         }
-    
+
         return this.children[index];
     }
 
-    removeChild (child: DisplayObject): DisplayObject
+    removeChild (child: Container): Container
     {
         const index = this.children.indexOf(child);
 
@@ -99,7 +106,7 @@ export default class DisplayObjectContainer extends DisplayObject
         return this.removeChildAt(index);
     }
 
-    removeChildAt (index: number): DisplayObject
+    removeChildAt (index: number): Container
     {
         const child = this.getChildAt(index);
 
@@ -113,7 +120,7 @@ export default class DisplayObjectContainer extends DisplayObject
         return child;
     }
 
-    removeChildren (beginIndex: number = 0, endIndex?: number): DisplayObject[]
+    removeChildren (beginIndex: number = 0, endIndex?: number): Container[]
     {
         const children = this.children;
 
@@ -146,14 +153,19 @@ export default class DisplayObjectContainer extends DisplayObject
         }
     }
 
-    updateTransform (parent?: DisplayObjectContainer)
+    update ()
     {
-        if (!this.visible)
-        {
-            return;
-        }
+        const children = this.children;
 
-        super.updateTransform(parent);
+        for (let i = 0; i < children.length; i++)
+        {
+            children[i].update();
+        }
+    }
+
+    updateTransform ()
+    {
+        super.updateTransform();
    
         const children = this.children;
 
@@ -161,6 +173,11 @@ export default class DisplayObjectContainer extends DisplayObject
         {
             children[i].updateTransform();
         }
+    }
+
+    get size ()
+    {
+        return this.children.length;
     }
 
 }

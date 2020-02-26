@@ -1,24 +1,21 @@
 import Game from 'Game';
 import Loader from 'Loader';
 import TextureManager from 'TextureManager';
-import DisplayList from 'DisplayList';
-import GameObjectFactory from 'GameObjectFactory';
+import DisplayObjectContainer from 'DisplayObjectContainer';
 
 export default class Scene
 {
     game: Game;
     load: Loader;
     textures: TextureManager;
-    children: DisplayList;
-    add: GameObjectFactory;
+    world: DisplayObjectContainer;
 
     constructor (game: Game)
     {
         this.game = game;
         this.load = game.loader;
         this.textures = game.textures;
-        this.children = new DisplayList(this);
-        this.add = new GameObjectFactory(this);
+        this.world = new DisplayObjectContainer();
     }
 
     init ()

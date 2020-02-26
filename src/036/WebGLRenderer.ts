@@ -2,8 +2,10 @@ import CheckShaderMaxIfStatements from './CheckShaderMaxIfStatements';
 import { Matrix4 } from '@phaserjs/math-matrix4';
 import MultiTextureQuadShader from 'MultiTextureQuadShader';
 import Texture from 'Texture';
-import Sprite from 'Sprite';
 import { Ortho } from '@phaserjs/math-matrix4-funcs';
+import DisplayObjectContainer from 'DisplayObjectContainer';
+import Sprite from 'Sprite';
+import { Container } from 'Container';
 
 export default class WebGLRenderer
 {
@@ -12,9 +14,9 @@ export default class WebGLRenderer
 
     contextOptions: WebGLContextAttributes = {
         alpha: false,
-        antialias: true,
+        antialias: false,
         premultipliedAlpha: false,
-        stencil: true,
+        stencil: false,
         preserveDrawingBuffer: false
     };
 
@@ -61,10 +63,11 @@ export default class WebGLRenderer
     setBackgroundColor (color: number)
     {
         const clearColor = this.clearColor;
-        let r: number = color >> 16 & 0xFF;
-        let g: number = color >> 8 & 0xFF;
-        let b: number = color & 0xFF;
-        let a: number = (color > 16777215) ? color >>> 24 : 255;
+
+        const r: number = color >> 16 & 0xFF;
+        const g: number = color >> 8 & 0xFF;
+        const b: number = color & 0xFF;
+        const a: number = (color > 16777215) ? color >>> 24 : 255;
     
         clearColor[0] = r / 255;
         clearColor[1] = g / 255;
@@ -114,8 +117,8 @@ export default class WebGLRenderer
 
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
 
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
 
         const pot = this.isSizePowerOfTwo(source.width, source.height);
 
@@ -132,22 +135,19 @@ export default class WebGLRenderer
         return glTexture;
     }
 
-    render (displayList: Sprite[])
+    render (world: DisplayObjectContainer)
     {
+        this.currentActiveTexture = 0;
         this.startActiveTexture++;
 
-        let startActiveTexture = this.startActiveTexture;
-
-        let currentActiveTexture = 0;
-
         const shader = this.shader;
-        const maxTextures = this.maxTextures;
-        const activeTextures = this.activeTextures;
 
         //  CLS
 
         const gl = this.gl;
         const cls = this.clearColor;
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
         gl.disable(gl.DEPTH_TEST);
         gl.disable(gl.CULL_FACE);
@@ -157,8 +157,6 @@ export default class WebGLRenderer
 
         gl.viewport(0, 0, this.resolution.x, this.resolution.y);
 
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
         if (this.clearBeforeRender)
         {
             gl.clearColor(cls[0], cls[1], cls[2], cls[3]);
@@ -167,44 +165,72 @@ export default class WebGLRenderer
 
         shader.bind();
 
-        for (let i: number = 0; i < displayList.length; i++)
-        {
-            let entity = displayList[i];
+        world.updateTransform();
 
-            entity.updateTransform();
-
-            if (entity.visible && entity.renderable && entity.texture)
-            {
-                let texture = entity.texture;
-
-                if (texture.glIndexCounter < startActiveTexture)
-                {
-                    texture.glIndexCounter = startActiveTexture;
-    
-                    if (currentActiveTexture < maxTextures)
-                    {
-                        //  Make this texture active
-                        activeTextures[currentActiveTexture] = texture;
-    
-                        texture.glIndex = currentActiveTexture;
-    
-                        gl.activeTexture(gl.TEXTURE0 + currentActiveTexture);
-                        gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
-    
-                        currentActiveTexture++;
-                    }
-                    else
-                    {
-                        //  We've run out, flush + recycle the oldest one
-                        //  TODO
-                    }
-                }
-
-                shader.batchSprite(entity);
-            }
-        }
+        this.renderChildren(world);
 
         shader.flush();
+    }
+
+    renderChildren (container: Container)
+    {
+        const gl = this.gl;
+        const shader = this.shader;
+
+        const maxTextures = this.maxTextures;
+        const activeTextures = this.activeTextures;
+        const startActiveTexture = this.startActiveTexture;
+
+        let currentActiveTexture = this.currentActiveTexture;
+
+        const children = container.children;
+
+        for (let i: number = 0; i < children.length; i++)
+        {
+            let entity = children[i];
+
+            if (entity.willRender())
+            {
+                //  Entity has a texture ...
+                if (entity.texture)
+                {
+                    let texture = entity.texture;
+
+                    if (texture.glIndexCounter < startActiveTexture)
+                    {
+                        texture.glIndexCounter = startActiveTexture;
+        
+                        if (currentActiveTexture < maxTextures)
+                        {
+                            //  Make this texture active
+                            activeTextures[currentActiveTexture] = texture;
+        
+                            texture.glIndex = currentActiveTexture;
+        
+                            gl.activeTexture(gl.TEXTURE0 + currentActiveTexture);
+                            gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
+        
+                            currentActiveTexture++;
+
+                            this.currentActiveTexture = currentActiveTexture;
+                        }
+                        else
+                        {
+                            //  We've run out, flush + recycle the oldest one
+                            //  TODO
+                        }
+                    }
+
+                    shader.batchSprite(entity as Sprite);
+                }
+
+                //  Render the children, if it has any
+                if (entity.size)
+                {
+                    this.renderChildren(entity);
+                }
+            }
+        }
     }
 
 }

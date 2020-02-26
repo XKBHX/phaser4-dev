@@ -1,6 +1,7 @@
 import resolve from 'rollup-plugin-node-resolve';
 import typescript from 'rollup-plugin-typescript2';
 import { terser } from 'rollup-plugin-terser';
+import sourcemaps from 'rollup-plugin-sourcemaps';
 
 const extensions = [
     '.js', '.jsx', '.ts', '.tsx'
@@ -16,15 +17,17 @@ export default {
             format: 'es',
             sourcemap: true
         },
-        {
-            file: './src/036/test036.min.js',
-            format: 'iife',
-            name: 'Phaser4Nano',
-            plugins: [ terser() ]
-        }
+        // {
+        //     file: './src/036/test036.min.js',
+        //     format: 'iife',
+        //     name: 'Phaser4Nano',
+        //     plugins: [ terser() ]
+        // }
     ],
 
     plugins: [
+
+        sourcemaps(),
 
         resolve({
             extensions

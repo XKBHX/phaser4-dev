@@ -437,9 +437,9 @@ class WebGLRenderer {
     constructor(width, height) {
         this.contextOptions = {
             alpha: false,
-            antialias: true,
+            antialias: false,
             premultipliedAlpha: false,
-            stencil: true,
+            stencil: false,
             preserveDrawingBuffer: false
         };
         this.clearColor = [0, 0, 0, 1];
@@ -461,10 +461,10 @@ class WebGLRenderer {
     }
     setBackgroundColor(color) {
         const clearColor = this.clearColor;
-        let r = color >> 16 & 0xFF;
-        let g = color >> 8 & 0xFF;
-        let b = color & 0xFF;
-        let a = (color > 16777215) ? color >>> 24 : 255;
+        const r = color >> 16 & 0xFF;
+        const g = color >> 8 & 0xFF;
+        const b = color & 0xFF;
+        const a = (color > 16777215) ? color >>> 24 : 255;
         clearColor[0] = r / 255;
         clearColor[1] = g / 255;
         clearColor[2] = b / 255;
@@ -494,8 +494,8 @@ class WebGLRenderer {
         gl.bindTexture(gl.TEXTURE_2D, glTexture);
         gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
         const pot = this.isSizePowerOfTwo(source.width, source.height);
         const wrap = (pot) ? gl.REPEAT : gl.CLAMP_TO_EDGE;
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
@@ -505,47 +505,62 @@ class WebGLRenderer {
         }
         return glTexture;
     }
-    render(displayList) {
+    render(world) {
+        this.currentActiveTexture = 0;
         this.startActiveTexture++;
-        let startActiveTexture = this.startActiveTexture;
-        let currentActiveTexture = 0;
         const shader = this.shader;
-        const maxTextures = this.maxTextures;
-        const activeTextures = this.activeTextures;
         //  CLS
         const gl = this.gl;
         const cls = this.clearColor;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.disable(gl.DEPTH_TEST);
         gl.disable(gl.CULL_FACE);
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         gl.viewport(0, 0, this.resolution.x, this.resolution.y);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         if (this.clearBeforeRender) {
             gl.clearColor(cls[0], cls[1], cls[2], cls[3]);
             gl.clear(gl.COLOR_BUFFER_BIT);
         }
         shader.bind();
-        for (let i = 0; i < displayList.length; i++) {
-            let entity = displayList[i];
-            entity.updateTransform();
-            if (entity.visible && entity.renderable && entity.texture) {
-                let texture = entity.texture;
-                if (texture.glIndexCounter < startActiveTexture) {
-                    texture.glIndexCounter = startActiveTexture;
-                    if (currentActiveTexture < maxTextures) {
-                        //  Make this texture active
-                        activeTextures[currentActiveTexture] = texture;
-                        texture.glIndex = currentActiveTexture;
-                        gl.activeTexture(gl.TEXTURE0 + currentActiveTexture);
-                        gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
-                        currentActiveTexture++;
+        world.updateTransform();
+        this.renderChildren(world);
+        shader.flush();
+    }
+    renderChildren(container) {
+        const gl = this.gl;
+        const shader = this.shader;
+        const maxTextures = this.maxTextures;
+        const activeTextures = this.activeTextures;
+        const startActiveTexture = this.startActiveTexture;
+        let currentActiveTexture = this.currentActiveTexture;
+        const children = container.children;
+        for (let i = 0; i < children.length; i++) {
+            let entity = children[i];
+            if (entity.willRender()) {
+                //  Entity has a texture ...
+                if (entity.texture) {
+                    let texture = entity.texture;
+                    if (texture.glIndexCounter < startActiveTexture) {
+                        texture.glIndexCounter = startActiveTexture;
+                        if (currentActiveTexture < maxTextures) {
+                            //  Make this texture active
+                            activeTextures[currentActiveTexture] = texture;
+                            texture.glIndex = currentActiveTexture;
+                            gl.activeTexture(gl.TEXTURE0 + currentActiveTexture);
+                            gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
+                            currentActiveTexture++;
+                            this.currentActiveTexture = currentActiveTexture;
+                        }
                     }
+                    shader.batchSprite(entity);
                 }
-                shader.batchSprite(entity);
+                //  Render the children, if it has any
+                if (entity.size) {
+                    this.renderChildren(entity);
+                }
             }
         }
-        shader.flush();
     }
 }
 
@@ -697,96 +712,6 @@ class Loader {
     }
 }
 
-class DisplayList {
-    constructor(scene) {
-        this.scene = scene;
-        this.game = scene.game;
-        this.list = [];
-    }
-    add(child) {
-        const list = this.list;
-        if (list.indexOf(child) === -1) {
-            list.push(child);
-        }
-        return this;
-    }
-    remove(child) {
-        const list = this.list;
-        const index = list.indexOf(child);
-        if (index !== -1) {
-            list.splice(index, 1);
-        }
-        return this;
-    }
-}
-
-class Frame {
-    constructor(texture, key, x, y, width, height) {
-        this.texture = texture;
-        this.key = key;
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-        this.updateUVs();
-    }
-    updateUVs() {
-        const { x, y, width, height } = this;
-        const sourceWidth = this.texture.width;
-        const sourceHeight = this.texture.height;
-        this.u0 = x / sourceWidth;
-        this.v0 = y / sourceHeight;
-        this.u1 = (x + width) / sourceWidth;
-        this.v1 = (y + height) / sourceHeight;
-    }
-}
-
-//  Base Texture
-class Texture {
-    constructor(key, image) {
-        this.glIndex = 0;
-        this.glIndexCounter = -1;
-        this.key = key;
-        this.image = image;
-        this.frames = new Map();
-        this.width = this.image.width;
-        this.height = this.image.height;
-        this.add('__BASE', 0, 0, this.width, this.height);
-    }
-    add(key, x, y, width, height) {
-        if (this.frames.has(key)) {
-            return null;
-        }
-        let frame = new Frame(this, key, x, y, width, height);
-        this.frames.set(key, frame);
-        if (!this.firstFrame || this.firstFrame.key === '__BASE') {
-            this.firstFrame = frame;
-        }
-        return frame;
-    }
-    get(key) {
-        //  null, undefined, empty string, zero
-        if (!key) {
-            return this.firstFrame;
-        }
-        let frame = this.frames.get(key);
-        if (!frame) {
-            console.warn('Texture.frame missing: ' + key);
-            frame = this.firstFrame;
-        }
-        return frame;
-    }
-}
-
-class Vertex {
-    constructor(x = 0, y = 0, color = 16777215, alpha = 1) {
-        this.x = x;
-        this.y = y;
-        this.color = color;
-        this.alpha = alpha;
-    }
-}
-
 class Vec2 {
     /**
      * Creates an instance of a Vector2.
@@ -850,6 +775,8 @@ class Vec2 {
 
 class DisplayObject {
     constructor() {
+        this.texture = null;
+        this.frame = null;
         this.visible = true;
         this.renderable = true;
         this._position = new Vec2();
@@ -857,15 +784,17 @@ class DisplayObject {
         this._skew = new Vec2();
         this._origin = new Vec2(0.5, 0.5);
         this._rotation = 0;
+        this._alpha = 1;
         this.localTransform = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
         this.worldTransform = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
     }
-    updateTransform(parent) {
+    updateTransform() {
+        const parent = this.parent;
         const lt = this.localTransform;
         const wt = this.worldTransform;
         lt.tx = this.x;
         lt.ty = this.y;
-        if (!parent && !this.parent) {
+        if (!parent) {
             wt.a = lt.a;
             wt.b = lt.b;
             wt.c = lt.c;
@@ -873,9 +802,6 @@ class DisplayObject {
             wt.tx = lt.tx;
             wt.ty = lt.ty;
             return;
-        }
-        else if (!parent) {
-            parent = this.parent;
         }
         const pt = parent.worldTransform;
         let { a, b, c, d, tx, ty } = lt;
@@ -923,6 +849,13 @@ class DisplayObject {
         // reset the bounds each time this is called!
         // this._currentBounds = null;
         */
+    }
+    willRender() {
+        return (this.visible && this.renderable && this._alpha > 0);
+    }
+    setAlpha(alpha = 1) {
+        this._alpha = alpha;
+        return this;
     }
     setSize(width, height) {
         this.width = width;
@@ -1005,6 +938,12 @@ class DisplayObject {
     get skewY() {
         return this._skew.y;
     }
+    get alpha() {
+        return this._alpha;
+    }
+    set alpha(value) {
+        this._alpha = value;
+    }
 }
 
 class DisplayObjectContainer extends DisplayObject {
@@ -1012,8 +951,11 @@ class DisplayObjectContainer extends DisplayObject {
         super();
         this.children = [];
     }
-    addChild(child) {
-        return this.addChildAt(child, this.children.length);
+    addChild(...child) {
+        child.forEach((entity) => {
+            this.addChildAt(entity, this.children.length);
+        });
+        return this;
     }
     addChildAt(child, index) {
         if (index >= 0 && index <= this.children.length) {
@@ -1054,7 +996,7 @@ class DisplayObjectContainer extends DisplayObject {
         children.splice(index, 0, child);
     }
     getChildAt(index) {
-        if (index < 0 || index >= this.children.length) {
+        if (index < 0 || index >= this.size) {
             throw new Error('Index ' + index + ' out of bounds');
         }
         return this.children[index];
@@ -1094,120 +1036,21 @@ class DisplayObjectContainer extends DisplayObject {
             throw new Error('Range Error. Values out of bounds');
         }
     }
-    updateTransform(parent) {
-        if (!this.visible) {
-            return;
+    update() {
+        const children = this.children;
+        for (let i = 0; i < children.length; i++) {
+            children[i].update();
         }
-        super.updateTransform(parent);
+    }
+    updateTransform() {
+        super.updateTransform();
         const children = this.children;
         for (let i = 0; i < children.length; i++) {
             children[i].updateTransform();
         }
     }
-}
-
-class Sprite extends DisplayObjectContainer {
-    constructor(scene, x, y, texture, frame) {
-        super();
-        this.texture = null;
-        this.frame = null;
-        this.vertices = [new Vertex(), new Vertex(), new Vertex(), new Vertex()];
-        this._alpha = 1;
-        this._tint = 0xffffff;
-        this.scene = scene;
-        this.setTexture(texture, frame);
-        this.setPosition(x, y);
-    }
-    setTexture(key, frame) {
-        if (key instanceof Texture) {
-            this.texture = key;
-        }
-        else {
-            this.texture = this.scene.textures.get(key);
-        }
-        return this.setFrame(frame);
-    }
-    setFrame(key) {
-        const frame = this.texture.get(key);
-        this.frame = frame;
-        return this.setSize(frame.width, frame.height);
-    }
-    setAlpha(topLeft = 1, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
-        const vertices = this.vertices;
-        vertices[0].alpha = topLeft;
-        vertices[1].alpha = topRight;
-        vertices[2].alpha = bottomLeft;
-        vertices[3].alpha = bottomRight;
-        return this;
-    }
-    setTint(topLeft = 0xffffff, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
-        const vertices = this.vertices;
-        vertices[0].color = topLeft;
-        vertices[1].color = topRight;
-        vertices[2].color = bottomLeft;
-        vertices[3].color = bottomRight;
-        return this;
-    }
-    update() {
-    }
-    updateTransform() {
-        super.updateTransform();
-        //  Update Vertices:
-        const w = this.width;
-        const h = this.height;
-        const x0 = -(this._origin.x * w);
-        const x1 = x0 + w;
-        const y0 = -(this._origin.y * h);
-        const y1 = y0 + h;
-        const { a, b, c, d, tx, ty } = this.worldTransform;
-        //  Cache the calculations to avoid 8 getX/Y function calls:
-        const x0a = x0 * a;
-        const x0b = x0 * b;
-        const y0c = y0 * c;
-        const y0d = y0 * d;
-        const x1a = x1 * a;
-        const x1b = x1 * b;
-        const y1c = y1 * c;
-        const y1d = y1 * d;
-        const vertices = this.vertices;
-        //  top left
-        vertices[0].x = x0a + y0c + tx;
-        vertices[0].y = x0b + y0d + ty;
-        //  top right
-        vertices[1].x = x1a + y0c + tx;
-        vertices[1].y = x1b + y0d + ty;
-        //  bottom left
-        vertices[2].x = x0a + y1c + tx;
-        vertices[2].y = x0b + y1d + ty;
-        //  bottom right
-        vertices[3].x = x1a + y1c + tx;
-        vertices[3].y = x1b + y1d + ty;
-    }
-    get alpha() {
-        return this._alpha;
-    }
-    set alpha(value) {
-        this._alpha = value;
-        this.setAlpha(value);
-    }
-    get tint() {
-        return this._tint;
-    }
-    set tint(value) {
-        this._tint = value;
-        this.setTint(value);
-    }
-}
-
-class GameObjectFactory {
-    constructor(scene) {
-        this.scene = scene;
-        this.displayList = scene.children;
-    }
-    sprite(x, y, texture, frame) {
-        let sprite = new Sprite(this.scene, x, y, texture, frame);
-        this.displayList.add(sprite);
-        return sprite;
+    get size() {
+        return this.children.length;
     }
 }
 
@@ -1216,8 +1059,7 @@ class Scene {
         this.game = game;
         this.load = game.loader;
         this.textures = game.textures;
-        this.children = new DisplayList(this);
-        this.add = new GameObjectFactory(this);
+        this.world = new DisplayObjectContainer();
     }
     init() {
     }
@@ -1229,8 +1071,29 @@ class Scene {
     }
 }
 
+class Frame {
+    constructor(texture, key, x, y, width, height) {
+        this.texture = texture;
+        this.key = key;
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.updateUVs();
+    }
+    updateUVs() {
+        const { x, y, width, height } = this;
+        const sourceWidth = this.texture.width;
+        const sourceHeight = this.texture.height;
+        this.u0 = x / sourceWidth;
+        this.v0 = y / sourceHeight;
+        this.u1 = (x + width) / sourceWidth;
+        this.v1 = (y + height) / sourceHeight;
+    }
+}
+
 //  Base Texture
-class Texture$1 {
+class Texture {
     constructor(key, image) {
         this.glIndex = 0;
         this.glIndexCounter = -1;
@@ -1331,7 +1194,7 @@ class TextureManager {
     addImage(key, source) {
         let texture = null;
         if (!this.textures.has(key)) {
-            texture = new Texture$1(key, source);
+            texture = new Texture(key, source);
             texture.glTexture = this.game.renderer.createGLTexture(texture.image);
             this.textures.set(key, texture);
         }
@@ -1340,7 +1203,7 @@ class TextureManager {
     addSpriteSheet(key, source, frameConfig) {
         let texture = null;
         if (!this.textures.has(key)) {
-            texture = new Texture$1(key, source);
+            texture = new Texture(key, source);
             texture.glTexture = this.game.renderer.createGLTexture(texture.image);
             SpriteSheetParser(texture, 0, 0, texture.width, texture.height, frameConfig);
             this.textures.set(key, texture);
@@ -1447,44 +1310,269 @@ class Game {
             requestAnimationFrame((time) => this.step(time));
             return;
         }
+        this.scene.world.update();
         this.scene.update(time);
-        this.renderer.render(this.scene.children.list);
+        this.renderer.render(this.scene.world);
         requestAnimationFrame((time) => this.step(time));
     }
 }
 
+//  Base Texture
+class Texture$1 {
+    constructor(key, image) {
+        this.glIndex = 0;
+        this.glIndexCounter = -1;
+        this.key = key;
+        this.image = image;
+        this.frames = new Map();
+        this.width = this.image.width;
+        this.height = this.image.height;
+        this.add('__BASE', 0, 0, this.width, this.height);
+    }
+    add(key, x, y, width, height) {
+        if (this.frames.has(key)) {
+            return null;
+        }
+        let frame = new Frame(this, key, x, y, width, height);
+        this.frames.set(key, frame);
+        if (!this.firstFrame || this.firstFrame.key === '__BASE') {
+            this.firstFrame = frame;
+        }
+        return frame;
+    }
+    get(key) {
+        //  null, undefined, empty string, zero
+        if (!key) {
+            return this.firstFrame;
+        }
+        let frame = this.frames.get(key);
+        if (!frame) {
+            console.warn('Texture.frame missing: ' + key);
+            frame = this.firstFrame;
+        }
+        return frame;
+    }
+}
+
+class Vertex {
+    constructor(x = 0, y = 0, color = 16777215, alpha = 1) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.alpha = alpha;
+    }
+}
+
+class Sprite extends DisplayObjectContainer {
+    constructor(scene, x, y, texture, frame) {
+        super();
+        // texture: Texture = null;
+        // frame: Frame = null;
+        this.vertices = [new Vertex(), new Vertex(), new Vertex(), new Vertex()];
+        // private _alpha: number = 1;
+        this._tint = 0xffffff;
+        this.scene = scene;
+        this.setTexture(texture, frame);
+        this.setPosition(x, y);
+    }
+    setTexture(key, frame) {
+        if (key instanceof Texture$1) {
+            this.texture = key;
+        }
+        else {
+            this.texture = this.scene.textures.get(key);
+        }
+        return this.setFrame(frame);
+    }
+    setFrame(key) {
+        const frame = this.texture.get(key);
+        this.frame = frame;
+        return this.setSize(frame.width, frame.height);
+    }
+    setAlpha(topLeft = 1, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
+        const vertices = this.vertices;
+        vertices[0].alpha = topLeft;
+        vertices[1].alpha = topRight;
+        vertices[2].alpha = bottomLeft;
+        vertices[3].alpha = bottomRight;
+        return this;
+    }
+    setTint(topLeft = 0xffffff, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
+        const vertices = this.vertices;
+        vertices[0].color = topLeft;
+        vertices[1].color = topRight;
+        vertices[2].color = bottomLeft;
+        vertices[3].color = bottomRight;
+        return this;
+    }
+    updateTransform() {
+        super.updateTransform();
+        //  Update Vertices:
+        const w = this.width;
+        const h = this.height;
+        const x0 = -(this._origin.x * w);
+        const x1 = x0 + w;
+        const y0 = -(this._origin.y * h);
+        const y1 = y0 + h;
+        const { a, b, c, d, tx, ty } = this.worldTransform;
+        //  Cache the calculations to avoid 8 getX/Y function calls:
+        const x0a = x0 * a;
+        const x0b = x0 * b;
+        const y0c = y0 * c;
+        const y0d = y0 * d;
+        const x1a = x1 * a;
+        const x1b = x1 * b;
+        const y1c = y1 * c;
+        const y1d = y1 * d;
+        const vertices = this.vertices;
+        //  top left
+        vertices[0].x = x0a + y0c + tx;
+        vertices[0].y = x0b + y0d + ty;
+        //  top right
+        vertices[1].x = x1a + y0c + tx;
+        vertices[1].y = x1b + y0d + ty;
+        //  bottom left
+        vertices[2].x = x0a + y1c + tx;
+        vertices[2].y = x0b + y1d + ty;
+        //  bottom right
+        vertices[3].x = x1a + y1c + tx;
+        vertices[3].y = x1b + y1d + ty;
+    }
+    set alpha(value) {
+        this._alpha = value;
+        this.setAlpha(value);
+    }
+    get tint() {
+        return this._tint;
+    }
+    set tint(value) {
+        this._tint = value;
+        this.setTint(value);
+    }
+}
+
+class Box extends Sprite {
+    constructor(scene, x, y, texture, frame, direction = 0, size = 512) {
+        super(scene, x, y, texture, frame);
+        //  0 = left to right
+        //  1 = top to bottom
+        //  2 = right to left
+        //  3 = bottom to top
+        this.direction = 0;
+        this.speed = 2;
+        this.direction = direction;
+        if (direction === 0) {
+            //  Box is in the top-left
+            this.startX = x;
+            this.startY = y;
+            this.endX = x + size;
+            this.endY = y + size;
+        }
+        else if (direction === 1) {
+            //  Box is in the top-right
+            this.startX = x - size;
+            this.startY = y;
+            this.endX = x;
+            this.endY = y + size;
+        }
+        else if (direction === 2) {
+            //  Box is in the bottom-right
+            this.startX = x - size;
+            this.startY = y - size;
+            this.endX = x;
+            this.endY = y;
+        }
+        else if (direction === 3) {
+            //  Box is in the bottom-left
+            this.startX = x;
+            this.startY = y - size;
+            this.endX = x + size;
+            this.endY = y;
+        }
+    }
+    update() {
+        switch (this.direction) {
+            case 0:
+                {
+                    this.x += this.speed;
+                    if (this.x >= this.endX) {
+                        this.x = this.endX;
+                        this.direction = 1;
+                    }
+                }
+                break;
+            case 1:
+                {
+                    this.y += this.speed;
+                    if (this.y >= this.endY) {
+                        this.y = this.endY;
+                        this.direction = 2;
+                    }
+                }
+                break;
+            case 2:
+                {
+                    this.x -= this.speed;
+                    if (this.x <= this.startX) {
+                        this.x = this.startX;
+                        this.direction = 3;
+                    }
+                }
+                break;
+            case 3:
+                {
+                    this.y -= this.speed;
+                    if (this.y <= this.startY) {
+                        this.y = this.startY;
+                        this.direction = 0;
+                    }
+                }
+                break;
+        }
+    }
+}
 class Demo extends Scene {
     constructor(game) {
         super(game);
     }
     preload() {
-        this.load.image('logo', '../assets/512x512.png');
-        this.load.image('box', '../assets/box-item-boxed.png');
+        this.load.image('512', '../assets/checker.png');
+        this.load.image('128', '../assets/lance-overdose-loader-eye.png');
+        this.load.image('logo', '../assets/logo.png');
         this.load.image('brain', '../assets/brain.png');
     }
     create() {
-        document.getElementById('toggle').addEventListener('click', () => {
-            this.game.isPaused = (this.game.isPaused) ? false : true;
-        });
-        this.sprite1 = this.add.sprite(400, 300, 'logo');
-        const child1 = this.add.sprite(0, 0, 'box');
-        const child2 = this.add.sprite(-256, -256, 'box');
-        const child3 = this.add.sprite(256, 256, 'box');
-        this.sprite1.addChild(child1);
-        this.sprite1.addChild(child2);
-        this.sprite1.addChild(child3);
+        this.container = new Sprite(this, 400, 300, '512');
+        const child1 = new Box(this, -256, -256, 'brain', null, 0);
+        const child2 = new Box(this, 256, -256, 'brain', null, 1);
+        const child3 = new Box(this, 256, 256, 'brain', null, 2);
+        const child4 = new Box(this, -256, 256, 'brain', null, 3);
+        //  Logo stack
+        const child5 = new Sprite(this, 0, 0, 'logo').setScale(0.7);
+        const child6 = new Sprite(this, 0, 0, 'logo').setScale(0.8);
+        const child7 = new Sprite(this, 0, 0, 'logo').setScale(0.9);
+        const child8 = new Sprite(this, 0, 0, 'logo').setScale(1.0);
+        this.container.addChild(child1, child2, child3, child4, child5, child6, child7, child8);
+        this.world.addChild(this.container);
     }
-    update(time) {
-        this.sprite1.rotation += 0.01;
+    update() {
+        this.container.rotation += 0.005;
+        this.container.getChildAt(4).rotation += 0.037;
+        this.container.getChildAt(5).rotation += 0.038;
+        this.container.getChildAt(6).rotation += 0.039;
+        this.container.getChildAt(7).rotation += 0.040;
     }
 }
 function demo6 () {
-    new Game({
+    let game = new Game({
         width: 800,
         height: 600,
         backgroundColor: 0x000066,
         parent: 'gameParent',
         scene: Demo
+    });
+    document.getElementById('toggle').addEventListener('click', () => {
+        game.isPaused = (game.isPaused) ? false : true;
     });
 }
 

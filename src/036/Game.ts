@@ -179,9 +179,11 @@ export default class Game
             return;
         }
 
+        this.scene.world.update();
+
         this.scene.update(time);
 
-        this.renderer.render(this.scene.children.list);
+        this.renderer.render(this.scene.world);
 
         requestAnimationFrame((time) => this.step(time));
     }

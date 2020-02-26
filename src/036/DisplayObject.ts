@@ -1,8 +1,13 @@
+import Texture from './Texture';
+import Frame from './Frame';
 import { Vec2 } from '@phaserjs/math-vec2';
 import DisplayObjectContainer from 'DisplayObjectContainer';
 
 export default class DisplayObject
 {
+    texture: Texture = null;
+    frame: Frame = null;
+
     visible: boolean = true;
     renderable: boolean = true;
     parent: DisplayObjectContainer;
@@ -16,7 +21,7 @@ export default class DisplayObject
     protected _origin: Vec2 = new Vec2(0.5, 0.5);
     protected _rotation: number = 0;
 
-    // private _alpha: number = 1;
+    protected _alpha: number = 1;
     // private _tint: number = 0xffffff;
 
     localTransform: { a: number; b: number; c: number; d: number; tx: number; ty: number; };
@@ -28,15 +33,16 @@ export default class DisplayObject
         this.worldTransform = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
     }
 
-    updateTransform (parent?: DisplayObjectContainer)
+    updateTransform ()
     {
+        const parent = this.parent;
         const lt = this.localTransform;
         const wt = this.worldTransform;
 
         lt.tx = this.x;
         lt.ty = this.y;
 
-        if (!parent && !this.parent)
+        if (!parent)
         {
             wt.a = lt.a;
             wt.b = lt.b;
@@ -46,10 +52,6 @@ export default class DisplayObject
             wt.ty = lt.ty;
 
             return;
-        }
-        else if (!parent)
-        {
-            parent = this.parent;
         }
 
         const pt = parent.worldTransform;
@@ -101,6 +103,18 @@ export default class DisplayObject
         // reset the bounds each time this is called!
         // this._currentBounds = null;
         */
+    }
+
+    willRender (): boolean
+    {
+        return (this.visible && this.renderable && this._alpha > 0);
+    }
+
+    setAlpha (alpha: number = 1)
+    {
+        this._alpha = alpha;
+
+        return this;
     }
 
     setSize (width: number, height: number)
@@ -239,4 +253,15 @@ export default class DisplayObject
     {
         return this._skew.y;
     }
+
+    get alpha (): number
+    {
+        return this._alpha;
+    }
+
+    set alpha (value: number)
+    {
+        this._alpha = value;
+    }
+
 }
