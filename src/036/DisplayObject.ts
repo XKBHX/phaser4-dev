@@ -19,20 +19,6 @@ export default class DisplayObject
     // private _alpha: number = 1;
     // private _tint: number = 0xffffff;
 
-    // protected _a: number = 1;
-    // protected _b: number = 0;
-    // protected _c: number = 0;
-    // protected _d: number = 1;
-    // protected _tx: number = 0;
-    // protected _ty: number = 0;
-
-    // protected _wa: number = 1;
-    // protected _wb: number = 0;
-    // protected _wc: number = 0;
-    // protected _wd: number = 1;
-    // protected _wtx: number = 0;
-    // protected _wty: number = 0;
-
     localTransform: { a: number; b: number; c: number; d: number; tx: number; ty: number; };
     worldTransform: { a: number; b: number; c: number; d: number; tx: number; ty: number; };
 
