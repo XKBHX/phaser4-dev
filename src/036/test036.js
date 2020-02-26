@@ -439,12 +439,13 @@ class WebGLRenderer {
             alpha: false,
             antialias: true,
             premultipliedAlpha: false,
-            stencil: false,
+            stencil: true,
             preserveDrawingBuffer: false
         };
         this.clearColor = [0, 0, 0, 1];
         this.resolution = { x: 0, y: 0 };
         this.maxTextures = 0;
+        this.clearBeforeRender = true;
         this.resolution.x = width;
         this.resolution.y = height;
         this.canvas = document.createElement('canvas');
@@ -483,6 +484,9 @@ class WebGLRenderer {
         this.maxTextures = maxTextures;
         this.textureIndex = Array.from(Array(maxTextures).keys());
     }
+    isSizePowerOfTwo(width, height) {
+        return (width > 0 && (width & (width - 1)) === 0 && height > 0 && (height & (height - 1)) === 0);
+    }
     createGLTexture(source) {
         const gl = this.gl;
         const glTexture = gl.createTexture();
@@ -491,14 +495,17 @@ class WebGLRenderer {
         gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        //  POT only
-        // gl.generateMipmap(gl.TEXTURE_2D);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
+        const pot = this.isSizePowerOfTwo(source.width, source.height);
+        const wrap = (pot) ? gl.REPEAT : gl.CLAMP_TO_EDGE;
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap);
+        if (pot) {
+            gl.generateMipmap(gl.TEXTURE_2D);
+        }
         return glTexture;
     }
-    render(sprites) {
+    render(displayList) {
         this.startActiveTexture++;
         let startActiveTexture = this.startActiveTexture;
         let currentActiveTexture = 0;
@@ -508,29 +515,34 @@ class WebGLRenderer {
         //  CLS
         const gl = this.gl;
         const cls = this.clearColor;
-        gl.clearColor(cls[0], cls[1], cls[2], cls[3]);
-        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.disable(gl.DEPTH_TEST);
+        gl.disable(gl.CULL_FACE);
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         gl.viewport(0, 0, this.resolution.x, this.resolution.y);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        if (this.clearBeforeRender) {
+            gl.clearColor(cls[0], cls[1], cls[2], cls[3]);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+        }
         shader.bind();
-        for (let i = 0; i < sprites.length; i++) {
-            let sprite = sprites[i];
-            let texture = sprite.texture;
-            if (texture.glIndexCounter < startActiveTexture) {
-                texture.glIndexCounter = startActiveTexture;
-                if (currentActiveTexture < maxTextures) {
-                    //  Make this texture active
-                    activeTextures[currentActiveTexture] = texture;
-                    texture.glIndex = currentActiveTexture;
-                    gl.activeTexture(gl.TEXTURE0 + currentActiveTexture);
-                    gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
-                    currentActiveTexture++;
+        for (let i = 0; i < displayList.length; i++) {
+            let entity = displayList[i];
+            entity.updateTransform();
+            if (entity.visible && entity.renderable && entity.texture) {
+                let texture = entity.texture;
+                if (texture.glIndexCounter < startActiveTexture) {
+                    texture.glIndexCounter = startActiveTexture;
+                    if (currentActiveTexture < maxTextures) {
+                        //  Make this texture active
+                        activeTextures[currentActiveTexture] = texture;
+                        texture.glIndex = currentActiveTexture;
+                        gl.activeTexture(gl.TEXTURE0 + currentActiveTexture);
+                        gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
+                        currentActiveTexture++;
+                    }
                 }
-            }
-            sprite.update();
-            if (sprite.visible) {
-                shader.batchSprite(sprite);
+                shader.batchSprite(entity);
             }
         }
         shader.flush();
@@ -766,6 +778,15 @@ class Texture {
     }
 }
 
+class Vertex {
+    constructor(x = 0, y = 0, color = 16777215, alpha = 1) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.alpha = alpha;
+    }
+}
+
 class Vec2 {
     /**
      * Creates an instance of a Vector2.
@@ -827,54 +848,85 @@ class Vec2 {
 }
 //# sourceMappingURL=Vec2.js.map
 
-class Vertex {
-    constructor(x = 0, y = 0, color = 16777215, alpha = 1) {
-        this.x = x;
-        this.y = y;
-        this.color = color;
-        this.alpha = alpha;
-    }
-}
-
-class Sprite {
-    constructor(scene, x, y, texture, frame) {
+class DisplayObject {
+    constructor() {
         this.visible = true;
-        this.texture = null;
-        this.frame = null;
-        this.vertices = [new Vertex(), new Vertex(), new Vertex(), new Vertex()];
-        this._size = new Vec2();
+        this.renderable = true;
         this._position = new Vec2();
         this._scale = new Vec2(1, 1);
         this._skew = new Vec2();
         this._origin = new Vec2(0.5, 0.5);
         this._rotation = 0;
-        this._alpha = 1;
-        this._tint = 0xffffff;
-        this._a = 1;
-        this._b = 0;
-        this._c = 0;
-        this._d = 1;
-        this._tx = 0;
-        this._ty = 0;
-        this.scene = scene;
-        this.setTexture(texture, frame);
-        this._position.set(x, y);
-        //  Transform.update:
-        this._tx = x;
-        this._ty = y;
+        this.localTransform = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
+        this.worldTransform = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
     }
-    setTexture(key, frame) {
-        if (key instanceof Texture) {
-            this.texture = key;
+    updateTransform(parent) {
+        const lt = this.localTransform;
+        const wt = this.worldTransform;
+        lt.tx = this.x;
+        lt.ty = this.y;
+        if (!parent && !this.parent) {
+            wt.a = lt.a;
+            wt.b = lt.b;
+            wt.c = lt.c;
+            wt.d = lt.d;
+            wt.tx = lt.tx;
+            wt.ty = lt.ty;
+            return;
         }
-        else {
-            this.texture = this.scene.textures.get(key);
+        else if (!parent) {
+            parent = this.parent;
         }
-        return this.setFrame(frame);
+        const pt = parent.worldTransform;
+        let { a, b, c, d, tx, ty } = lt;
+        wt.a = a * pt.a + b * pt.c;
+        wt.b = a * pt.b + b * pt.d;
+        wt.c = c * pt.a + d * pt.c;
+        wt.d = c * pt.b + d * pt.d;
+        wt.tx = tx * pt.a + ty * pt.c + pt.tx;
+        wt.ty = tx * pt.b + ty * pt.d + pt.ty;
+        /*
+        a = wt.a;
+        b = wt.b;
+        c = wt.c;
+        d = wt.d;
+
+        const determ = (a * d) - (b * c);
+
+        if (a || b)
+        {
+            const r = Math.sqrt((a * a) + (b * b));
+
+            // this.worldRotation = (b > 0) ? Math.acos(a / r) : -Math.acos(a / r);
+            // this.worldScale.x = r;
+            // this.worldScale.y = determ / r;
+        }
+        else if (c || d)
+        {
+            var s = Math.sqrt((c * c) + (d * d));
+
+            // this.worldRotation = Phaser.Math.HALF_PI - ((d > 0) ? Math.acos(-c / s) : -Math.acos(c / s));
+            // this.worldScale.x = determ / s;
+            // this.worldScale.y = s;
+        }
+        else
+        {
+            // this.worldScale.x = 0;
+            // this.worldScale.y = 0;
+        }
+
+        //  Set the World values
+        // this.worldAlpha = this.alpha * p.worldAlpha;
+        // this.worldPosition.x = wt.tx;
+        // this.worldPosition.y = wt.ty;
+
+        // reset the bounds each time this is called!
+        // this._currentBounds = null;
+        */
     }
-    setFrame(key) {
-        this.frame = this.texture.get(key);
-        this._size.set(this.frame.width, this.frame.height);
+    setSize(width, height) {
+        this.width = width;
+        this.height = height;
         return this;
     }
     setPosition(x, y) {
@@ -897,63 +949,13 @@ class Sprite {
         this._rotation = rotation;
         return this.updateCache();
     }
-    setAlpha(topLeft = 1, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
-        const vertices = this.vertices;
-        vertices[0].alpha = topLeft;
-        vertices[1].alpha = topRight;
-        vertices[2].alpha = bottomLeft;
-        vertices[3].alpha = bottomRight;
-        return this;
-    }
-    setTint(topLeft = 0xffffff, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
-        const vertices = this.vertices;
-        vertices[0].color = topLeft;
-        vertices[1].color = topRight;
-        vertices[2].color = bottomLeft;
-        vertices[3].color = bottomRight;
-        return this;
-    }
-    update() {
-        //  Transform.update:
-        this._tx = this.x;
-        this._ty = this.y;
-        //  Update Vertices:
-        const w = this._size.x;
-        const h = this._size.y;
-        const x0 = -(this._origin.x * w);
-        const x1 = x0 + w;
-        const y0 = -(this._origin.y * h);
-        const y1 = y0 + h;
-        const { _a, _b, _c, _d, _tx, _ty } = this;
-        //  Cache the calculations to avoid 8 getX/Y function calls:
-        const x0a = x0 * _a;
-        const x0b = x0 * _b;
-        const y0c = y0 * _c;
-        const y0d = y0 * _d;
-        const x1a = x1 * _a;
-        const x1b = x1 * _b;
-        const y1c = y1 * _c;
-        const y1d = y1 * _d;
-        const vertices = this.vertices;
-        //  top left
-        vertices[0].x = x0a + y0c + _tx;
-        vertices[0].y = x0b + y0d + _ty;
-        //  top right
-        vertices[1].x = x1a + y0c + _tx;
-        vertices[1].y = x1b + y0d + _ty;
-        //  bottom left
-        vertices[2].x = x0a + y1c + _tx;
-        vertices[2].y = x0b + y1d + _ty;
-        //  bottom right
-        vertices[3].x = x1a + y1c + _tx;
-        vertices[3].y = x1b + y1d + _ty;
-    }
     updateCache() {
+        const transform = this.localTransform;
         const { _rotation, _skew, _scale } = this;
-        this._a = Math.cos(_rotation + _skew.y) * _scale.x;
-        this._b = Math.sin(_rotation + _skew.y) * _scale.x;
-        this._c = -Math.sin(_rotation - _skew.x) * _scale.y;
-        this._d = Math.cos(_rotation - _skew.x) * _scale.y;
+        transform.a = Math.cos(_rotation + _skew.y) * _scale.x;
+        transform.b = Math.sin(_rotation + _skew.y) * _scale.x;
+        transform.c = -Math.sin(_rotation - _skew.x) * _scale.y;
+        transform.d = Math.cos(_rotation - _skew.x) * _scale.y;
         return this;
     }
     set x(value) {
@@ -1002,6 +1004,184 @@ class Sprite {
     }
     get skewY() {
         return this._skew.y;
+    }
+}
+
+class DisplayObjectContainer extends DisplayObject {
+    constructor() {
+        super();
+        this.children = [];
+    }
+    addChild(child) {
+        return this.addChildAt(child, this.children.length);
+    }
+    addChildAt(child, index) {
+        if (index >= 0 && index <= this.children.length) {
+            if (child.parent) {
+                child.parent.removeChild(child);
+            }
+            child.parent = this;
+            this.children.splice(index, 0, child);
+        }
+        return child;
+    }
+    swapChildren(child1, child2) {
+        if (child1 !== child2) {
+            return;
+        }
+        let index1 = this.getChildIndex(child1);
+        let index2 = this.getChildIndex(child2);
+        if (index1 < 0 || index2 < 0) {
+            throw new Error('swap: Both children must belong to the same parent');
+        }
+        this.children[index1] = child2;
+        this.children[index2] = child1;
+    }
+    getChildIndex(child) {
+        const index = this.children.indexOf(child);
+        if (index === -1) {
+            throw new Error('Supplied DisplayObject not child of the caller');
+        }
+        return index;
+    }
+    setChildIndex(child, index) {
+        const children = this.children;
+        if (index < 0 || index >= children.length) {
+            throw new Error('Index ' + index + ' out of bounds');
+        }
+        const currentIndex = this.getChildIndex(child);
+        children.splice(currentIndex, 1);
+        children.splice(index, 0, child);
+    }
+    getChildAt(index) {
+        if (index < 0 || index >= this.children.length) {
+            throw new Error('Index ' + index + ' out of bounds');
+        }
+        return this.children[index];
+    }
+    removeChild(child) {
+        const index = this.children.indexOf(child);
+        if (index === -1) {
+            return;
+        }
+        return this.removeChildAt(index);
+    }
+    removeChildAt(index) {
+        const child = this.getChildAt(index);
+        if (child) {
+            child.parent = undefined;
+            this.children.splice(index, 1);
+        }
+        return child;
+    }
+    removeChildren(beginIndex = 0, endIndex) {
+        const children = this.children;
+        if (endIndex === undefined) {
+            endIndex = children.length;
+        }
+        const range = endIndex - beginIndex;
+        if (range > 0 && range <= endIndex) {
+            const removed = children.splice(beginIndex, range);
+            removed.forEach((child) => {
+                child.parent = undefined;
+            });
+            return removed;
+        }
+        else if (range === 0 && children.length === 0) {
+            return [];
+        }
+        else {
+            throw new Error('Range Error. Values out of bounds');
+        }
+    }
+    updateTransform(parent) {
+        if (!this.visible) {
+            return;
+        }
+        super.updateTransform(parent);
+        const children = this.children;
+        for (let i = 0; i < children.length; i++) {
+            children[i].updateTransform();
+        }
+    }
+}
+
+class Sprite extends DisplayObjectContainer {
+    constructor(scene, x, y, texture, frame) {
+        super();
+        this.texture = null;
+        this.frame = null;
+        this.vertices = [new Vertex(), new Vertex(), new Vertex(), new Vertex()];
+        this._alpha = 1;
+        this._tint = 0xffffff;
+        this.scene = scene;
+        this.setTexture(texture, frame);
+        this.setPosition(x, y);
+    }
+    setTexture(key, frame) {
+        if (key instanceof Texture) {
+            this.texture = key;
+        }
+        else {
+            this.texture = this.scene.textures.get(key);
+        }
+        return this.setFrame(frame);
+    }
+    setFrame(key) {
+        const frame = this.texture.get(key);
+        this.frame = frame;
+        return this.setSize(frame.width, frame.height);
+    }
+    setAlpha(topLeft = 1, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
+        const vertices = this.vertices;
+        vertices[0].alpha = topLeft;
+        vertices[1].alpha = topRight;
+        vertices[2].alpha = bottomLeft;
+        vertices[3].alpha = bottomRight;
+        return this;
+    }
+    setTint(topLeft = 0xffffff, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
+        const vertices = this.vertices;
+        vertices[0].color = topLeft;
+        vertices[1].color = topRight;
+        vertices[2].color = bottomLeft;
+        vertices[3].color = bottomRight;
+        return this;
+    }
+    update() {
+    }
+    updateTransform() {
+        super.updateTransform();
+        //  Update Vertices:
+        const w = this.width;
+        const h = this.height;
+        const x0 = -(this._origin.x * w);
+        const x1 = x0 + w;
+        const y0 = -(this._origin.y * h);
+        const y1 = y0 + h;
+        const { a, b, c, d, tx, ty } = this.worldTransform;
+        //  Cache the calculations to avoid 8 getX/Y function calls:
+        const x0a = x0 * a;
+        const x0b = x0 * b;
+        const y0c = y0 * c;
+        const y0d = y0 * d;
+        const x1a = x1 * a;
+        const x1b = x1 * b;
+        const y1c = y1 * c;
+        const y1d = y1 * d;
+        const vertices = this.vertices;
+        //  top left
+        vertices[0].x = x0a + y0c + tx;
+        vertices[0].y = x0b + y0d + ty;
+        //  top right
+        vertices[1].x = x1a + y0c + tx;
+        vertices[1].y = x1b + y0d + ty;
+        //  bottom left
+        vertices[2].x = x0a + y1c + tx;
+        vertices[2].y = x0b + y1d + ty;
+        //  bottom right
+        vertices[3].x = x1a + y1c + tx;
+        vertices[3].y = x1b + y1d + ty;
     }
     get alpha() {
         return this._alpha;
@@ -1276,26 +1456,29 @@ class Game {
 class Demo extends Scene {
     constructor(game) {
         super(game);
-        this.s = 0.01;
     }
     preload() {
         this.load.image('logo', '../assets/512x512.png');
+        this.load.image('box', '../assets/box-item-boxed.png');
+        this.load.image('brain', '../assets/brain.png');
     }
     create() {
         document.getElementById('toggle').addEventListener('click', () => {
             this.game.isPaused = (this.game.isPaused) ? false : true;
         });
         this.sprite1 = this.add.sprite(400, 300, 'logo');
+        const child1 = this.add.sprite(0, 0, 'box');
+        const child2 = this.add.sprite(-256, -256, 'box');
+        const child3 = this.add.sprite(256, 256, 'box');
+        this.sprite1.addChild(child1);
+        this.sprite1.addChild(child2);
+        this.sprite1.addChild(child3);
     }
     update(time) {
-        this.sprite1.skewX += this.s;
-        this.sprite1.skewY += this.s;
-        if (this.sprite1.skewX >= 0.5 || this.sprite1.skewX <= -0.5) {
-            this.s *= -1;
-        }
+        this.sprite1.rotation += 0.01;
     }
 }
-function demo5 () {
+function demo6 () {
     new Game({
         width: 800,
         height: 600,
@@ -1306,13 +1489,20 @@ function demo5 () {
 }
 
 // import demo1 from './demo1'; // test single sprite
-demo5();
+demo6();
 //  Next steps:
+//  * Context lost handler
+//  * Renderer resize handler
+//  * Renderer resolution
+//  * Camera class (position, scale, rotation, alpha)
 //  * Texture Atlas Loader
 //  * Multi Texture re-use old texture IDs when count > max supported
-//  * Container class - Transform stack test (Quad with children, children of children, etc)
+//  * Single Texture shader
+//  * Static Batch shader (Static Container?)
+//  * Input point translation
 //  * Instead of a Quad class, try a class that can have any number of vertices in it (ala Rope), or any vertex moved
 //  Done:
+//  X Container class - Transform stack test (Sprite with children, children of children, etc)
 //  X Encode color as a single float, rather than a vec4 and add back to the shader
 //  X Moved all code to WebGL Renderer and supporting classes
 //  X Game class, single Scene, Loader, DOM Content Load handler, Texture Cache

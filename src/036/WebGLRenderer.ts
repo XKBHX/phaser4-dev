@@ -14,7 +14,7 @@ export default class WebGLRenderer
         alpha: false,
         antialias: true,
         premultipliedAlpha: false,
-        stencil: false,
+        stencil: true,
         preserveDrawingBuffer: false
     };
 
@@ -32,6 +32,8 @@ export default class WebGLRenderer
     activeTextures: Texture[];
     currentActiveTexture: number;
     startActiveTexture: number;
+
+    clearBeforeRender: boolean = true;
 
     constructor (width: number, height: number)
     {
@@ -94,6 +96,11 @@ export default class WebGLRenderer
         this.textureIndex = Array.from(Array(maxTextures).keys());
     }
 
+    isSizePowerOfTwo (width: number, height: number): boolean
+    {
+        return (width > 0 && (width & (width - 1)) === 0 && height > 0 && (height & (height - 1)) === 0);
+    }
+
     createGLTexture (source: TexImageSource): WebGLTexture
     {
         const gl = this.gl;
@@ -108,18 +115,24 @@ export default class WebGLRenderer
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
 
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
 
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        const pot = this.isSizePowerOfTwo(source.width, source.height);
 
-        //  POT only
-        // gl.generateMipmap(gl.TEXTURE_2D);
+        const wrap = (pot) ? gl.REPEAT : gl.CLAMP_TO_EDGE;
+
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap);
+
+        if (pot)
+        {
+            gl.generateMipmap(gl.TEXTURE_2D);
+        }
 
         return glTexture;
     }
 
-    render (sprites: Sprite[])
+    render (displayList: Sprite[])
     {
         this.startActiveTexture++;
 
@@ -136,49 +149,58 @@ export default class WebGLRenderer
         const gl = this.gl;
         const cls = this.clearColor;
 
-        gl.clearColor(cls[0], cls[1], cls[2], cls[3]);
-        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.disable(gl.DEPTH_TEST);
+        gl.disable(gl.CULL_FACE);
 
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
         gl.viewport(0, 0, this.resolution.x, this.resolution.y);
 
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        if (this.clearBeforeRender)
+        {
+            gl.clearColor(cls[0], cls[1], cls[2], cls[3]);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+        }
+
         shader.bind();
 
-        for (let i: number = 0; i < sprites.length; i++)
+        for (let i: number = 0; i < displayList.length; i++)
         {
-            let sprite = sprites[i];
-            let texture = sprite.texture;
+            let entity = displayList[i];
 
-            if (texture.glIndexCounter < startActiveTexture)
+            entity.updateTransform();
+
+            if (entity.visible && entity.renderable && entity.texture)
             {
-                texture.glIndexCounter = startActiveTexture;
+                let texture = entity.texture;
 
-                if (currentActiveTexture < maxTextures)
+                if (texture.glIndexCounter < startActiveTexture)
                 {
-                    //  Make this texture active
-                    activeTextures[currentActiveTexture] = texture;
-
-                    texture.glIndex = currentActiveTexture;
-
-                    gl.activeTexture(gl.TEXTURE0 + currentActiveTexture);
-                    gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
-
-                    currentActiveTexture++;
+                    texture.glIndexCounter = startActiveTexture;
+    
+                    if (currentActiveTexture < maxTextures)
+                    {
+                        //  Make this texture active
+                        activeTextures[currentActiveTexture] = texture;
+    
+                        texture.glIndex = currentActiveTexture;
+    
+                        gl.activeTexture(gl.TEXTURE0 + currentActiveTexture);
+                        gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
+    
+                        currentActiveTexture++;
+                    }
+                    else
+                    {
+                        //  We've run out, flush + recycle the oldest one
+                        //  TODO
+                    }
                 }
-                else
-                {
-                    //  We've run out, flush + recycle the oldest one
-                    //  TODO
-                }
-            }
 
-            sprite.update();
-
-            if (sprite.visible)
-            {
-                shader.batchSprite(sprite);
+                shader.batchSprite(entity);
             }
         }
 

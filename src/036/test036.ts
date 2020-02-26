@@ -2,19 +2,27 @@
 // import demo2 from './demo2'; // test multiple images with multiple sprites
 // import demo3 from './demo3'; // test sprite sheet loader and display
 // import demo4 from './demo4'; // sprite tint + alpha back in the shader
-import demo5 from './demo5'; // test skew
+// import demo5 from './demo5'; // test skew
+import demo6 from './demo6'; // test container children
 
-demo5();
+demo6();
 
 //  Next steps:
 
+//  * Context lost handler
+//  * Renderer resize handler
+//  * Renderer resolution
+//  * Camera class (position, scale, rotation, alpha)
 //  * Texture Atlas Loader
 //  * Multi Texture re-use old texture IDs when count > max supported
-//  * Container class - Transform stack test (Quad with children, children of children, etc)
+//  * Single Texture shader
+//  * Static Batch shader (Static Container?)
+//  * Input point translation
 //  * Instead of a Quad class, try a class that can have any number of vertices in it (ala Rope), or any vertex moved
 
 //  Done:
 
+//  X Container class - Transform stack test (Sprite with children, children of children, etc)
 //  X Encode color as a single float, rather than a vec4 and add back to the shader
 //  X Moved all code to WebGL Renderer and supporting classes
 //  X Game class, single Scene, Loader, DOM Content Load handler, Texture Cache
