@@ -207,10 +207,11 @@ class Matrix4 {
 
 const shaderSource = {
     fragmentShader: `
-precision mediump float;
+precision highp float;
 
 varying vec2 vTextureCoord;
 varying float vTextureId;
+varying vec4 vTintColor;
 
 uniform sampler2D uTexture[%count%];
 
@@ -220,23 +221,28 @@ void main (void)
 
     %forloop%
 
-    gl_FragColor = color;
+    gl_FragColor = color * vec4(vTintColor.bgr * vTintColor.a, vTintColor.a);
 }`,
     vertexShader: `
+precision highp float;
+
 attribute vec2 aVertexPosition;
 attribute vec2 aTextureCoord;
 attribute float aTextureId;
+attribute vec4 aTintColor;
 
 uniform mat4 uProjectionMatrix;
 uniform mat4 uCameraMatrix;
 
 varying vec2 vTextureCoord;
 varying float vTextureId;
+varying vec4 vTintColor;
 
 void main (void)
 {
     vTextureCoord = aTextureCoord;
     vTextureId = aTextureId;
+    vTintColor = aTintColor;
 
     gl_Position = uProjectionMatrix * uCameraMatrix * vec4(aVertexPosition, 0.0, 1.0);
 }`
@@ -245,7 +251,7 @@ class MultiTextureQuadShader {
     constructor(renderer, config = {}) {
         this.renderer = renderer;
         this.gl = renderer.gl;
-        const { batchSize = 2000, dataSize = 4, indexSize = 4, vertexElementSize = 5, quadIndexSize = 6, fragmentShader = shaderSource.fragmentShader, vertexShader = shaderSource.vertexShader } = config;
+        const { batchSize = 2000, dataSize = 4, indexSize = 4, vertexElementSize = 6, quadIndexSize = 6, fragmentShader = shaderSource.fragmentShader, vertexShader = shaderSource.vertexShader } = config;
         this.batchSize = batchSize;
         this.dataSize = dataSize;
         this.indexSize = indexSize;
@@ -264,8 +270,10 @@ class MultiTextureQuadShader {
         for (let i = 0; i < (this.batchSize * this.indexSize); i += this.indexSize) {
             ibo.push(i + 0, i + 1, i + 2, i + 2, i + 3, i + 0);
         }
-        this.data = new Float32Array(this.bufferByteSize);
+        this.data = new ArrayBuffer(this.bufferByteSize);
         this.index = new Uint16Array(ibo);
+        this.vertexViewF32 = new Float32Array(this.data);
+        this.vertexViewU32 = new Uint32Array(this.data);
         const gl = this.gl;
         this.vertexBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
@@ -310,22 +318,29 @@ class MultiTextureQuadShader {
         const vertexPosition = gl.getAttribLocation(program, 'aVertexPosition');
         const vertexTextureCoord = gl.getAttribLocation(program, 'aTextureCoord');
         const vertexTextureIndex = gl.getAttribLocation(program, 'aTextureId');
+        const vertexColor = gl.getAttribLocation(program, 'aTintColor');
         const uProjectionMatrix = gl.getUniformLocation(program, 'uProjectionMatrix');
         const uCameraMatrix = gl.getUniformLocation(program, 'uCameraMatrix');
         const uTextureLocation = gl.getUniformLocation(program, 'uTexture');
         gl.enableVertexAttribArray(vertexPosition);
         gl.enableVertexAttribArray(vertexTextureCoord);
         gl.enableVertexAttribArray(vertexTextureIndex);
+        gl.enableVertexAttribArray(vertexColor);
         this.attribs = {
             position: vertexPosition,
             textureCoord: vertexTextureCoord,
-            textureIndex: vertexTextureIndex
+            textureIndex: vertexTextureIndex,
+            color: vertexColor
         };
         this.uniforms = {
             projectionMatrix: uProjectionMatrix,
             cameraMatrix: uCameraMatrix,
             textureLocation: uTextureLocation
         };
+    }
+    packColor(rgb, alpha) {
+        let ua = ((alpha * 255) | 0) & 0xFF;
+        return ((ua << 24) | rgb) >>> 0;
     }
     bind() {
         const gl = this.gl;
@@ -342,6 +357,7 @@ class MultiTextureQuadShader {
         gl.vertexAttribPointer(attribs.position, 2, gl.FLOAT, false, stride, 0); // size = 8
         gl.vertexAttribPointer(attribs.textureCoord, 2, gl.FLOAT, false, stride, 8); // size = 8
         gl.vertexAttribPointer(attribs.textureIndex, 1, gl.FLOAT, false, stride, 8 + 8); // size = 4
+        gl.vertexAttribPointer(attribs.color, 4, gl.UNSIGNED_BYTE, true, stride, 8 + 8 + 4); // size = 4
         this.count = 0;
     }
     batchSprite(sprite) {
@@ -349,30 +365,39 @@ class MultiTextureQuadShader {
             this.flush();
         }
         let offset = this.count * this.quadElementSize;
-        const data = this.data;
+        const F32 = this.vertexViewF32;
+        const U32 = this.vertexViewU32;
         const frame = sprite.frame;
         const textureIndex = frame.texture.glIndex;
         const vertices = sprite.vertices;
-        data[offset++] = vertices[0];
-        data[offset++] = vertices[1];
-        data[offset++] = frame.u0;
-        data[offset++] = frame.v0;
-        data[offset++] = textureIndex;
-        data[offset++] = vertices[4];
-        data[offset++] = vertices[5];
-        data[offset++] = frame.u0;
-        data[offset++] = frame.v1;
-        data[offset++] = textureIndex;
-        data[offset++] = vertices[6];
-        data[offset++] = vertices[7];
-        data[offset++] = frame.u1;
-        data[offset++] = frame.v1;
-        data[offset++] = textureIndex;
-        data[offset++] = vertices[2];
-        data[offset++] = vertices[3];
-        data[offset++] = frame.u1;
-        data[offset++] = frame.v0;
-        data[offset++] = textureIndex;
+        const topLeft = vertices[0];
+        const topRight = vertices[1];
+        const bottomLeft = vertices[2];
+        const bottomRight = vertices[3];
+        F32[offset++] = topLeft.x;
+        F32[offset++] = topLeft.y;
+        F32[offset++] = frame.u0;
+        F32[offset++] = frame.v0;
+        F32[offset++] = textureIndex;
+        U32[offset++] = this.packColor(topLeft.color, topLeft.alpha);
+        F32[offset++] = bottomLeft.x;
+        F32[offset++] = bottomLeft.y;
+        F32[offset++] = frame.u0;
+        F32[offset++] = frame.v1;
+        F32[offset++] = textureIndex;
+        U32[offset++] = this.packColor(bottomLeft.color, bottomLeft.alpha);
+        F32[offset++] = bottomRight.x;
+        F32[offset++] = bottomRight.y;
+        F32[offset++] = frame.u1;
+        F32[offset++] = frame.v1;
+        F32[offset++] = textureIndex;
+        U32[offset++] = this.packColor(bottomRight.color, bottomRight.alpha);
+        F32[offset++] = topRight.x;
+        F32[offset++] = topRight.y;
+        F32[offset++] = frame.u1;
+        F32[offset++] = frame.v0;
+        F32[offset++] = textureIndex;
+        U32[offset++] = this.packColor(topRight.color, topRight.alpha);
         this.count++;
     }
     flush() {
@@ -386,7 +411,7 @@ class MultiTextureQuadShader {
             gl.bufferData(gl.ARRAY_BUFFER, this.data, gl.DYNAMIC_DRAW);
         }
         else {
-            let view = this.data.subarray(0, offset);
+            let view = this.vertexViewF32.subarray(0, offset);
             gl.bufferSubData(gl.ARRAY_BUFFER, 0, view);
         }
         gl.drawElements(gl.TRIANGLES, count * this.quadIndexSize, gl.UNSIGNED_SHORT, 0);
@@ -802,28 +827,29 @@ class Vec2 {
 }
 //# sourceMappingURL=Vec2.js.map
 
+class Vertex {
+    constructor(x = 0, y = 0, color = 16777215, alpha = 1) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.alpha = alpha;
+    }
+}
+
 class Sprite {
     constructor(scene, x, y, texture, frame) {
-        this.rgba = { r: 1, g: 1, b: 1, a: 1 };
         this.visible = true;
         this.texture = null;
         this.frame = null;
-        this.vertices = [
-            //  top left
-            0, 0,
-            //  top right
-            0, 0,
-            //  bottom left
-            0, 0,
-            //  bottom right
-            0, 0
-        ];
+        this.vertices = [new Vertex(), new Vertex(), new Vertex(), new Vertex()];
         this._size = new Vec2();
         this._position = new Vec2();
         this._scale = new Vec2(1, 1);
         this._skew = new Vec2();
         this._origin = new Vec2(0.5, 0.5);
         this._rotation = 0;
+        this._alpha = 1;
+        this._tint = 0xffffff;
         this._a = 1;
         this._b = 0;
         this._c = 0;
@@ -871,12 +897,20 @@ class Sprite {
         this._rotation = rotation;
         return this.updateCache();
     }
-    updateCache() {
-        const { _rotation, _skew, _scale } = this;
-        this._a = Math.cos(_rotation + _skew.y) * _scale.x;
-        this._b = Math.sin(_rotation + _skew.y) * _scale.x;
-        this._c = -Math.sin(_rotation - _skew.x) * _scale.y;
-        this._d = Math.cos(_rotation - _skew.x) * _scale.y;
+    setAlpha(topLeft = 1, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
+        const vertices = this.vertices;
+        vertices[0].alpha = topLeft;
+        vertices[1].alpha = topRight;
+        vertices[2].alpha = bottomLeft;
+        vertices[3].alpha = bottomRight;
+        return this;
+    }
+    setTint(topLeft = 0xffffff, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
+        const vertices = this.vertices;
+        vertices[0].color = topLeft;
+        vertices[1].color = topRight;
+        vertices[2].color = bottomLeft;
+        vertices[3].color = bottomRight;
         return this;
     }
     update() {
@@ -902,17 +936,25 @@ class Sprite {
         const y1d = y1 * _d;
         const vertices = this.vertices;
         //  top left
-        vertices[0] = x0a + y0c + _tx;
-        vertices[1] = x0b + y0d + _ty;
+        vertices[0].x = x0a + y0c + _tx;
+        vertices[0].y = x0b + y0d + _ty;
         //  top right
-        vertices[2] = x1a + y0c + _tx;
-        vertices[3] = x1b + y0d + _ty;
+        vertices[1].x = x1a + y0c + _tx;
+        vertices[1].y = x1b + y0d + _ty;
         //  bottom left
-        vertices[4] = x0a + y1c + _tx;
-        vertices[5] = x0b + y1d + _ty;
+        vertices[2].x = x0a + y1c + _tx;
+        vertices[2].y = x0b + y1d + _ty;
         //  bottom right
-        vertices[6] = x1a + y1c + _tx;
-        vertices[7] = x1b + y1d + _ty;
+        vertices[3].x = x1a + y1c + _tx;
+        vertices[3].y = x1b + y1d + _ty;
+    }
+    updateCache() {
+        const { _rotation, _skew, _scale } = this;
+        this._a = Math.cos(_rotation + _skew.y) * _scale.x;
+        this._b = Math.sin(_rotation + _skew.y) * _scale.x;
+        this._c = -Math.sin(_rotation - _skew.x) * _scale.y;
+        this._d = Math.cos(_rotation - _skew.x) * _scale.y;
+        return this;
     }
     set x(value) {
         this._position.x = value;
@@ -960,6 +1002,20 @@ class Sprite {
     }
     get skewY() {
         return this._skew.y;
+    }
+    get alpha() {
+        return this._alpha;
+    }
+    set alpha(value) {
+        this._alpha = value;
+        this.setAlpha(value);
+    }
+    get tint() {
+        return this._tint;
+    }
+    set tint(value) {
+        this._tint = value;
+        this.setTint(value);
     }
 }
 
@@ -1220,33 +1276,26 @@ class Game {
 class Demo extends Scene {
     constructor(game) {
         super(game);
+        this.s = 0.01;
     }
     preload() {
-        this.load.setPath('../assets');
-        this.load.spritesheet('diamonds', 'diamonds32x24x5.png', { frameWidth: 32, frameHeight: 24 });
-        this.load.spritesheet('pack', '32x32-item-pack.png', { frameWidth: 32, frameHeight: 32 });
+        this.load.image('logo', '../assets/512x512.png');
     }
     create() {
         document.getElementById('toggle').addEventListener('click', () => {
             this.game.isPaused = (this.game.isPaused) ? false : true;
         });
-        const totalDiamondFrames = this.textures.get('diamonds').frames.size - 1;
-        const totalPackFrames = this.textures.get('pack').frames.size - 1;
-        for (let i = 0; i < 128; i++) {
-            let x = Math.floor(Math.random() * this.game.renderer.resolution.x);
-            let y = Math.floor(Math.random() * this.game.renderer.resolution.y);
-            let frame = Math.floor(Math.random() * totalPackFrames);
-            this.add.sprite(x, y, 'pack', frame);
-        }
-        for (let i = 0; i < 64; i++) {
-            let x = Math.floor(Math.random() * this.game.renderer.resolution.x);
-            let y = Math.floor(Math.random() * this.game.renderer.resolution.y);
-            let frame = Math.floor(Math.random() * totalDiamondFrames);
-            this.add.sprite(x, y, 'diamonds', frame);
+        this.sprite1 = this.add.sprite(400, 300, 'logo');
+    }
+    update(time) {
+        this.sprite1.skewX += this.s;
+        this.sprite1.skewY += this.s;
+        if (this.sprite1.skewX >= 0.5 || this.sprite1.skewX <= -0.5) {
+            this.s *= -1;
         }
     }
 }
-function demo3 () {
+function demo5 () {
     new Game({
         width: 800,
         height: 600,
@@ -1257,14 +1306,14 @@ function demo3 () {
 }
 
 // import demo1 from './demo1'; // test single sprite
-demo3();
+demo5();
 //  Next steps:
 //  * Texture Atlas Loader
-//  * Encode color as a single float, rather than a vec4 and add back to the shader
 //  * Multi Texture re-use old texture IDs when count > max supported
 //  * Container class - Transform stack test (Quad with children, children of children, etc)
 //  * Instead of a Quad class, try a class that can have any number of vertices in it (ala Rope), or any vertex moved
 //  Done:
+//  X Encode color as a single float, rather than a vec4 and add back to the shader
 //  X Moved all code to WebGL Renderer and supporting classes
 //  X Game class, single Scene, Loader, DOM Content Load handler, Texture Cache
 //  X Encapsulate a Simple asset loader (images + json) and remove responsibility from the Texture class

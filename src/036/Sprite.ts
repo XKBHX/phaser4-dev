@@ -2,27 +2,17 @@ import Texture from './Texture';
 import Frame from './Frame';
 import { Vec2 } from '@phaserjs/math-vec2';
 import Scene from 'Scene';
+import Vertex from 'Vertex';
 
 export default class Sprite
 {
     readonly scene: Scene;
 
-    readonly rgba = { r: 1, g: 1, b: 1, a: 1 };
-
     visible: boolean = true;
     texture: Texture = null;
     frame: Frame = null;
 
-    vertices: number[] = [
-        //  top left
-        0, 0,
-        //  top right
-        0, 0,
-        //  bottom left
-        0, 0,
-        //  bottom right
-        0, 0
-    ];
+    vertices: Vertex[] = [ new Vertex(), new Vertex(), new Vertex(), new Vertex() ];
 
     private _size: Vec2 = new Vec2();
     private _position: Vec2 = new Vec2();
@@ -30,6 +20,9 @@ export default class Sprite
     private _skew: Vec2 = new Vec2();
     private _origin: Vec2 = new Vec2(0.5, 0.5);
     private _rotation: number = 0;
+
+    private _alpha: number = 1;
+    private _tint: number = 0xffffff;
 
     private _a: number = 1;
     private _b: number = 0;
@@ -109,14 +102,26 @@ export default class Sprite
         return this.updateCache();
     }
 
-    private updateCache ()
+    setAlpha (topLeft: number = 1, topRight: number = topLeft, bottomLeft: number = topLeft, bottomRight: number = topLeft)
     {
-        const { _rotation, _skew, _scale } = this;
+        const vertices = this.vertices;
 
-        this._a = Math.cos(_rotation + _skew.y) * _scale.x;
-        this._b = Math.sin(_rotation + _skew.y) * _scale.x;
-        this._c = -Math.sin(_rotation - _skew.x) * _scale.y;
-        this._d = Math.cos(_rotation - _skew.x) * _scale.y;
+        vertices[0].alpha = topLeft;
+        vertices[1].alpha = topRight;
+        vertices[2].alpha = bottomLeft;
+        vertices[3].alpha = bottomRight;
+
+        return this;
+    }
+
+    setTint (topLeft: number = 0xffffff, topRight: number = topLeft, bottomLeft: number = topLeft, bottomRight: number = topLeft)
+    {
+        const vertices = this.vertices;
+
+        vertices[0].color = topLeft;
+        vertices[1].color = topRight;
+        vertices[2].color = bottomLeft;
+        vertices[3].color = bottomRight;
 
         return this;
     }
@@ -155,20 +160,32 @@ export default class Sprite
         const vertices = this.vertices;
 
         //  top left
-        vertices[0] = x0a + y0c + _tx;
-        vertices[1] = x0b + y0d + _ty;
+        vertices[0].x = x0a + y0c + _tx;
+        vertices[0].y = x0b + y0d + _ty;
 
         //  top right
-        vertices[2] = x1a + y0c + _tx;
-        vertices[3] = x1b + y0d + _ty;
+        vertices[1].x = x1a + y0c + _tx;
+        vertices[1].y = x1b + y0d + _ty;
 
         //  bottom left
-        vertices[4] = x0a + y1c + _tx;
-        vertices[5] = x0b + y1d + _ty;
+        vertices[2].x = x0a + y1c + _tx;
+        vertices[2].y = x0b + y1d + _ty;
 
         //  bottom right
-        vertices[6] = x1a + y1c + _tx;
-        vertices[7] = x1b + y1d + _ty;
+        vertices[3].x = x1a + y1c + _tx;
+        vertices[3].y = x1b + y1d + _ty;
+    }
+
+    private updateCache ()
+    {
+        const { _rotation, _skew, _scale } = this;
+
+        this._a = Math.cos(_rotation + _skew.y) * _scale.x;
+        this._b = Math.sin(_rotation + _skew.y) * _scale.x;
+        this._c = -Math.sin(_rotation - _skew.x) * _scale.y;
+        this._d = Math.cos(_rotation - _skew.x) * _scale.y;
+
+        return this;
     }
 
     set x (value: number)
@@ -250,4 +267,29 @@ export default class Sprite
     {
         return this._skew.y;
     }
+
+    get alpha (): number
+    {
+        return this._alpha;
+    }
+
+    set alpha (value: number)
+    {
+        this._alpha = value;
+
+        this.setAlpha(value);
+    }
+
+    get tint (): number
+    {
+        return this._tint;
+    }
+
+    set tint (value: number)
+    {
+        this._tint = value;
+
+        this.setTint(value);
+    }
+
 }

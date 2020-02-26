@@ -5,10 +5,11 @@ import ISpriteMultiShader from 'ISpriteMultiShader';
 const shaderSource = {
 
     fragmentShader: `
-precision mediump float;
+precision highp float;
 
 varying vec2 vTextureCoord;
 varying float vTextureId;
+varying vec4 vTintColor;
 
 uniform sampler2D uTexture[%count%];
 
@@ -18,24 +19,29 @@ void main (void)
 
     %forloop%
 
-    gl_FragColor = color;
+    gl_FragColor = color * vec4(vTintColor.bgr * vTintColor.a, vTintColor.a);
 }`,
     
     vertexShader: `
+precision highp float;
+
 attribute vec2 aVertexPosition;
 attribute vec2 aTextureCoord;
 attribute float aTextureId;
+attribute vec4 aTintColor;
 
 uniform mat4 uProjectionMatrix;
 uniform mat4 uCameraMatrix;
 
 varying vec2 vTextureCoord;
 varying float vTextureId;
+varying vec4 vTintColor;
 
 void main (void)
 {
     vTextureCoord = aTextureCoord;
     vTextureId = aTextureId;
+    vTintColor = aTintColor;
 
     gl_Position = uProjectionMatrix * uCameraMatrix * vec4(aVertexPosition, 0.0, 1.0);
 }`
@@ -48,7 +54,7 @@ export default class MultiTextureQuadShader
 
     program: WebGLProgram;
 
-    attribs: { position: number; textureCoord: number; textureIndex: number; };
+    attribs: { position: number; textureCoord: number; textureIndex: number; color: number };
     uniforms: { projectionMatrix: WebGLUniformLocation; cameraMatrix: WebGLUniformLocation; textureLocation: WebGLUniformLocation; };
 
     /**
@@ -78,11 +84,12 @@ export default class MultiTextureQuadShader
     /**
      * The amount of elements / floats a single vertex consists of.
      * 
-     * The default is 5:
+     * The default is 6:
      * 
      * position (x,y - 2 floats)
      * texture coord (x,y - 2 floats)
      * texture index (float)
+     * packed color (vec4)
      *
      * @type {number}
      * @memberof MultiTextureQuadShader
@@ -143,10 +150,26 @@ export default class MultiTextureQuadShader
     /**
      * The Array Buffer.
      *
+     * @type {ArrayBuffer}
+     * @memberof MultiTextureQuadShader
+     */
+    data: ArrayBuffer;
+
+    /**
+     * Float32 View of the Array Buffer.
+     *
      * @type {Float32Array}
      * @memberof MultiTextureQuadShader
      */
-    data: Float32Array;
+    vertexViewF32: Float32Array;
+
+    /**
+     * Uint32 View of the Array Buffer.
+     *
+     * @type {Uint32Array}
+     * @memberof MultiTextureQuadShader
+     */
+    vertexViewU32: Uint32Array;
 
     /**
      * The Element Array Buffer.
@@ -190,7 +213,7 @@ export default class MultiTextureQuadShader
             batchSize = 2000,
             dataSize = 4,
             indexSize = 4,
-            vertexElementSize = 5,
+            vertexElementSize = 6,
             quadIndexSize = 6,
             fragmentShader = shaderSource.fragmentShader,
             vertexShader = shaderSource.vertexShader
@@ -220,8 +243,11 @@ export default class MultiTextureQuadShader
             ibo.push(i + 0, i + 1, i + 2, i + 2, i + 3, i + 0);
         }
         
-        this.data = new Float32Array(this.bufferByteSize);
+        this.data = new ArrayBuffer(this.bufferByteSize);
         this.index = new Uint16Array(ibo);
+
+        this.vertexViewF32 = new Float32Array(this.data);
+        this.vertexViewU32 = new Uint32Array(this.data);
 
         const gl = this.gl;
 
@@ -290,6 +316,7 @@ export default class MultiTextureQuadShader
         const vertexPosition = gl.getAttribLocation(program, 'aVertexPosition');
         const vertexTextureCoord = gl.getAttribLocation(program, 'aTextureCoord');
         const vertexTextureIndex = gl.getAttribLocation(program, 'aTextureId');
+        const vertexColor = gl.getAttribLocation(program, 'aTintColor');
 
         const uProjectionMatrix = gl.getUniformLocation(program, 'uProjectionMatrix');
         const uCameraMatrix = gl.getUniformLocation(program, 'uCameraMatrix');
@@ -298,11 +325,13 @@ export default class MultiTextureQuadShader
         gl.enableVertexAttribArray(vertexPosition);
         gl.enableVertexAttribArray(vertexTextureCoord);
         gl.enableVertexAttribArray(vertexTextureIndex);
+        gl.enableVertexAttribArray(vertexColor);
 
         this.attribs = {
             position: vertexPosition,
             textureCoord: vertexTextureCoord,
-            textureIndex: vertexTextureIndex
+            textureIndex: vertexTextureIndex,
+            color: vertexColor
         };
 
         this.uniforms = {
@@ -310,6 +339,13 @@ export default class MultiTextureQuadShader
             cameraMatrix: uCameraMatrix,
             textureLocation: uTextureLocation
         };
+    }
+
+    packColor (rgb: number, alpha: number): number
+    {
+        let ua = ((alpha * 255) | 0) & 0xFF;
+
+        return ((ua << 24) | rgb) >>> 0;
     }
 
     bind ()
@@ -332,6 +368,7 @@ export default class MultiTextureQuadShader
         gl.vertexAttribPointer(attribs.position, 2, gl.FLOAT, false, stride, 0);            // size = 8
         gl.vertexAttribPointer(attribs.textureCoord, 2, gl.FLOAT, false, stride, 8);        // size = 8
         gl.vertexAttribPointer(attribs.textureIndex, 1, gl.FLOAT, false, stride, 8 + 8);    // size = 4
+        gl.vertexAttribPointer(attribs.color, 4, gl.UNSIGNED_BYTE, true, stride, 8 + 8 + 4);       // size = 4
 
         this.count = 0;
     }
@@ -345,34 +382,46 @@ export default class MultiTextureQuadShader
 
         let offset = this.count * this.quadElementSize;
 
-        const data = this.data;
+        const F32 = this.vertexViewF32;
+        const U32 = this.vertexViewU32;
+
         const frame = sprite.frame;
         const textureIndex = frame.texture.glIndex;
+
         const vertices = sprite.vertices;
 
-        data[offset++] = vertices[0];
-        data[offset++] = vertices[1];
-        data[offset++] = frame.u0;
-        data[offset++] = frame.v0;
-        data[offset++] = textureIndex;
+        const topLeft = vertices[0];
+        const topRight = vertices[1];
+        const bottomLeft = vertices[2];
+        const bottomRight = vertices[3];
 
-        data[offset++] = vertices[4];
-        data[offset++] = vertices[5];
-        data[offset++] = frame.u0;
-        data[offset++] = frame.v1;
-        data[offset++] = textureIndex;
+        F32[offset++] = topLeft.x;
+        F32[offset++] = topLeft.y;
+        F32[offset++] = frame.u0;
+        F32[offset++] = frame.v0;
+        F32[offset++] = textureIndex;
+        U32[offset++] = this.packColor(topLeft.color, topLeft.alpha);
 
-        data[offset++] = vertices[6];
-        data[offset++] = vertices[7];
-        data[offset++] = frame.u1;
-        data[offset++] = frame.v1;
-        data[offset++] = textureIndex;
+        F32[offset++] = bottomLeft.x;
+        F32[offset++] = bottomLeft.y;
+        F32[offset++] = frame.u0;
+        F32[offset++] = frame.v1;
+        F32[offset++] = textureIndex;
+        U32[offset++] = this.packColor(bottomLeft.color, bottomLeft.alpha);
 
-        data[offset++] = vertices[2];
-        data[offset++] = vertices[3];
-        data[offset++] = frame.u1;
-        data[offset++] = frame.v0;
-        data[offset++] = textureIndex;
+        F32[offset++] = bottomRight.x;
+        F32[offset++] = bottomRight.y;
+        F32[offset++] = frame.u1;
+        F32[offset++] = frame.v1;
+        F32[offset++] = textureIndex;
+        U32[offset++] = this.packColor(bottomRight.color, bottomRight.alpha);
+
+        F32[offset++] = topRight.x;
+        F32[offset++] = topRight.y;
+        F32[offset++] = frame.u1;
+        F32[offset++] = frame.v0;
+        F32[offset++] = textureIndex;
+        U32[offset++] = this.packColor(topRight.color, topRight.alpha);
 
         this.count++;
     }
@@ -395,7 +444,7 @@ export default class MultiTextureQuadShader
         }
         else
         {
-            let view = this.data.subarray(0, offset);
+            let view = this.vertexViewF32.subarray(0, offset);
 
             gl.bufferSubData(gl.ARRAY_BUFFER, 0, view);
         }
