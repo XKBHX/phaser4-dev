@@ -20,12 +20,10 @@ function AddToDOM(element, parent) {
     target.appendChild(element);
     return element;
 }
-//# sourceMappingURL=AddToDOM.js.map
 
 function isCordova() {
     return (window.hasOwnProperty('cordova'));
 }
-//# sourceMappingURL=isCordova.js.map
 
 function DOMContentLoaded(callback) {
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
@@ -49,7 +47,6 @@ function DOMContentLoaded(callback) {
         window.addEventListener('load', check, true);
     }
 }
-//# sourceMappingURL=DOMContentLoaded.js.map
 
 //  From Pixi v5
 const fragTemplate = [
@@ -792,7 +789,6 @@ class Vec2 {
         return data[Symbol.iterator]();
     }
 }
-//# sourceMappingURL=Vec2.js.map
 
 class DisplayObject {
     constructor() {
@@ -1117,7 +1113,6 @@ class Frame {
     }
 }
 
-//  Base Texture
 class Texture {
     constructor(key, image) {
         this.glIndex = 0;
@@ -1318,43 +1313,6 @@ class Game {
     }
 }
 
-//  Base Texture
-class Texture$1 {
-    constructor(key, image) {
-        this.glIndex = 0;
-        this.glIndexCounter = -1;
-        this.key = key;
-        this.image = image;
-        this.frames = new Map();
-        this.width = this.image.width;
-        this.height = this.image.height;
-        this.add('__BASE', 0, 0, this.width, this.height);
-    }
-    add(key, x, y, width, height) {
-        if (this.frames.has(key)) {
-            return null;
-        }
-        let frame = new Frame(this, key, x, y, width, height);
-        this.frames.set(key, frame);
-        if (!this.firstFrame || this.firstFrame.key === '__BASE') {
-            this.firstFrame = frame;
-        }
-        return frame;
-    }
-    get(key) {
-        //  null, undefined, empty string, zero
-        if (!key) {
-            return this.firstFrame;
-        }
-        let frame = this.frames.get(key);
-        if (!frame) {
-            console.warn('Texture.frame missing: ' + key);
-            frame = this.firstFrame;
-        }
-        return frame;
-    }
-}
-
 class Vertex {
     constructor(x = 0, y = 0, color = 16777215, alpha = 1) {
         this.x = x;
@@ -1377,7 +1335,7 @@ class Sprite extends DisplayObjectContainer {
         this.setPosition(x, y);
     }
     setTexture(key, frame) {
-        if (key instanceof Texture$1) {
+        if (key instanceof Texture) {
             this.texture = key;
         }
         else {
@@ -1449,6 +1407,23 @@ class Sprite extends DisplayObjectContainer {
     set tint(value) {
         this._tint = value;
         this.setTint(value);
+    }
+}
+
+class Scene$1 {
+    constructor(game) {
+        this.game = game;
+        this.load = game.loader;
+        this.textures = game.textures;
+        this.world = new DisplayObjectContainer();
+    }
+    init() {
+    }
+    preload() {
+    }
+    create() {
+    }
+    update(time) {
     }
 }
 
@@ -1573,7 +1548,7 @@ class EventEmitter {
     }
 }
 
-class Demo extends Scene {
+class Demo extends Scene$1 {
     constructor(game) {
         super(game);
     }

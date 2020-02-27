@@ -1,5 +1,5 @@
-import Game from 'Game';
-import Scene from 'Scene';
+import Game from 'nano/Game';
+import Scene from 'nano/Scene';
 
 class Demo extends Scene
 {

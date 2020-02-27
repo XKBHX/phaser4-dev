@@ -1,6 +1,6 @@
-import WebGLRenderer from 'WebGLRenderer';
-import Sprite from 'Sprite';
-import ISpriteMultiShader from 'ISpriteMultiShader';
+import WebGLRenderer from './WebGLRenderer';
+import Sprite from './Sprite';
+import ISpriteMultiShader from './ISpriteMultiShader';
 
 const shaderSource = {
 

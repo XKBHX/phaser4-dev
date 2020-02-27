@@ -1,8 +1,8 @@
 import Texture from './Texture';
 import Frame from './Frame';
-import Scene from 'Scene';
-import Vertex from 'Vertex';
-import DisplayObjectContainer from 'DisplayObjectContainer';
+import Scene from './Scene';
+import Vertex from './Vertex';
+import DisplayObjectContainer from './DisplayObjectContainer';
 
 export default class Sprite extends DisplayObjectContainer
 {

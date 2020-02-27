@@ -1,7 +1,7 @@
 import Texture from './Texture';
 import Frame from './Frame';
 import { Vec2 } from '@phaserjs/math-vec2';
-import DisplayObjectContainer from 'DisplayObjectContainer';
+import DisplayObjectContainer from './DisplayObjectContainer';
 
 export default class DisplayObject
 {

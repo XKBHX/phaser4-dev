@@ -1,7 +1,7 @@
-import Game from 'Game';
-import Loader from 'Loader';
-import TextureManager from 'TextureManager';
-import DisplayObjectContainer from 'DisplayObjectContainer';
+import Game from './Game';
+import Loader from './Loader';
+import TextureManager from './TextureManager';
+import DisplayObjectContainer from './DisplayObjectContainer';
 
 export default class Scene
 {

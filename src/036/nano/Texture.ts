@@ -1,7 +1,5 @@
-//  Base Texture
-
-import WebGLRenderer from 'WebGLRenderer';
-import Frame from 'Frame';
+import WebGLRenderer from './WebGLRenderer';
+import Frame from './Frame';
 
 export default class Texture
 {

@@ -1,5 +1,5 @@
-import DisplayObject from 'DisplayObject';
-import { Container } from 'Container';
+import DisplayObject from './DisplayObject';
+import { Container } from './Container';
 
 export default class DisplayObjectContainer extends DisplayObject
 {

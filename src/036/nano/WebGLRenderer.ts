@@ -1,10 +1,10 @@
 import CheckShaderMaxIfStatements from './CheckShaderMaxIfStatements';
-import MultiTextureQuadShader from 'MultiTextureQuadShader';
-import Texture from 'Texture';
-import DisplayObjectContainer from 'DisplayObjectContainer';
-import Sprite from 'Sprite';
-import { Container } from 'Container';
-import Camera from 'Camera';
+import MultiTextureQuadShader from './MultiTextureQuadShader';
+import Texture from './Texture';
+import DisplayObjectContainer from './DisplayObjectContainer';
+import Sprite from './Sprite';
+import { Container } from './Container';
+import Camera from './Camera';
 
 export default class WebGLRenderer
 {

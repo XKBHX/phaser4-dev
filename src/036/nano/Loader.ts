@@ -1,6 +1,6 @@
 import File from './File';
-import Game from 'Game';
-import IFrameConfig from 'IFrameConfig';
+import Game from './Game';
+import IFrameConfig from './IFrameConfig';
 
 export default class Loader
 {

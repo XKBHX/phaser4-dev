@@ -1,7 +1,7 @@
-import Texture from 'Texture';
-import Game from 'Game';
-import SpriteSheetParser from 'SpriteSheetParser';
-import IFrameConfig from 'IFrameConfig';
+import Texture from './Texture';
+import Game from './Game';
+import SpriteSheetParser from './SpriteSheetParser';
+import IFrameConfig from './IFrameConfig';
 
 export default class TextureManager
 {

@@ -1,9 +1,9 @@
 import { DOMContentLoaded, AddToDOM } from '@phaserjs/dom';
-import WebGLRenderer from 'WebGLRenderer';
-import Loader from 'Loader';
-import Scene from 'Scene';
-import TextureManager from 'TextureManager';
-import IGameConfig from 'IGameConfig';
+import WebGLRenderer from './WebGLRenderer';
+import Loader from './Loader';
+import Scene from './Scene';
+import TextureManager from './TextureManager';
+import IGameConfig from './IGameConfig';
 
 export default class Game
 {
