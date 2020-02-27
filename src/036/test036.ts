@@ -18,9 +18,6 @@ demo7();
 //  * Camera scroll factor (?)
 //  * Don't defer updateTransform - do immediately
 //  * Cache world values?
-//  * Context lost handler
-//  * Renderer resize handler
-//  * Renderer resolution
 //  * Texture Atlas Loader
 //  * Multi Texture re-use old texture IDs when count > max supported
 //  * Single Texture shader
@@ -31,6 +28,9 @@ demo7();
 
 //  Done:
 
+//  X Context lost handler
+//  X Renderer resize handler
+//  X Renderer resolution
 //  X Camera class (position, scale, rotation, alpha)
 //  X Container class - Transform stack test (Sprite with children, children of children, etc)
 //  X Encode color as a single float, rather than a vec4 and add back to the shader

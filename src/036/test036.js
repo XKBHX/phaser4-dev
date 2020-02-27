@@ -482,10 +482,10 @@ function Ortho(left, right, bottom, top, near, far) {
 class Camera {
     constructor(renderer, width, height) {
         if (!width) {
-            width = renderer.resolution.x;
+            width = renderer.width;
         }
         if (!height) {
-            height = renderer.resolution.y;
+            height = renderer.height;
         }
         this.renderer = renderer;
         this.matrix = new Matrix4();
@@ -530,7 +530,7 @@ class Camera {
 }
 
 class WebGLRenderer {
-    constructor(width, height) {
+    constructor(width, height, resolution = 1) {
         this.contextOptions = {
             alpha: false,
             antialias: false,
@@ -539,21 +539,53 @@ class WebGLRenderer {
             preserveDrawingBuffer: false
         };
         this.clearColor = [0, 0, 0, 1];
-        this.resolution = { x: 0, y: 0 };
         this.maxTextures = 0;
         this.clearBeforeRender = true;
-        this.resolution.x = width;
-        this.resolution.y = height;
-        this.canvas = document.createElement('canvas');
-        this.canvas.width = width;
-        this.canvas.height = height;
-        this.gl = this.canvas.getContext('webgl', this.contextOptions);
-        this.getMaxTextures();
+        this.autoResize = true;
+        this.contextLost = false;
+        this.width = width;
+        this.height = height;
+        this.resolution = resolution;
+        const canvas = document.createElement('canvas');
+        canvas.addEventListener('webglcontextlost', (event) => this.onContextLost(event), false);
+        canvas.addEventListener('webglcontextrestored', () => this.onContextRestored(), false);
+        this.canvas = canvas;
+        this.initContext();
         this.shader = new MultiTextureQuadShader(this);
-        this.activeTextures = Array(this.maxTextures);
-        this.projectionMatrix = Ortho(0, width, height, 0, -1000, 1000);
         this.camera = new Camera(this);
-        this.startActiveTexture = 0;
+    }
+    initContext() {
+        const gl = this.canvas.getContext('webgl', this.contextOptions);
+        this.gl = gl;
+        this.getMaxTextures();
+        gl.disable(gl.DEPTH_TEST);
+        gl.disable(gl.CULL_FACE);
+        if (this.shader) {
+            this.shader.gl = gl;
+        }
+        this.resize(this.width, this.height, this.resolution);
+    }
+    resize(width, height, resolution = 1) {
+        this.width = width * resolution;
+        this.height = height * resolution;
+        this.resolution = resolution;
+        const canvas = this.canvas;
+        canvas.width = this.width;
+        canvas.height = this.height;
+        if (this.autoResize) {
+            canvas.style.width = this.width / resolution + 'px';
+            canvas.style.height = this.height / resolution + 'px';
+        }
+        this.gl.viewport(0, 0, this.width, this.height);
+        this.projectionMatrix = Ortho(0, width, height, 0, -1000, 1000);
+    }
+    onContextLost(event) {
+        event.preventDefault();
+        this.contextLost = true;
+    }
+    onContextRestored() {
+        this.contextLost = false;
+        this.initContext();
     }
     setBackgroundColor(color) {
         const clearColor = this.clearColor;
@@ -579,6 +611,9 @@ class WebGLRenderer {
         }
         this.maxTextures = maxTextures;
         this.textureIndex = Array.from(Array(maxTextures).keys());
+        this.activeTextures = Array(maxTextures);
+        this.currentActiveTexture = 0;
+        this.startActiveTexture = 0;
     }
     isSizePowerOfTwo(width, height) {
         return (width > 0 && (width & (width - 1)) === 0 && height > 0 && (height & (height - 1)) === 0);
@@ -602,6 +637,9 @@ class WebGLRenderer {
         return glTexture;
     }
     render(world) {
+        if (this.contextLost) {
+            return;
+        }
         this.currentActiveTexture = 0;
         this.startActiveTexture++;
         const shader = this.shader;
@@ -609,11 +647,9 @@ class WebGLRenderer {
         const gl = this.gl;
         const cls = this.clearColor;
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.disable(gl.DEPTH_TEST);
-        gl.disable(gl.CULL_FACE);
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-        gl.viewport(0, 0, this.resolution.x, this.resolution.y);
+        gl.viewport(0, 0, this.width, this.height);
         if (this.clearBeforeRender) {
             gl.clearColor(cls[0], cls[1], cls[2], cls[3]);
             gl.clear(gl.COLOR_BUFFER_BIT);
@@ -1375,31 +1411,7 @@ class Game {
         requestAnimationFrame((time) => this.step(time));
     }
     banner(version) {
-        let c = '';
-        const args = [c];
-        const bannerColor = [
-            '#e000e0',
-            '#8000e0',
-            '#2000e0',
-            '#0000c0',
-            '#000080'
-        ];
-        const bannerTextColor = '#ffffff';
-        let lastColor;
-        bannerColor.forEach((color) => {
-            c = c.concat('%c ');
-            args.push('background: ' + color);
-            lastColor = color;
-        });
-        //  inject the text color
-        args[args.length - 1] = 'color: ' + bannerTextColor + '; background: ' + lastColor;
-        //  URL link background color (always white)
-        args.push('background: rgba(0,0,0,0)');
-        c = c.concat('Phaser Nano v' + version);
-        c = c.concat(' %c ' + 'https://phaser4.io');
-        //  Inject the new string back into the args array
-        args[0] = c;
-        console.log.apply(console, args);
+        console.log('%cPhaser Nano v' + version + '%c https://phaser4.io', 'padding: 2px 20px; color: #fff; background: linear-gradient(to right, #00bcc3, #3e0081 10%, #3e0081 90%, #3e0081 10%, #00bcc3)', '');
     }
     step(time) {
         if (this.isPaused) {
@@ -1588,9 +1600,6 @@ demo7();
 //  * Camera scroll factor (?)
 //  * Don't defer updateTransform - do immediately
 //  * Cache world values?
-//  * Context lost handler
-//  * Renderer resize handler
-//  * Renderer resolution
 //  * Texture Atlas Loader
 //  * Multi Texture re-use old texture IDs when count > max supported
 //  * Single Texture shader
@@ -1599,6 +1608,9 @@ demo7();
 //  * Input point translation
 //  * Instead of a Quad class, try a class that can have any number of vertices in it (ala Rope), or any vertex moved
 //  Done:
+//  X Context lost handler
+//  X Renderer resize handler
+//  X Renderer resolution
 //  X Camera class (position, scale, rotation, alpha)
 //  X Container class - Transform stack test (Sprite with children, children of children, etc)
 //  X Encode color as a single float, rather than a vec4 and add back to the shader

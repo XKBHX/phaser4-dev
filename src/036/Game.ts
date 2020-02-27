@@ -130,44 +130,11 @@ export default class Game
 
     banner (version: string)
     {
-        let c: string = '';
-        const args: string[] = [ c ];
-
-        const bannerColor = [
-            '#e000e0',
-            '#8000e0',
-            '#2000e0',
-            '#0000c0',
-            '#000080'
-        ];
-
-        const bannerTextColor: string = '#ffffff';
-
-        let lastColor: string;
-
-        bannerColor.forEach((color) => {
-
-            c = c.concat('%c ');
-
-            args.push('background: ' + color);
-
-            lastColor = color;
-
-        });
-
-        //  inject the text color
-        args[args.length - 1] = 'color: ' + bannerTextColor + '; background: ' + lastColor;
-
-        //  URL link background color (always white)
-        args.push('background: rgba(0,0,0,0)');
-
-        c = c.concat('Phaser Nano v' + version);
-        c = c.concat(' %c ' + 'https://phaser4.io');
-
-        //  Inject the new string back into the args array
-        args[0] = c;
-
-        console.log.apply(console, args);
+        console.log(
+            '%cPhaser Nano v' + version + '%c https://phaser4.io',
+            'padding: 2px 20px; color: #fff; background: linear-gradient(to right, #00bcc3, #3e0081 10%, #3e0081 90%, #3e0081 10%, #00bcc3)',
+            ''
+        );
     }
 
     step (time: DOMHighResTimeStamp)

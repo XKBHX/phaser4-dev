@@ -25,41 +25,97 @@ export default class WebGLRenderer
 
     shader: MultiTextureQuadShader;
 
-    resolution = { x: 0, y: 0 };
-    maxTextures: number = 0;
-
+    width: number;
+    height: number;
+    resolution: number;
+    
     camera: Camera;
-
+    
     projectionMatrix: Matrix4;
     textureIndex: number[];
-
+    
+    maxTextures: number = 0;
     activeTextures: Texture[];
     currentActiveTexture: number;
     startActiveTexture: number;
 
     clearBeforeRender: boolean = true;
+    autoResize: boolean = true;
 
-    constructor (width: number, height: number)
+    contextLost: boolean = false;
+
+    constructor (width: number, height: number, resolution: number = 1)
     {
-        this.resolution.x = width;
-        this.resolution.y = height;
+        this.width = width;
+        this.height = height;
+        this.resolution = resolution;
 
-        this.canvas = document.createElement('canvas');
-        this.canvas.width = width;
-        this.canvas.height = height;
+        const canvas = document.createElement('canvas'); 
 
-        this.gl = this.canvas.getContext('webgl', this.contextOptions);
+        canvas.addEventListener('webglcontextlost', (event) => this.onContextLost(event), false);
+        canvas.addEventListener('webglcontextrestored', () => this.onContextRestored(), false);
+
+        this.canvas = canvas;
+
+        this.initContext();
+
+        this.shader = new MultiTextureQuadShader(this);
+        this.camera = new Camera(this);
+    }
+
+    initContext ()
+    {
+        const gl = this.canvas.getContext('webgl', this.contextOptions);
+
+        this.gl = gl;
 
         this.getMaxTextures();
 
-        this.shader = new MultiTextureQuadShader(this);
+        gl.disable(gl.DEPTH_TEST);
+        gl.disable(gl.CULL_FACE);
 
-        this.activeTextures = Array(this.maxTextures);
+        if (this.shader)
+        {
+            this.shader.gl = gl;
+        }
+
+        this.resize(this.width, this.height, this.resolution);
+    }
+
+    resize (width: number, height: number, resolution: number = 1)
+    {
+        this.width = width * resolution;
+        this.height = height * resolution;
+        this.resolution = resolution;
+    
+        const canvas = this.canvas;
+
+        canvas.width = this.width;
+        canvas.height = this.height;
+    
+        if (this.autoResize)
+        {
+            canvas.style.width = this.width / resolution + 'px';
+            canvas.style.height = this.height / resolution + 'px';
+        }
+    
+        this.gl.viewport(0, 0, this.width, this.height);
 
         this.projectionMatrix = Ortho(0, width, height, 0, -1000, 1000);
-        this.camera = new Camera(this);
+    }
 
-        this.startActiveTexture = 0;
+    onContextLost (event)
+    {
+        event.preventDefault();
+
+        this.contextLost = true;
+    }
+
+    onContextRestored ()
+    {
+        this.contextLost = false;
+
+        this.initContext();
     }
 
     setBackgroundColor (color: number)
@@ -98,7 +154,12 @@ export default class WebGLRenderer
         }
 
         this.maxTextures = maxTextures;
+
         this.textureIndex = Array.from(Array(maxTextures).keys());
+        this.activeTextures = Array(maxTextures);
+
+        this.currentActiveTexture = 0;
+        this.startActiveTexture = 0;
     }
 
     isSizePowerOfTwo (width: number, height: number): boolean
@@ -139,6 +200,11 @@ export default class WebGLRenderer
 
     render (world: DisplayObjectContainer)
     {
+        if (this.contextLost)
+        {
+            return;
+        }
+
         this.currentActiveTexture = 0;
         this.startActiveTexture++;
 
@@ -151,13 +217,10 @@ export default class WebGLRenderer
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-        gl.disable(gl.DEPTH_TEST);
-        gl.disable(gl.CULL_FACE);
-
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-        gl.viewport(0, 0, this.resolution.x, this.resolution.y);
+        gl.viewport(0, 0, this.width, this.height);
 
         if (this.clearBeforeRender)
         {

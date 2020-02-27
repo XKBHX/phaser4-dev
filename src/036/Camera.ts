@@ -19,12 +19,12 @@ export default class Camera
     {
         if (!width)
         {
-            width = renderer.resolution.x;
+            width = renderer.width;
         }
 
         if (!height)
         {
-            height = renderer.resolution.y;
+            height = renderer.height;
         }
 
         this.renderer = renderer;
