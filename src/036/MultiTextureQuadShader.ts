@@ -359,7 +359,7 @@ export default class MultiTextureQuadShader
         gl.useProgram(this.program);
 
         gl.uniformMatrix4fv(uniforms.projectionMatrix, false, renderer.projectionMatrix);
-        gl.uniformMatrix4fv(uniforms.cameraMatrix, false, renderer.cameraMatrix);
+        gl.uniformMatrix4fv(uniforms.cameraMatrix, false, renderer.camera.matrix);
         gl.uniform1iv(uniforms.textureLocation, renderer.textureIndex);
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);

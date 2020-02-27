@@ -6,6 +6,7 @@ import { Ortho } from '@phaserjs/math-matrix4-funcs';
 import DisplayObjectContainer from 'DisplayObjectContainer';
 import Sprite from 'Sprite';
 import { Container } from 'Container';
+import Camera from 'Camera';
 
 export default class WebGLRenderer
 {
@@ -27,8 +28,9 @@ export default class WebGLRenderer
     resolution = { x: 0, y: 0 };
     maxTextures: number = 0;
 
+    camera: Camera;
+
     projectionMatrix: Matrix4;
-    cameraMatrix: Matrix4;
     textureIndex: number[];
 
     activeTextures: Texture[];
@@ -55,7 +57,7 @@ export default class WebGLRenderer
         this.activeTextures = Array(this.maxTextures);
 
         this.projectionMatrix = Ortho(0, width, height, 0, -1000, 1000);
-        this.cameraMatrix = new Matrix4();
+        this.camera = new Camera(this);
 
         this.startActiveTexture = 0;
     }

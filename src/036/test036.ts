@@ -3,25 +3,35 @@
 // import demo3 from './demo3'; // test sprite sheet loader and display
 // import demo4 from './demo4'; // sprite tint + alpha back in the shader
 // import demo5 from './demo5'; // test skew
-import demo6 from './demo6'; // test container children
+// import demo6 from './demo6'; // test container children
+import demo7 from './demo7'; // Camera class (position, scale, rotation)
 
-demo6();
+demo7();
 
 //  Next steps:
 
+//  * Camera alpha
+//  * Camera background color
+//  * Camera stencil?
+//  * Camera bounds / cull
+//  * Camera ignore | ignore except
+//  * Camera scroll factor (?)
+//  * Don't defer updateTransform - do immediately
+//  * Cache world values?
 //  * Context lost handler
 //  * Renderer resize handler
 //  * Renderer resolution
-//  * Camera class (position, scale, rotation, alpha)
 //  * Texture Atlas Loader
 //  * Multi Texture re-use old texture IDs when count > max supported
 //  * Single Texture shader
 //  * Static Batch shader (Static Container?)
+//  * Tile Layer
 //  * Input point translation
 //  * Instead of a Quad class, try a class that can have any number of vertices in it (ala Rope), or any vertex moved
 
 //  Done:
 
+//  X Camera class (position, scale, rotation, alpha)
 //  X Container class - Transform stack test (Sprite with children, children of children, etc)
 //  X Encode color as a single float, rather than a vec4 and add back to the shader
 //  X Moved all code to WebGL Renderer and supporting classes
