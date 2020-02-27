@@ -303,170 +303,13 @@ class MultiTextureQuadShader {
     }
 }
 
-class Matrix4 {
-    /**
-     * Creates an instance of a Matrix4.
-     *
-     * Format: column-major, when typed out it looks like row-major.
-     *
-     * @param {number} [m00=1] - Component in column 0, row 0 position (index 0)
-     * @param {number} [m01=0] - Component in column 0, row 1 position (index 1)
-     * @param {number} [m02=0] - Component in column 0, row 2 position (index 2)
-     * @param {number} [m03=0] - Component in column 0, row 3 position (index 3)
-     * @param {number} [m10=0] - Component in column 1, row 0 position (index 4)
-     * @param {number} [m11=1] - Component in column 1, row 1 position (index 5)
-     * @param {number} [m12=0] - Component in column 1, row 2 position (index 6)
-     * @param {number} [m13=0] - Component in column 1, row 3 position (index 7)
-     * @param {number} [m20=0] - Component in column 2, row 0 position (index 8)
-     * @param {number} [m21=0] - Component in column 2, row 1 position (index 9)
-     * @param {number} [m22=1] - Component in column 2, row 2 position (index 10)
-     * @param {number} [m23=0] - Component in column 2, row 3 position (index 11)
-     * @param {number} [m30=0] - Component in column 3, row 0 position (index 12)
-     * @param {number} [m31=0] - Component in column 3, row 1 position (index 13)
-     * @param {number} [m32=0] - Component in column 3, row 2 position (index 14)
-     * @param {number} [m33=1] - Component in column 3, row 3 position (index 15)
-     * @memberof Matrix4
-     */
-    constructor(m00 = 1, m01 = 0, m02 = 0, m03 = 0, m10 = 0, m11 = 1, m12 = 0, m13 = 0, m20 = 0, m21 = 0, m22 = 1, m23 = 0, m30 = 0, m31 = 0, m32 = 0, m33 = 1) {
-        this.set(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33);
-    }
-    /**
-     * Sets the components of this Matrix4.
-     *
-     * If no parameters are given it resets this Matrix4 to an identity matrix.
-     *
-     * @param {number} [m00=1] - Component in column 0, row 0 position (index 0)
-     * @param {number} [m01=0] - Component in column 0, row 1 position (index 1)
-     * @param {number} [m02=0] - Component in column 0, row 2 position (index 2)
-     * @param {number} [m03=0] - Component in column 0, row 3 position (index 3)
-     * @param {number} [m10=0] - Component in column 1, row 0 position (index 4)
-     * @param {number} [m11=1] - Component in column 1, row 1 position (index 5)
-     * @param {number} [m12=0] - Component in column 1, row 2 position (index 6)
-     * @param {number} [m13=0] - Component in column 1, row 3 position (index 7)
-     * @param {number} [m20=0] - Component in column 2, row 0 position (index 8)
-     * @param {number} [m21=0] - Component in column 2, row 1 position (index 9)
-     * @param {number} [m22=1] - Component in column 2, row 2 position (index 10)
-     * @param {number} [m23=0] - Component in column 2, row 3 position (index 11)
-     * @param {number} [m30=0] - Component in column 3, row 0 position (index 12)
-     * @param {number} [m31=0] - Component in column 3, row 1 position (index 13)
-     * @param {number} [m32=0] - Component in column 3, row 2 position (index 14)
-     * @param {number} [m33=1] - Component in column 3, row 3 position (index 15)
-     * @returns {Matrix4}
-     * @memberof Matrix4
-     */
-    set(m00 = 1, m01 = 0, m02 = 0, m03 = 0, m10 = 0, m11 = 1, m12 = 0, m13 = 0, m20 = 0, m21 = 0, m22 = 1, m23 = 0, m30 = 0, m31 = 0, m32 = 0, m33 = 1) {
-        this.m00 = m00;
-        this.m01 = m01;
-        this.m02 = m02;
-        this.m03 = m03;
-        this.m10 = m10;
-        this.m11 = m11;
-        this.m12 = m12;
-        this.m13 = m13;
-        this.m20 = m20;
-        this.m21 = m21;
-        this.m22 = m22;
-        this.m23 = m23;
-        this.m30 = m30;
-        this.m31 = m31;
-        this.m32 = m32;
-        this.m33 = m33;
-        return this;
-    }
-    /**
-     * Sets all components of this Matrix4 to zero.
-     *
-     * @returns {Matrix4}
-     * @memberof Matrix4
-     */
-    zero() {
-        return this.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    }
-    /**
-     * Resets this Matrix4 to an identity matrix.
-     *
-     * @returns {Matrix4}
-     * @memberof Matrix4
-     */
-    identity() {
-        return this.set();
-    }
-    /**
-     * Returns a new array containg the Matrix4 component values in column-major format.
-     *
-     * @returns {number[]}
-     * @memberof Matrix4
-     */
-    getArray() {
-        return [this.m00, this.m01, this.m02, this.m03, this.m10, this.m11, this.m12, this.m13, this.m20, this.m21, this.m22, this.m23, this.m30, this.m31, this.m32, this.m33];
-    }
-    /**
-     * Sets the values of this Matrix4 based on the given array, or array-like object, such as a Float32.
-     *
-     * The source must have 16 elements, starting from index 0 through to index 15.
-     *
-     * @param {number[]} src - The source array to copy the values from.
-     * @returns {Matrix4}
-     * @memberof Matrix4
-     */
-    fromArray(src) {
-        return this.set(src[0], src[1], src[2], src[3], src[4], src[5], src[6], src[7], src[8], src[9], src[10], src[11], src[12], src[13], src[14], src[15]);
-    }
-    [Symbol.iterator]() {
-        const data = this.getArray();
-        return data[Symbol.iterator]();
-    }
-}
-//# sourceMappingURL=Matrix4.js.map
-
-//  Rotates the target Matrix4 by the angle on its z axis, then returns the target Matrix4
-function RotateZ(target, angle) {
-    const s = Math.sin(angle);
-    const c = Math.cos(angle);
-    const { m00, m01, m02, m03, m10, m11, m12, m13 } = target;
-    target.m00 = m00 * c + m10 * s;
-    target.m01 = m01 * c + m11 * s;
-    target.m02 = m02 * c + m12 * s;
-    target.m03 = m03 * c + m13 * s;
-    target.m10 = m10 * c - m00 * s;
-    target.m11 = m11 * c - m01 * s;
-    target.m12 = m12 * c - m02 * s;
-    target.m13 = m13 * c - m03 * s;
-    return target;
-}
-//# sourceMappingURL=RotateZ.js.map
-
-//  Scales the target Matrix4 by the x, y and z values, then returns the target Matrix4
-function Scale(target, scaleX, scaleY, scaleZ) {
-    target.m00 *= scaleX;
-    target.m01 *= scaleX;
-    target.m02 *= scaleX;
-    target.m03 *= scaleX;
-    target.m10 *= scaleY;
-    target.m11 *= scaleY;
-    target.m12 *= scaleY;
-    target.m13 *= scaleY;
-    target.m20 *= scaleZ;
-    target.m21 *= scaleZ;
-    target.m22 *= scaleZ;
-    target.m23 *= scaleZ;
-    return target;
-}
-//# sourceMappingURL=Scale.js.map
-
-//  Translates the target Matrix4 by the x, y and z values, then returns the target Matrix4
-function Translate(target, x = 0, y = 0, z = 0) {
-    const { m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33 } = target;
-    target.m30 = m00 * x + m10 * y + m20 * z + m30;
-    target.m31 = m01 * x + m11 * y + m21 * z + m31;
-    target.m32 = m02 * x + m12 * y + m22 * z + m32;
-    target.m33 = m03 * x + m13 * y + m23 * z + m33;
-    return target;
-}
-//# sourceMappingURL=Translate.js.map
-
 class Camera {
     constructor(renderer, width, height) {
+        this._x = 0;
+        this._y = 0;
+        this._rotation = 0;
+        this._scaleX = 1;
+        this._scaleY = 1;
         if (!width) {
             width = renderer.width;
         }
@@ -474,41 +317,96 @@ class Camera {
             height = renderer.height;
         }
         this.renderer = renderer;
-        this.matrix = new Matrix4();
+        this.matrix = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
         this.width = width;
         this.height = height;
     }
+    translate(x, y, z = 0) {
+        const matrix = this.matrix;
+        const m00 = matrix[0];
+        const m01 = matrix[1];
+        const m02 = matrix[2];
+        const m03 = matrix[3];
+        const m10 = matrix[4];
+        const m11 = matrix[5];
+        const m12 = matrix[6];
+        const m13 = matrix[7];
+        const m20 = matrix[8];
+        const m21 = matrix[9];
+        const m22 = matrix[10];
+        const m23 = matrix[11];
+        const m30 = matrix[12];
+        const m31 = matrix[13];
+        const m32 = matrix[14];
+        const m33 = matrix[15];
+        matrix[12] = m00 * x + m10 * y + m20 * z + m30;
+        matrix[13] = m01 * x + m11 * y + m21 * z + m31;
+        matrix[14] = m02 * x + m12 * y + m22 * z + m32;
+        matrix[15] = m03 * x + m13 * y + m23 * z + m33;
+    }
+    scale(scaleX, scaleY) {
+        const matrix = this.matrix;
+        matrix[0] *= scaleX;
+        matrix[1] *= scaleX;
+        matrix[2] *= scaleX;
+        matrix[3] *= scaleX;
+        matrix[4] *= scaleY;
+        matrix[5] *= scaleY;
+        matrix[6] *= scaleY;
+        matrix[7] *= scaleY;
+    }
+    rotate(angle) {
+        const s = Math.sin(angle);
+        const c = Math.cos(angle);
+        const matrix = this.matrix;
+        const m00 = matrix[0];
+        const m01 = matrix[1];
+        const m02 = matrix[2];
+        const m03 = matrix[3];
+        const m10 = matrix[4];
+        const m11 = matrix[5];
+        const m12 = matrix[6];
+        const m13 = matrix[7];
+        matrix[0] = m00 * c + m10 * s;
+        matrix[1] = m01 * c + m11 * s;
+        matrix[2] = m02 * c + m12 * s;
+        matrix[3] = m03 * c + m13 * s;
+        matrix[4] = m10 * c - m00 * s;
+        matrix[5] = m11 * c - m01 * s;
+        matrix[6] = m12 * c - m02 * s;
+        matrix[7] = m13 * c - m03 * s;
+    }
     set x(value) {
         this._x = value;
-        Translate(this.matrix, value, this._y);
+        this.translate(value, this._y);
     }
     get x() {
         return this._x;
     }
     set y(value) {
         this._y = value;
-        Translate(this.matrix, this._x, value);
+        this.translate(this._x, value);
     }
     get y() {
         return this._y;
     }
     set rotation(value) {
         this._rotation = value;
-        RotateZ(this.matrix, value);
+        this.rotate(value);
     }
     get rotation() {
         return this._rotation;
     }
     set scaleX(value) {
         this._scaleX = value;
-        Scale(this.matrix, value, this._scaleY, 1);
+        this.scale(value, this._scaleY);
     }
     get scaleX() {
         return this._scaleX;
     }
     set scaleY(value) {
         this._scaleY = value;
-        Scale(this.matrix, this._scaleX, value, 1);
+        this.scale(this._scaleX, value);
     }
     get scaleY() {
         return this._scaleY;
@@ -1554,119 +1452,159 @@ class Sprite extends DisplayObjectContainer {
     }
 }
 
-class Box extends Sprite {
-    constructor(scene, x, y, texture, frame, direction = 0, size = 512) {
-        super(scene, x, y, texture, frame);
-        //  0 = left to right
-        //  1 = top to bottom
-        //  2 = right to left
-        //  3 = bottom to top
-        this.direction = 0;
-        this.speed = 2;
-        this.direction = direction;
-        if (direction === 0) {
-            //  Box is in the top-left
-            this.startX = x;
-            this.startY = y;
-            this.endX = x + size;
-            this.endY = y + size;
-        }
-        else if (direction === 1) {
-            //  Box is in the top-right
-            this.startX = x - size;
-            this.startY = y;
-            this.endX = x;
-            this.endY = y + size;
-        }
-        else if (direction === 2) {
-            //  Box is in the bottom-right
-            this.startX = x - size;
-            this.startY = y - size;
-            this.endX = x;
-            this.endY = y;
-        }
-        else if (direction === 3) {
-            //  Box is in the bottom-left
-            this.startX = x;
-            this.startY = y - size;
-            this.endX = x + size;
-            this.endY = y;
-        }
+class EE {
+    constructor(callback, context, once = false) {
+        this.callback = callback;
+        this.context = context;
+        this.once = once;
     }
-    update() {
-        switch (this.direction) {
-            case 0:
-                {
-                    this.x += this.speed;
-                    if (this.x >= this.endX) {
-                        this.x = this.endX;
-                        this.direction = 1;
-                    }
+}
+class EventEmitter {
+    constructor() {
+        this._events = new Map();
+    }
+    on(event, callback, context = this, once = false) {
+        if (typeof callback !== 'function') {
+            throw new TypeError('The listener must be a function');
+        }
+        const listener = new EE(callback, context, once);
+        const listeners = this._events.get(event);
+        if (!listeners) {
+            this._events.set(event, new Set([listener]));
+        }
+        else {
+            listeners.add(listener);
+        }
+        return this;
+    }
+    once(event, callback, context = this) {
+        return this.on(event, callback, context, true);
+    }
+    /**
+     * Clear an event by name.
+     */
+    clearEvent(event) {
+        this._events.delete(event);
+        return this;
+    }
+    /**
+     * Return an array listing the events for which the emitter has registered listeners.
+     */
+    eventNames() {
+        return [...this._events.keys()];
+    }
+    /**
+     * Return the listeners registered for a given event.
+     */
+    listeners(event) {
+        const out = [];
+        const listeners = this._events.get(event);
+        listeners.forEach((ee) => {
+            out.push(ee.callback);
+        });
+        return out;
+    }
+    /**
+     * Return the number of listeners listening to a given event.
+     */
+    listenerCount(event) {
+        const listeners = this._events.get(event);
+        return (listeners) ? listeners.size : 0;
+    }
+    /**
+     * Calls each of the listeners registered for a given event.
+     */
+    emit(event, ...args) {
+        if (!this._events.has(event)) {
+            return false;
+        }
+        const listeners = this._events.get(event);
+        for (const ee of listeners) {
+            ee.callback.apply(ee.context, args);
+            if (ee.once) {
+                listeners.delete(ee);
+            }
+        }
+        if (listeners.size === 0) {
+            this._events.delete(event);
+        }
+        return true;
+    }
+    /**
+     * Remove the listeners of a given event.
+     *
+     * @param event
+     * @param callback
+     * @param context
+     * @param once
+     */
+    off(event, callback, context, once) {
+        if (!callback) {
+            //  Remove all events matching the given key
+            this._events.delete(event);
+        }
+        else {
+            const listeners = this._events.get(event);
+            const hasContext = !context;
+            const hasOnce = (once !== undefined);
+            for (const ee of listeners) {
+                if (ee.callback === callback && (hasContext && ee.context === console) && (hasOnce && ee.once === once)) {
+                    listeners.delete(ee);
                 }
-                break;
-            case 1:
-                {
-                    this.y += this.speed;
-                    if (this.y >= this.endY) {
-                        this.y = this.endY;
-                        this.direction = 2;
-                    }
-                }
-                break;
-            case 2:
-                {
-                    this.x -= this.speed;
-                    if (this.x <= this.startX) {
-                        this.x = this.startX;
-                        this.direction = 3;
-                    }
-                }
-                break;
-            case 3:
-                {
-                    this.y -= this.speed;
-                    if (this.y <= this.startY) {
-                        this.y = this.startY;
-                        this.direction = 0;
-                    }
-                }
-                break;
+            }
+            if (listeners.size === 0) {
+                this._events.delete(event);
+            }
+        }
+        return this;
+    }
+    /**
+     * Remove all listeners, or those of the specified event.
+     *
+     * @param event
+     */
+    removeAllListeners(event) {
+        if (!event) {
+            this._events.clear();
+        }
+        else {
+            this._events.delete(event);
         }
     }
 }
+
 class Demo extends Scene {
     constructor(game) {
         super(game);
     }
     preload() {
-        this.load.image('512', '../assets/checker.png');
-        this.load.image('128', '../assets/lance-overdose-loader-eye.png');
-        this.load.image('logo', '../assets/logo.png');
-        this.load.image('brain', '../assets/brain.png');
+        this.load.setPath('../assets/');
+        this.load.image('grid', 'uv-grid-diag.png');
+        this.load.image('512', 'checker.png');
+        this.load.image('128', 'lance-overdose-loader-eye.png');
+        this.load.image('logo', 'logo.png');
+        this.load.image('brain', 'brain.png');
     }
     create() {
-        this.container = new Sprite(this, 400, 300, '512');
-        const child1 = new Box(this, -256, -256, 'brain', null, 0);
-        const child2 = new Box(this, 256, -256, 'brain', null, 1);
-        const child3 = new Box(this, 256, 256, 'brain', null, 2);
-        const child4 = new Box(this, -256, 256, 'brain', null, 3);
-        //  Logo stack
-        const child5 = new Sprite(this, 0, 0, 'logo').setScale(0.7);
-        const child6 = new Sprite(this, 0, 0, 'logo').setScale(0.8);
-        const child7 = new Sprite(this, 0, 0, 'logo').setScale(0.9);
-        const child8 = new Sprite(this, 0, 0, 'logo').setScale(1.0);
-        this.container.addChild(child1, child2, child3, child4, child5, child6, child7, child8);
-        this.world.addChild(this.container);
-    }
-    update() {
-        this.container.rotation += 0.005;
-        this.container.getChildAt(4).rotation += 0.037;
-        this.container.getChildAt(5).rotation += 0.038;
-        this.container.getChildAt(6).rotation += 0.039;
-        this.container.getChildAt(7).rotation += 0.040;
+        let ee = new EventEmitter();
+        ee.once('logo', (x, y) => {
+            this.world.addChild(new Sprite(this, x, y, 'logo'));
+        });
+        ee.on('brain', (x, y) => {
+            this.world.addChild(new Sprite(this, x, y, 'brain'));
+        });
+        console.log(ee.eventNames());
+        this.game.renderer.canvas.addEventListener('click', (event) => {
+            if (event.clientY < 200) {
+                ee.emit('logo', 400, 300);
+            }
+            else {
+                ee.emit('brain', event.clientX, event.clientY);
+            }
+        });
     }
 }
-function demo6 () {
+function demo8 () {
     let game = new Game({
         width: 800,
         height: 600,
@@ -1680,10 +1618,9 @@ function demo6 () {
 }
 
 // import demo1 from './demo1'; // test single sprite
-// import demo7 from './demo7'; // Camera class (position, scale, rotation)
-// import demo8 from './demo8'; // Event Emitter
-demo6();
-// demo8();
+// demo6();
+// demo7();
+demo8();
 //  Next steps:
 //  * Camera alpha
 //  * Camera background color

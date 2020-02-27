@@ -1,6 +1,5 @@
 import File from './File';
 import Game from 'Game';
-import Texture from 'Texture';
 import IFrameConfig from 'IFrameConfig';
 
 export default class Loader

@@ -1,19 +1,18 @@
-import { Matrix4, Translate, RotateZ, Scale } from '@phaserjs/math-matrix4';
 import WebGLRenderer from 'WebGLRenderer';
 
 export default class Camera
 {
-    matrix: Matrix4;
+    matrix: Float32Array;
     renderer: WebGLRenderer;
 
     readonly width: number;
     readonly height: number;
 
-    private _x: number;
-    private _y: number;
-    private _rotation: number;
-    private _scaleX: number;
-    private _scaleY: number;
+    private _x: number = 0;
+    private _y: number = 0;
+    private _rotation: number = 0;
+    private _scaleX: number = 1;
+    private _scaleY: number = 1;
 
     constructor (renderer: WebGLRenderer, width?: number, height?: number)
     {
@@ -29,17 +28,85 @@ export default class Camera
 
         this.renderer = renderer;
 
-        this.matrix = new Matrix4();
+        this.matrix = new Float32Array([ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ]);
 
         this.width = width;
         this.height = height;
+    }
+
+    private translate (x: number, y: number, z: number = 0)
+    {
+        const matrix = this.matrix;
+
+        const m00 = matrix[0];
+        const m01 = matrix[1];
+        const m02 = matrix[2];
+        const m03 = matrix[3];
+        const m10 = matrix[4];
+        const m11 = matrix[5];
+        const m12 = matrix[6];
+        const m13 = matrix[7];
+        const m20 = matrix[8];
+        const m21 = matrix[9];
+        const m22 = matrix[10];
+        const m23 = matrix[11];
+        const m30 = matrix[12];
+        const m31 = matrix[13];
+        const m32 = matrix[14];
+        const m33 = matrix[15];
+
+        matrix[12] = m00 * x + m10 * y + m20 * z + m30;
+        matrix[13] = m01 * x + m11 * y + m21 * z + m31;
+        matrix[14] = m02 * x + m12 * y + m22 * z + m32;
+        matrix[15] = m03 * x + m13 * y + m23 * z + m33;
+    }
+
+    private scale (scaleX: number, scaleY: number)
+    {
+        const matrix = this.matrix;
+
+        matrix[0] *= scaleX;
+        matrix[1] *= scaleX;
+        matrix[2] *= scaleX;
+        matrix[3] *= scaleX;
+    
+        matrix[4] *= scaleY;
+        matrix[5] *= scaleY;
+        matrix[6] *= scaleY;
+        matrix[7] *= scaleY;
+    }
+
+    private rotate (angle: number)
+    {
+        const s: number = Math.sin(angle);
+        const c: number = Math.cos(angle);
+
+        const matrix = this.matrix;
+    
+        const m00 = matrix[0];
+        const m01 = matrix[1];
+        const m02 = matrix[2];
+        const m03 = matrix[3];
+        const m10 = matrix[4];
+        const m11 = matrix[5];
+        const m12 = matrix[6];
+        const m13 = matrix[7];
+
+        matrix[0] = m00 * c + m10 * s;
+        matrix[1] = m01 * c + m11 * s;
+        matrix[2] = m02 * c + m12 * s;
+        matrix[3] = m03 * c + m13 * s;
+        matrix[4] = m10 * c - m00 * s;
+        matrix[5] = m11 * c - m01 * s;
+        matrix[6] = m12 * c - m02 * s;
+        matrix[7] = m13 * c - m03 * s;
     }
 
     set x (value: number)
     {
         this._x = value;
 
-        Translate(this.matrix, value, this._y);
+        this.translate(value, this._y);
     }
 
     get x (): number
@@ -51,7 +118,7 @@ export default class Camera
     {
         this._y = value;
 
-        Translate(this.matrix, this._x, value);
+        this.translate(this._x, value);
     }
 
     get y (): number
@@ -63,7 +130,7 @@ export default class Camera
     {
         this._rotation = value;
 
-        RotateZ(this.matrix, value);
+        this.rotate(value);
     }
 
     get rotation (): number
@@ -75,7 +142,7 @@ export default class Camera
     {
         this._scaleX = value;
 
-        Scale(this.matrix, value, this._scaleY, 1);
+        this.scale(value, this._scaleY);
     }
 
     get scaleX (): number
@@ -87,12 +154,11 @@ export default class Camera
     {
         this._scaleY = value;
 
-        Scale(this.matrix, this._scaleX, value, 1);
+        this.scale(this._scaleX, value);
     }
 
     get scaleY (): number
     {
         return this._scaleY;
     }
-
 }
