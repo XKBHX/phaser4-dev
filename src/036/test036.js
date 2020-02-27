@@ -465,20 +465,6 @@ function Translate(target, x = 0, y = 0, z = 0) {
 }
 //# sourceMappingURL=Translate.js.map
 
-function Ortho(left, right, bottom, top, near, far) {
-    const lr = 1 / (left - right);
-    const bt = 1 / (bottom - top);
-    const nf = 1 / (near - far);
-    const m00 = -2 * lr;
-    const m11 = -2 * bt;
-    const m22 = 2 * nf;
-    const m30 = (left + right) * lr;
-    const m31 = (top + bottom) * bt;
-    const m32 = (far + near) * nf;
-    return new Matrix4(m00, 0, 0, 0, 0, m11, 0, 0, 0, 0, m22, 0, m30, m31, m32, 1);
-}
-//# sourceMappingURL=Ortho.js.map
-
 class Camera {
     constructor(renderer, width, height) {
         if (!width) {
@@ -577,7 +563,13 @@ class WebGLRenderer {
             canvas.style.height = this.height / resolution + 'px';
         }
         this.gl.viewport(0, 0, this.width, this.height);
-        this.projectionMatrix = Ortho(0, width, height, 0, -1000, 1000);
+        this.projectionMatrix = this.ortho(width, height, -1000, 1000);
+    }
+    ortho(width, height, near, far) {
+        const m00 = -2 * (1 / -width);
+        const m11 = -2 * (1 / height);
+        const m22 = 2 * (1 / (near - far));
+        return new Float32Array([m00, 0, 0, 0, 0, m11, 0, 0, 0, 0, m22, 0, -1, 1, 0, 1]);
     }
     onContextLost(event) {
         event.preventDefault();
@@ -1562,159 +1554,119 @@ class Sprite extends DisplayObjectContainer {
     }
 }
 
-class EE {
-    constructor(callback, context, once = false) {
-        this.callback = callback;
-        this.context = context;
-        this.once = once;
-    }
-}
-class EventEmitter {
-    constructor() {
-        this._events = new Map();
-    }
-    on(event, callback, context = this, once = false) {
-        if (typeof callback !== 'function') {
-            throw new TypeError('The listener must be a function');
+class Box extends Sprite {
+    constructor(scene, x, y, texture, frame, direction = 0, size = 512) {
+        super(scene, x, y, texture, frame);
+        //  0 = left to right
+        //  1 = top to bottom
+        //  2 = right to left
+        //  3 = bottom to top
+        this.direction = 0;
+        this.speed = 2;
+        this.direction = direction;
+        if (direction === 0) {
+            //  Box is in the top-left
+            this.startX = x;
+            this.startY = y;
+            this.endX = x + size;
+            this.endY = y + size;
         }
-        const listener = new EE(callback, context, once);
-        const listeners = this._events.get(event);
-        if (!listeners) {
-            this._events.set(event, new Set([listener]));
+        else if (direction === 1) {
+            //  Box is in the top-right
+            this.startX = x - size;
+            this.startY = y;
+            this.endX = x;
+            this.endY = y + size;
         }
-        else {
-            listeners.add(listener);
+        else if (direction === 2) {
+            //  Box is in the bottom-right
+            this.startX = x - size;
+            this.startY = y - size;
+            this.endX = x;
+            this.endY = y;
         }
-        return this;
-    }
-    once(event, callback, context = this) {
-        return this.on(event, callback, context, true);
-    }
-    /**
-     * Clear an event by name.
-     */
-    clearEvent(event) {
-        this._events.delete(event);
-        return this;
-    }
-    /**
-     * Return an array listing the events for which the emitter has registered listeners.
-     */
-    eventNames() {
-        return [...this._events.keys()];
-    }
-    /**
-     * Return the listeners registered for a given event.
-     */
-    listeners(event) {
-        const out = [];
-        const listeners = this._events.get(event);
-        listeners.forEach((ee) => {
-            out.push(ee.callback);
-        });
-        return out;
-    }
-    /**
-     * Return the number of listeners listening to a given event.
-     */
-    listenerCount(event) {
-        const listeners = this._events.get(event);
-        return (listeners) ? listeners.size : 0;
-    }
-    /**
-     * Calls each of the listeners registered for a given event.
-     */
-    emit(event, ...args) {
-        if (!this._events.has(event)) {
-            return false;
+        else if (direction === 3) {
+            //  Box is in the bottom-left
+            this.startX = x;
+            this.startY = y - size;
+            this.endX = x + size;
+            this.endY = y;
         }
-        const listeners = this._events.get(event);
-        for (const ee of listeners) {
-            ee.callback.apply(ee.context, args);
-            if (ee.once) {
-                listeners.delete(ee);
-            }
-        }
-        if (listeners.size === 0) {
-            this._events.delete(event);
-        }
-        return true;
     }
-    /**
-     * Remove the listeners of a given event.
-     *
-     * @param event
-     * @param callback
-     * @param context
-     * @param once
-     */
-    off(event, callback, context, once) {
-        if (!callback) {
-            //  Remove all events matching the given key
-            this._events.delete(event);
-        }
-        else {
-            const listeners = this._events.get(event);
-            const hasContext = !context;
-            const hasOnce = (once !== undefined);
-            for (const ee of listeners) {
-                if (ee.callback === callback && (hasContext && ee.context === console) && (hasOnce && ee.once === once)) {
-                    listeners.delete(ee);
+    update() {
+        switch (this.direction) {
+            case 0:
+                {
+                    this.x += this.speed;
+                    if (this.x >= this.endX) {
+                        this.x = this.endX;
+                        this.direction = 1;
+                    }
                 }
-            }
-            if (listeners.size === 0) {
-                this._events.delete(event);
-            }
-        }
-        return this;
-    }
-    /**
-     * Remove all listeners, or those of the specified event.
-     *
-     * @param event
-     */
-    removeAllListeners(event) {
-        if (!event) {
-            this._events.clear();
-        }
-        else {
-            this._events.delete(event);
+                break;
+            case 1:
+                {
+                    this.y += this.speed;
+                    if (this.y >= this.endY) {
+                        this.y = this.endY;
+                        this.direction = 2;
+                    }
+                }
+                break;
+            case 2:
+                {
+                    this.x -= this.speed;
+                    if (this.x <= this.startX) {
+                        this.x = this.startX;
+                        this.direction = 3;
+                    }
+                }
+                break;
+            case 3:
+                {
+                    this.y -= this.speed;
+                    if (this.y <= this.startY) {
+                        this.y = this.startY;
+                        this.direction = 0;
+                    }
+                }
+                break;
         }
     }
 }
-
 class Demo extends Scene {
     constructor(game) {
         super(game);
     }
     preload() {
-        this.load.setPath('../assets/');
-        this.load.image('grid', 'uv-grid-diag.png');
-        this.load.image('512', 'checker.png');
-        this.load.image('128', 'lance-overdose-loader-eye.png');
-        this.load.image('logo', 'logo.png');
-        this.load.image('brain', 'brain.png');
+        this.load.image('512', '../assets/checker.png');
+        this.load.image('128', '../assets/lance-overdose-loader-eye.png');
+        this.load.image('logo', '../assets/logo.png');
+        this.load.image('brain', '../assets/brain.png');
     }
     create() {
-        let ee = new EventEmitter();
-        ee.once('logo', (x, y) => {
-            this.world.addChild(new Sprite(this, x, y, 'logo'));
-        });
-        ee.on('brain', (x, y) => {
-            this.world.addChild(new Sprite(this, x, y, 'brain'));
-        });
-        console.log(ee.eventNames());
-        this.game.renderer.canvas.addEventListener('click', (event) => {
-            if (event.clientY < 200) {
-                ee.emit('logo', 400, 300);
-            }
-            else {
-                ee.emit('brain', event.clientX, event.clientY);
-            }
-        });
+        this.container = new Sprite(this, 400, 300, '512');
+        const child1 = new Box(this, -256, -256, 'brain', null, 0);
+        const child2 = new Box(this, 256, -256, 'brain', null, 1);
+        const child3 = new Box(this, 256, 256, 'brain', null, 2);
+        const child4 = new Box(this, -256, 256, 'brain', null, 3);
+        //  Logo stack
+        const child5 = new Sprite(this, 0, 0, 'logo').setScale(0.7);
+        const child6 = new Sprite(this, 0, 0, 'logo').setScale(0.8);
+        const child7 = new Sprite(this, 0, 0, 'logo').setScale(0.9);
+        const child8 = new Sprite(this, 0, 0, 'logo').setScale(1.0);
+        this.container.addChild(child1, child2, child3, child4, child5, child6, child7, child8);
+        this.world.addChild(this.container);
+    }
+    update() {
+        this.container.rotation += 0.005;
+        this.container.getChildAt(4).rotation += 0.037;
+        this.container.getChildAt(5).rotation += 0.038;
+        this.container.getChildAt(6).rotation += 0.039;
+        this.container.getChildAt(7).rotation += 0.040;
     }
 }
-function demo8 () {
+function demo6 () {
     let game = new Game({
         width: 800,
         height: 600,
@@ -1728,7 +1680,10 @@ function demo8 () {
 }
 
 // import demo1 from './demo1'; // test single sprite
-demo8();
+// import demo7 from './demo7'; // Camera class (position, scale, rotation)
+// import demo8 from './demo8'; // Event Emitter
+demo6();
+// demo8();
 //  Next steps:
 //  * Camera alpha
 //  * Camera background color
@@ -1736,7 +1691,6 @@ demo8();
 //  * Camera bounds / cull
 //  * Camera ignore | ignore except
 //  * Camera scroll factor (?)
-//  * Don't defer updateTransform - do immediately
 //  * Cache world values?
 //  * Texture Atlas Loader
 //  * Multi Texture re-use old texture IDs when count > max supported
@@ -1746,6 +1700,7 @@ demo8();
 //  * Input point translation
 //  * Instead of a Quad class, try a class that can have any number of vertices in it (ala Rope), or any vertex moved
 //  Done:
+//  X Don't defer updateTransform - do immediately
 //  X Context lost handler
 //  X Renderer resize handler
 //  X Renderer resolution

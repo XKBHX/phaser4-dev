@@ -1,8 +1,6 @@
 import CheckShaderMaxIfStatements from './CheckShaderMaxIfStatements';
-import { Matrix4 } from '@phaserjs/math-matrix4';
 import MultiTextureQuadShader from 'MultiTextureQuadShader';
 import Texture from 'Texture';
-import { Ortho } from '@phaserjs/math-matrix4-funcs';
 import DisplayObjectContainer from 'DisplayObjectContainer';
 import Sprite from 'Sprite';
 import { Container } from 'Container';
@@ -31,7 +29,7 @@ export default class WebGLRenderer
     
     camera: Camera;
     
-    projectionMatrix: Matrix4;
+    projectionMatrix: Float32Array;
     textureIndex: number[];
     
     maxTextures: number = 0;
@@ -101,7 +99,16 @@ export default class WebGLRenderer
     
         this.gl.viewport(0, 0, this.width, this.height);
 
-        this.projectionMatrix = Ortho(0, width, height, 0, -1000, 1000);
+        this.projectionMatrix = this.ortho(width, height, -1000, 1000);
+    }
+
+    ortho (width: number, height: number, near: number, far: number): Float32Array
+    {
+        const m00: number = -2 * (1 / -width);
+        const m11: number = -2 * (1 / height);
+        const m22: number = 2 * (1 / (near - far));
+
+        return new Float32Array([ m00, 0, 0, 0, 0, m11, 0, 0, 0, 0, m22, 0, -1, 1, 0, 1 ]);
     }
 
     onContextLost (event)
