@@ -4,9 +4,10 @@
 // import demo4 from './demo4'; // sprite tint + alpha back in the shader
 // import demo5 from './demo5'; // test skew
 // import demo6 from './demo6'; // test container children
-import demo7 from './demo7'; // Camera class (position, scale, rotation)
+// import demo7 from './demo7'; // Camera class (position, scale, rotation)
+import demo8 from './demo8'; // Event Emitter
 
-demo7();
+demo8();
 
 //  Next steps:
 

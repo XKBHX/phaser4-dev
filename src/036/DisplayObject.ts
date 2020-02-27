@@ -103,6 +103,8 @@ export default class DisplayObject
         // reset the bounds each time this is called!
         // this._currentBounds = null;
         */
+
+        return this;
     }
 
     willRender (): boolean
@@ -129,7 +131,7 @@ export default class DisplayObject
     {
         this._position.set(x, y);
 
-        return this;
+        return this.updateTransform();
     }
 
     setScale (scaleX: number, scaleY: number = scaleX)
@@ -171,12 +173,14 @@ export default class DisplayObject
         transform.c = -Math.sin(_rotation - _skew.x) * _scale.y;
         transform.d = Math.cos(_rotation - _skew.x) * _scale.y;
 
-        return this;
+        return this.updateTransform();
     }
 
     set x (value: number)
     {
         this._position.x = value;
+
+        this.updateTransform();
     }
 
     get x (): number
@@ -187,6 +191,8 @@ export default class DisplayObject
     set y (value: number)
     {
         this._position.y = value;
+
+        this.updateTransform();
     }
 
     get y (): number

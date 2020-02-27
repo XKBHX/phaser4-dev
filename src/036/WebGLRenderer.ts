@@ -230,8 +230,6 @@ export default class WebGLRenderer
 
         shader.bind();
 
-        world.updateTransform();
-
         this.renderChildren(world);
 
         shader.flush();

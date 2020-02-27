@@ -74,10 +74,8 @@ export default class Sprite extends DisplayObjectContainer
         return this;
     }
 
-    updateTransform ()
+    updateVertices (): Vertex[]
     {
-        super.updateTransform();
-
         //  Update Vertices:
 
         const w: number = this.width;
@@ -119,6 +117,8 @@ export default class Sprite extends DisplayObjectContainer
         //  bottom right
         vertices[3].x = x1a + y1c + tx;
         vertices[3].y = x1b + y1d + ty;
+
+        return vertices;
     }
 
     set alpha (value: number)

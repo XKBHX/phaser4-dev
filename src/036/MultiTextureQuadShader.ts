@@ -388,7 +388,7 @@ export default class MultiTextureQuadShader
         const frame = sprite.frame;
         const textureIndex = frame.texture.glIndex;
 
-        const vertices = sprite.vertices;
+        const vertices = sprite.updateVertices();
 
         const topLeft = vertices[0];
         const topRight = vertices[1];

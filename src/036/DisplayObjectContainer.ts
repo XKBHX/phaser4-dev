@@ -173,6 +173,8 @@ export default class DisplayObjectContainer extends DisplayObject
         {
             children[i].updateTransform();
         }
+
+        return this;
     }
 
     get size ()
