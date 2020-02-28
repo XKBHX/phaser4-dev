@@ -1483,6 +1483,8 @@ class Game extends EventEmitter {
         this.elapsed = dt;
         this.lastTick = now;
         if (this.isPaused) {
+            //  Otherwise SpectorGL can't debug the scene
+            this.renderer.render(this.scene.world);
             requestAnimationFrame(() => this.step());
             return;
         }
@@ -1652,14 +1654,11 @@ class SpriteBuffer {
     render() {
         const gl = this.gl;
         this.shader.bindBuffers(this.indexBuffer, this.vertexBuffer);
-        // gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-        // gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-        // if (this.dirty)
-        // {
-        gl.bufferData(gl.ARRAY_BUFFER, this.data, gl.STATIC_DRAW);
-        // gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.index, gl.STATIC_DRAW);
-        // this.dirty = false;
-        // }
+        if (this.dirty) {
+            gl.bufferData(gl.ARRAY_BUFFER, this.data, gl.STATIC_DRAW);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.index, gl.STATIC_DRAW);
+            this.dirty = false;
+        }
         //  For now we'll allow just the one texture
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, this.activeTextures[0].glTexture);
@@ -1736,29 +1735,42 @@ class Scene$1 {
 class Demo extends Scene$1 {
     constructor(game) {
         super(game);
+        this.cx = 0;
     }
     preload() {
-        this.load.image('brain', '../assets/brain.png');
+        this.load.setPath('../assets/');
+        this.load.image('cat', 'ultimatevirtues.gif');
+        this.load.spritesheet('tiles', 'gridtiles.png', { frameWidth: 32, frameHeight: 32 });
     }
     create() {
-        const buffer = new SpriteBuffer(this.game, 1000);
-        const brain = new Sprite(this, 0, 0, 'brain');
-        for (let i = 0; i < 100; i++) {
-            let x = Math.floor(Math.random() * 800);
-            let y = Math.floor(Math.random() * 600);
+        this.world.addChild(new Sprite(this, 400, 300, 'cat'));
+        const buffer = new SpriteBuffer(this.game, 100000);
+        const brain = new Sprite(this, 0, 0, 'tiles');
+        for (let i = 0; i < buffer.maxSize; i++) {
+            let x = -800 + Math.floor(Math.random() * 1600);
+            let y = -300 + Math.floor(Math.random() * 1200);
+            let f = Math.floor(Math.random() * 140);
+            let s = Math.random() * 2;
+            let r = Math.random() * Math.PI * 2;
             brain.setPosition(x, y);
+            brain.setFrame(f);
+            brain.setScale(s);
+            brain.setRotation(r);
             buffer.add(brain);
         }
         this.world.addChild(buffer);
     }
     update(delta) {
+        this.game.renderer.camera.x = Math.sin(this.cx) * 2;
+        this.game.renderer.camera.y = Math.cos(this.cx) * 2;
+        this.cx += 0.01;
     }
 }
 function demo10 () {
     let game = new Game({
         width: 800,
         height: 600,
-        backgroundColor: 0x000066,
+        backgroundColor: 0x000033,
         parent: 'gameParent',
         scene: Demo
     });

@@ -5,6 +5,8 @@ import Sprite from './Sprite';
 import Texture from './Texture';
 import DisplayObjectContainer from './DisplayObjectContainer';
 import { Container } from './Container';
+import Frame from './Frame';
+import Vertex from './Vertex';
 
 export default class SpriteBuffer
 {
@@ -156,16 +158,13 @@ export default class SpriteBuffer
 
         this.shader.bindBuffers(this.indexBuffer, this.vertexBuffer);
 
-        // gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-        // gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-
-        // if (this.dirty)
-        // {
+        if (this.dirty)
+        {
             gl.bufferData(gl.ARRAY_BUFFER, this.data, gl.STATIC_DRAW);
-            // gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.index, gl.STATIC_DRAW);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.index, gl.STATIC_DRAW);
 
-            // this.dirty = false;
-        // }
+            this.dirty = false;
+        }
 
         //  For now we'll allow just the one texture
         gl.activeTexture(gl.TEXTURE0);

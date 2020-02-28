@@ -194,6 +194,9 @@ export default class Game extends EventEmitter
     
         if (this.isPaused)
         {
+            //  Otherwise SpectorGL can't debug the scene
+            this.renderer.render(this.scene.world);
+
             requestAnimationFrame(() => this.step());
 
             return;
