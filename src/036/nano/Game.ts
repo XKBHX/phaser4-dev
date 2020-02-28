@@ -4,8 +4,9 @@ import Loader from './Loader';
 import Scene from './Scene';
 import TextureManager from './TextureManager';
 import IGameConfig from './IGameConfig';
+import EventEmitter from './EventEmitter';
 
-export default class Game
+export default class Game extends EventEmitter
 {
     VERSION: string = '4.0.0-beta1';
 
@@ -19,8 +20,14 @@ export default class Game
 
     scene: Scene;
 
+    private lastTick: number;
+    lifetime: number = 0;
+    elapsed: number = 0;
+
     constructor (config?: IGameConfig)
     {
+        super();
+
         const {
             width = 800,
             height = 600,
@@ -34,9 +41,24 @@ export default class Game
         DOMContentLoaded(() => this.boot(width, height, backgroundColor, parent));
     }
 
+    pause ()
+    {
+        this.isPaused = true;
+
+        this.emit('pause');
+    }
+
+    resume ()
+    {
+        this.isPaused = false;
+
+        this.emit('resume');
+    }
+
     boot (width: number, height: number, backgroundColor: number, parent: string | HTMLElement)
     {
         this.isBooted = true;
+        this.lastTick = Date.now();
 
         this.textures = new TextureManager(this);
         this.loader = new Loader(this);
@@ -50,6 +72,25 @@ export default class Game
         this.renderer = renderer;
 
         this.banner(this.VERSION);
+
+        //  Visibility API
+        document.addEventListener('visibilitychange', () => {
+
+            this.emit('visibilitychange', document.hidden);
+
+            if (document.hidden)
+            {
+                this.pause();
+            }
+            else
+            {
+                this.resume();
+            }
+
+        });
+
+        window.addEventListener('blur', () => this.pause());
+        window.addEventListener('focus', () => this.resume());
 
         const scene = this.scene;
 
@@ -67,6 +108,9 @@ export default class Game
         }
 
         this.scene.init();
+
+        this.emit('boot');
+
         this.scene.preload();
 
         if (this.loader.totalFilesToLoad() > 0)
@@ -125,7 +169,7 @@ export default class Game
     {
         this.scene.create();
 
-        requestAnimationFrame((time) => this.step(time));
+        requestAnimationFrame(() => this.step());
     }
 
     banner (version: string)
@@ -137,22 +181,33 @@ export default class Game
         );
     }
 
-    step (time: DOMHighResTimeStamp)
+    step ()
     {
+        const now = Date.now();
+        const delta = now - this.lastTick;
+
+        const dt = delta / 1000;
+
+        this.lifetime += dt;
+        this.elapsed = dt;
+        this.lastTick = now;
+    
         if (this.isPaused)
         {
-            requestAnimationFrame((time) => this.step(time));
+            requestAnimationFrame(() => this.step());
 
             return;
         }
 
-        this.scene.world.update();
+        this.emit('step', dt);
 
-        this.scene.update(time);
+        this.scene.world.update(dt);
+
+        this.scene.update(dt, now);
 
         this.renderer.render(this.scene.world);
 
-        requestAnimationFrame((time) => this.step(time));
+        requestAnimationFrame(() => this.step());
     }
 
 }

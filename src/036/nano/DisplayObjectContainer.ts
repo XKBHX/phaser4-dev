@@ -153,13 +153,13 @@ export default class DisplayObjectContainer extends DisplayObject
         }
     }
 
-    update ()
+    update (dt: number)
     {
         const children = this.children;
 
         for (let i = 0; i < children.length; i++)
         {
-            children[i].update();
+            children[i].update(dt);
         }
     }
 

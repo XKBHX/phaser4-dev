@@ -30,7 +30,7 @@ export default class Scene
     {
     }
 
-    update (time?: DOMHighResTimeStamp)
+    update (delta?: number, time?: number)
     {
     }
 

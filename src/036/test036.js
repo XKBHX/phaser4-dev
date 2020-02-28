@@ -20,10 +20,12 @@ function AddToDOM(element, parent) {
     target.appendChild(element);
     return element;
 }
+//# sourceMappingURL=AddToDOM.js.map
 
 function isCordova() {
     return (window.hasOwnProperty('cordova'));
 }
+//# sourceMappingURL=isCordova.js.map
 
 function DOMContentLoaded(callback) {
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
@@ -47,6 +49,7 @@ function DOMContentLoaded(callback) {
         window.addEventListener('load', check, true);
     }
 }
+//# sourceMappingURL=DOMContentLoaded.js.map
 
 //  From Pixi v5
 const fragTemplate = [
@@ -789,6 +792,7 @@ class Vec2 {
         return data[Symbol.iterator]();
     }
 }
+//# sourceMappingURL=Vec2.js.map
 
 class DisplayObject {
     constructor() {
@@ -1056,10 +1060,10 @@ class DisplayObjectContainer extends DisplayObject {
             throw new Error('Range Error. Values out of bounds');
         }
     }
-    update() {
+    update(dt) {
         const children = this.children;
         for (let i = 0; i < children.length; i++) {
-            children[i].update();
+            children[i].update(dt);
         }
     }
     updateTransform() {
@@ -1088,7 +1092,7 @@ class Scene {
     }
     create() {
     }
-    update(time) {
+    update(delta, time) {
     }
 }
 
@@ -1232,201 +1236,6 @@ class TextureManager {
     }
 }
 
-class Game {
-    constructor(config) {
-        this.VERSION = '4.0.0-beta1';
-        this.isPaused = false;
-        this.isBooted = false;
-        const { width = 800, height = 600, backgroundColor = 0x00000, parent = document.body, scene = new Scene(this) } = config;
-        this.scene = scene;
-        DOMContentLoaded(() => this.boot(width, height, backgroundColor, parent));
-    }
-    boot(width, height, backgroundColor, parent) {
-        this.isBooted = true;
-        this.textures = new TextureManager(this);
-        this.loader = new Loader(this);
-        const renderer = new WebGLRenderer(width, height);
-        renderer.setBackgroundColor(backgroundColor);
-        AddToDOM(renderer.canvas, parent);
-        this.renderer = renderer;
-        this.banner(this.VERSION);
-        const scene = this.scene;
-        if (scene instanceof Scene) {
-            this.scene = this.createSceneFromInstance(scene);
-        }
-        else if (typeof scene === 'object') {
-            this.scene = this.createSceneFromObject(scene);
-        }
-        else if (typeof scene === 'function') {
-            this.scene = this.createSceneFromFunction(scene);
-        }
-        this.scene.init();
-        this.scene.preload();
-        if (this.loader.totalFilesToLoad() > 0) {
-            this.loader.start(() => this.start());
-        }
-        else {
-            this.start();
-        }
-    }
-    createSceneFromInstance(newScene) {
-        newScene.game = this;
-        newScene.load = this.loader;
-        return newScene;
-    }
-    createSceneFromObject(scene) {
-        let newScene = new Scene(this);
-        //  Extract callbacks
-        const defaults = ['init', 'preload', 'create', 'update', 'render'];
-        defaults.forEach((method) => {
-            if (scene.hasOwnProperty(method)) {
-                newScene[method] = scene[method];
-            }
-        });
-        return newScene;
-    }
-    createSceneFromFunction(scene) {
-        var newScene = new scene(this);
-        if (newScene instanceof Scene) {
-            return this.createSceneFromInstance(newScene);
-        }
-        else {
-            return newScene;
-        }
-    }
-    start() {
-        this.scene.create();
-        requestAnimationFrame((time) => this.step(time));
-    }
-    banner(version) {
-        console.log('%cPhaser Nano v' + version + '%c https://phaser4.io', 'padding: 2px 20px; color: #fff; background: linear-gradient(to right, #00bcc3, #3e0081 10%, #3e0081 90%, #3e0081 10%, #00bcc3)', '');
-    }
-    step(time) {
-        if (this.isPaused) {
-            requestAnimationFrame((time) => this.step(time));
-            return;
-        }
-        this.scene.world.update();
-        this.scene.update(time);
-        this.renderer.render(this.scene.world);
-        requestAnimationFrame((time) => this.step(time));
-    }
-}
-
-class Vertex {
-    constructor(x = 0, y = 0, color = 16777215, alpha = 1) {
-        this.x = x;
-        this.y = y;
-        this.color = color;
-        this.alpha = alpha;
-    }
-}
-
-class Sprite extends DisplayObjectContainer {
-    constructor(scene, x, y, texture, frame) {
-        super();
-        // texture: Texture = null;
-        // frame: Frame = null;
-        this.vertices = [new Vertex(), new Vertex(), new Vertex(), new Vertex()];
-        // private _alpha: number = 1;
-        this._tint = 0xffffff;
-        this.scene = scene;
-        this.setTexture(texture, frame);
-        this.setPosition(x, y);
-    }
-    setTexture(key, frame) {
-        if (key instanceof Texture) {
-            this.texture = key;
-        }
-        else {
-            this.texture = this.scene.textures.get(key);
-        }
-        return this.setFrame(frame);
-    }
-    setFrame(key) {
-        const frame = this.texture.get(key);
-        this.frame = frame;
-        return this.setSize(frame.width, frame.height);
-    }
-    setAlpha(topLeft = 1, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
-        const vertices = this.vertices;
-        vertices[0].alpha = topLeft;
-        vertices[1].alpha = topRight;
-        vertices[2].alpha = bottomLeft;
-        vertices[3].alpha = bottomRight;
-        return this;
-    }
-    setTint(topLeft = 0xffffff, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
-        const vertices = this.vertices;
-        vertices[0].color = topLeft;
-        vertices[1].color = topRight;
-        vertices[2].color = bottomLeft;
-        vertices[3].color = bottomRight;
-        return this;
-    }
-    updateVertices() {
-        //  Update Vertices:
-        const w = this.width;
-        const h = this.height;
-        const x0 = -(this._origin.x * w);
-        const x1 = x0 + w;
-        const y0 = -(this._origin.y * h);
-        const y1 = y0 + h;
-        const { a, b, c, d, tx, ty } = this.worldTransform;
-        //  Cache the calculations to avoid 8 getX/Y function calls:
-        const x0a = x0 * a;
-        const x0b = x0 * b;
-        const y0c = y0 * c;
-        const y0d = y0 * d;
-        const x1a = x1 * a;
-        const x1b = x1 * b;
-        const y1c = y1 * c;
-        const y1d = y1 * d;
-        const vertices = this.vertices;
-        //  top left
-        vertices[0].x = x0a + y0c + tx;
-        vertices[0].y = x0b + y0d + ty;
-        //  top right
-        vertices[1].x = x1a + y0c + tx;
-        vertices[1].y = x1b + y0d + ty;
-        //  bottom left
-        vertices[2].x = x0a + y1c + tx;
-        vertices[2].y = x0b + y1d + ty;
-        //  bottom right
-        vertices[3].x = x1a + y1c + tx;
-        vertices[3].y = x1b + y1d + ty;
-        return vertices;
-    }
-    set alpha(value) {
-        this._alpha = value;
-        this.setAlpha(value);
-    }
-    get tint() {
-        return this._tint;
-    }
-    set tint(value) {
-        this._tint = value;
-        this.setTint(value);
-    }
-}
-
-class Scene$1 {
-    constructor(game) {
-        this.game = game;
-        this.load = game.loader;
-        this.textures = game.textures;
-        this.world = new DisplayObjectContainer();
-    }
-    init() {
-    }
-    preload() {
-    }
-    create() {
-    }
-    update(time) {
-    }
-}
-
 class EE {
     constructor(callback, context, once = false) {
         this.callback = callback;
@@ -1548,38 +1357,423 @@ class EventEmitter {
     }
 }
 
+class Game extends EventEmitter {
+    constructor(config) {
+        super();
+        this.VERSION = '4.0.0-beta1';
+        this.isPaused = false;
+        this.isBooted = false;
+        this.lifetime = 0;
+        this.elapsed = 0;
+        const { width = 800, height = 600, backgroundColor = 0x00000, parent = document.body, scene = new Scene(this) } = config;
+        this.scene = scene;
+        DOMContentLoaded(() => this.boot(width, height, backgroundColor, parent));
+    }
+    pause() {
+        this.isPaused = true;
+        this.emit('pause');
+    }
+    resume() {
+        this.isPaused = false;
+        this.emit('resume');
+    }
+    boot(width, height, backgroundColor, parent) {
+        this.isBooted = true;
+        this.lastTick = Date.now();
+        this.textures = new TextureManager(this);
+        this.loader = new Loader(this);
+        const renderer = new WebGLRenderer(width, height);
+        renderer.setBackgroundColor(backgroundColor);
+        AddToDOM(renderer.canvas, parent);
+        this.renderer = renderer;
+        this.banner(this.VERSION);
+        //  Visibility API
+        document.addEventListener('visibilitychange', () => {
+            this.emit('visibilitychange', document.hidden);
+            if (document.hidden) {
+                this.pause();
+            }
+            else {
+                this.resume();
+            }
+        });
+        window.addEventListener('blur', () => this.pause());
+        window.addEventListener('focus', () => this.resume());
+        const scene = this.scene;
+        if (scene instanceof Scene) {
+            this.scene = this.createSceneFromInstance(scene);
+        }
+        else if (typeof scene === 'object') {
+            this.scene = this.createSceneFromObject(scene);
+        }
+        else if (typeof scene === 'function') {
+            this.scene = this.createSceneFromFunction(scene);
+        }
+        this.scene.init();
+        this.emit('boot');
+        this.scene.preload();
+        if (this.loader.totalFilesToLoad() > 0) {
+            this.loader.start(() => this.start());
+        }
+        else {
+            this.start();
+        }
+    }
+    createSceneFromInstance(newScene) {
+        newScene.game = this;
+        newScene.load = this.loader;
+        return newScene;
+    }
+    createSceneFromObject(scene) {
+        let newScene = new Scene(this);
+        //  Extract callbacks
+        const defaults = ['init', 'preload', 'create', 'update', 'render'];
+        defaults.forEach((method) => {
+            if (scene.hasOwnProperty(method)) {
+                newScene[method] = scene[method];
+            }
+        });
+        return newScene;
+    }
+    createSceneFromFunction(scene) {
+        var newScene = new scene(this);
+        if (newScene instanceof Scene) {
+            return this.createSceneFromInstance(newScene);
+        }
+        else {
+            return newScene;
+        }
+    }
+    start() {
+        this.scene.create();
+        requestAnimationFrame(() => this.step());
+    }
+    banner(version) {
+        console.log('%cPhaser Nano v' + version + '%c https://phaser4.io', 'padding: 2px 20px; color: #fff; background: linear-gradient(to right, #00bcc3, #3e0081 10%, #3e0081 90%, #3e0081 10%, #00bcc3)', '');
+    }
+    step() {
+        const now = Date.now();
+        const delta = now - this.lastTick;
+        const dt = delta / 1000;
+        this.lifetime += dt;
+        this.elapsed = dt;
+        this.lastTick = now;
+        if (this.isPaused) {
+            requestAnimationFrame(() => this.step());
+            return;
+        }
+        this.emit('step', dt);
+        this.scene.world.update(dt);
+        this.scene.update(dt, now);
+        this.renderer.render(this.scene.world);
+        requestAnimationFrame(() => this.step());
+    }
+}
+
+class Vertex {
+    constructor(x = 0, y = 0, color = 16777215, alpha = 1) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.alpha = alpha;
+    }
+}
+
+class Sprite extends DisplayObjectContainer {
+    constructor(scene, x, y, texture, frame) {
+        super();
+        // texture: Texture = null;
+        // frame: Frame = null;
+        this.vertices = [new Vertex(), new Vertex(), new Vertex(), new Vertex()];
+        // private _alpha: number = 1;
+        this._tint = 0xffffff;
+        this.scene = scene;
+        this.setTexture(texture, frame);
+        this.setPosition(x, y);
+    }
+    setTexture(key, frame) {
+        if (key instanceof Texture) {
+            this.texture = key;
+        }
+        else {
+            this.texture = this.scene.textures.get(key);
+        }
+        return this.setFrame(frame);
+    }
+    setFrame(key) {
+        const frame = this.texture.get(key);
+        this.frame = frame;
+        return this.setSize(frame.width, frame.height);
+    }
+    setAlpha(topLeft = 1, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
+        const vertices = this.vertices;
+        vertices[0].alpha = topLeft;
+        vertices[1].alpha = topRight;
+        vertices[2].alpha = bottomLeft;
+        vertices[3].alpha = bottomRight;
+        return this;
+    }
+    setTint(topLeft = 0xffffff, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
+        const vertices = this.vertices;
+        vertices[0].color = topLeft;
+        vertices[1].color = topRight;
+        vertices[2].color = bottomLeft;
+        vertices[3].color = bottomRight;
+        return this;
+    }
+    updateVertices() {
+        //  Update Vertices:
+        const w = this.width;
+        const h = this.height;
+        const x0 = -(this._origin.x * w);
+        const x1 = x0 + w;
+        const y0 = -(this._origin.y * h);
+        const y1 = y0 + h;
+        const { a, b, c, d, tx, ty } = this.worldTransform;
+        //  Cache the calculations to avoid 8 getX/Y function calls:
+        const x0a = x0 * a;
+        const x0b = x0 * b;
+        const y0c = y0 * c;
+        const y0d = y0 * d;
+        const x1a = x1 * a;
+        const x1b = x1 * b;
+        const y1c = y1 * c;
+        const y1d = y1 * d;
+        const vertices = this.vertices;
+        //  top left
+        vertices[0].x = x0a + y0c + tx;
+        vertices[0].y = x0b + y0d + ty;
+        //  top right
+        vertices[1].x = x1a + y0c + tx;
+        vertices[1].y = x1b + y0d + ty;
+        //  bottom left
+        vertices[2].x = x0a + y1c + tx;
+        vertices[2].y = x0b + y1d + ty;
+        //  bottom right
+        vertices[3].x = x1a + y1c + tx;
+        vertices[3].y = x1b + y1d + ty;
+        return vertices;
+    }
+    set alpha(value) {
+        this._alpha = value;
+        this.setAlpha(value);
+    }
+    get tint() {
+        return this._tint;
+    }
+    set tint(value) {
+        this._tint = value;
+        this.setTint(value);
+    }
+}
+
+class Scene$1 {
+    constructor(game) {
+        this.game = game;
+        this.load = game.loader;
+        this.textures = game.textures;
+        this.world = new DisplayObjectContainer();
+    }
+    init() {
+    }
+    preload() {
+    }
+    create() {
+    }
+    update(delta, time) {
+    }
+}
+
+const easeCache = {
+    linear: (t) => {
+        return t;
+    },
+    inQuad: (t) => {
+        return t * t;
+    },
+    outQuad: (t) => {
+        return t * (2 - t);
+    },
+    inOutQuad: (t) => {
+        return t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+    },
+    inCubic: (t) => {
+        return t * t * t;
+    },
+    outCubic: (t) => {
+        return (--t) * t * t + 1;
+    },
+    inOutCubic: (t) => {
+        return t < .5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
+    },
+    inQuart: (t) => {
+        return t * t * t * t;
+    },
+    outQuart: (t) => {
+        return 1 - (--t) * t * t * t;
+    },
+    inOutQuart: (t) => {
+        return t < .5 ? 8 * t * t * t * t : 1 - 8 * (--t) * t * t * t;
+    },
+    inQuint: (t) => {
+        return t * t * t * t * t;
+    },
+    outQuint: (t) => {
+        return 1 + (--t) * t * t * t * t;
+    },
+    inOutQuint: (t) => {
+        return t < .5 ? 16 * t * t * t * t * t : 1 + 16 * (--t) * t * t * t * t;
+    },
+    inSine: (t) => {
+        return -1 * Math.cos(t / 1 * (Math.PI * 0.5)) + 1;
+    },
+    outSine: (t) => {
+        return Math.sin(t / 1 * (Math.PI * 0.5));
+    },
+    inOutSine: (t) => {
+        return -1 / 2 * (Math.cos(Math.PI * t) - 1);
+    },
+    inExpo: (t) => {
+        return (t == 0) ? 0 : Math.pow(2, 10 * (t - 1));
+    },
+    outExpo: (t) => {
+        return (t == 1) ? 1 : (-Math.pow(2, -10 * t) + 1);
+    },
+    inOutExpo: (t) => {
+        if (t == 0)
+            return 0;
+        if (t == 1)
+            return 1;
+        if ((t /= 1 / 2) < 1)
+            return 1 / 2 * Math.pow(2, 10 * (t - 1));
+        return 1 / 2 * (-Math.pow(2, -10 * --t) + 2);
+    },
+    inCirc: (t) => {
+        return -1 * (Math.sqrt(1 - t * t) - 1);
+    },
+    outCirc: (t) => {
+        return Math.sqrt(1 - (t = t - 1) * t);
+    },
+    inOutCirc: (t) => {
+        if ((t /= 1 / 2) < 1)
+            return -1 / 2 * (Math.sqrt(1 - t * t) - 1);
+        return 1 / 2 * (Math.sqrt(1 - (t -= 2) * t) + 1);
+    },
+    inElastic: (t) => {
+        if (t == 0)
+            return 0;
+        if (t == 1)
+            return 1;
+        let s = 1.70158;
+        let p = 0;
+        let a = 1;
+        if (!p)
+            p = 0.3;
+        {
+            s = p / (2 * Math.PI) * Math.asin(1 / a);
+        }
+        return -(a * Math.pow(2, 10 * (t -= 1)) * Math.sin((t - s) * (2 * Math.PI) / p));
+    },
+    outElastic: (t) => {
+        if (t == 0)
+            return 0;
+        if (t == 1)
+            return 1;
+        let s = 1.70158;
+        let p = 0;
+        let a = 1;
+        if (!p)
+            p = 0.3;
+        {
+            s = p / (2 * Math.PI) * Math.asin(1 / a);
+        }
+        return a * Math.pow(2, -10 * t) * Math.sin((t - s) * (2 * Math.PI) / p) + 1;
+    },
+    inOutElastic: (t) => {
+        if (t == 0)
+            return 0;
+        if ((t /= 1 / 2) == 2)
+            return 1;
+        let s = 1.70158;
+        let p = 0;
+        let a = 1;
+        if (!p)
+            p = (0.3 * 1.5);
+        {
+            s = p / (2 * Math.PI) * Math.asin(1 / a);
+        }
+        if (t < 1)
+            return -.5 * (a * Math.pow(2, 10 * (t -= 1)) * Math.sin((t - s) * (2 * Math.PI) / p));
+        return a * Math.pow(2, -10 * (t -= 1)) * Math.sin((t - s) * (2 * Math.PI) / p) * 0.5 + 1;
+    },
+    inBack: (t, s = 1.70158) => {
+        return 1 * t * t * ((s + 1) * t - s);
+    },
+    outBack: (t, s = 1.70158) => {
+        return 1 * ((t = t / 1 - 1) * t * ((s + 1) * t + s) + 1);
+    },
+    inOutBack: (t, s = 1.70158) => {
+        if ((t /= 1 / 2) < 1)
+            return 1 / 2 * (t * t * (((s *= (1.525)) + 1) * t - s));
+        return 1 / 2 * ((t -= 2) * t * (((s *= (1.525)) + 1) * t + s) + 2);
+    },
+    inBounce: (t) => {
+        return 1 - easeCache.outBounce(1 - t);
+    },
+    outBounce: (t) => {
+        if ((t /= 1) < (1 / 2.75)) {
+            return (7.5625 * t * t);
+        }
+        else if (t < (2 / 2.75)) {
+            return (7.5625 * (t -= (1.5 / 2.75)) * t + .75);
+        }
+        else if (t < (2.5 / 2.75)) {
+            return (7.5625 * (t -= (2.25 / 2.75)) * t + .9375);
+        }
+        else {
+            return (7.5625 * (t -= (2.625 / 2.75)) * t + .984375);
+        }
+    },
+    inOutBounce: (t) => {
+        if (t < 1 / 2)
+            return easeCache.inBounce(t * 2) * 0.5;
+        return easeCache.outBounce(t * 2 - 1) * 0.5 + 0.5;
+    }
+};
+function Ease(progress, easing) {
+    if (easeCache[easing]) {
+        return easeCache[easing](progress);
+    }
+}
+
 class Demo extends Scene$1 {
     constructor(game) {
         super(game);
     }
     preload() {
-        this.load.setPath('../assets/');
-        this.load.image('grid', 'uv-grid-diag.png');
-        this.load.image('512', 'checker.png');
-        this.load.image('128', 'lance-overdose-loader-eye.png');
-        this.load.image('logo', 'logo.png');
-        this.load.image('brain', 'brain.png');
+        this.load.image('brain', '../assets/brain.png');
     }
     create() {
-        let ee = new EventEmitter();
-        ee.once('logo', (x, y) => {
-            this.world.addChild(new Sprite(this, x, y, 'logo'));
-        });
-        ee.on('brain', (x, y) => {
-            this.world.addChild(new Sprite(this, x, y, 'brain'));
-        });
-        console.log(ee.eventNames());
-        this.game.renderer.canvas.addEventListener('click', (event) => {
-            if (event.clientY < 200) {
-                ee.emit('logo', 400, 300);
-            }
-            else {
-                ee.emit('brain', event.clientX, event.clientY);
-            }
-        });
+        this.sprite1 = new Sprite(this, 400, 100, 'brain');
+        this.world.addChild(this.sprite1);
+        this.duration = 2000;
+        this.elapsed = 0;
+    }
+    update(delta) {
+        this.elapsed += (delta * 1000);
+        let reset = false;
+        if (this.elapsed > this.duration) {
+            this.elapsed = this.duration;
+            reset = true;
+        }
+        let v = Ease(this.elapsed / this.duration, 'inOutSine');
+        this.sprite1.y = 100 + (v * 300);
+        if (reset) {
+            this.elapsed = 0;
+        }
     }
 }
-function demo8 () {
+function demo9 () {
     let game = new Game({
         width: 800,
         height: 600,
@@ -1592,10 +1786,10 @@ function demo8 () {
     });
 }
 
-// import demo1 from './demo1'; // test single sprite
 // demo6();
 // demo7();
-demo8();
+// demo8();
+demo9();
 //  Next steps:
 //  * Camera alpha
 //  * Camera background color
