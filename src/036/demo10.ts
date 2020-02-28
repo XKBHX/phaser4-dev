@@ -6,6 +6,8 @@ import Scene from 'nano/Scene';
 class Demo extends Scene
 {
     cx: number = 0;
+    ccx: number = 0;
+    ccy: number = 0;
 
     constructor (game: Game)
     {
@@ -16,7 +18,7 @@ class Demo extends Scene
     {
         this.load.setPath('../assets/');
         this.load.image('cat', 'ultimatevirtues.gif');
-        this.load.spritesheet('tiles', 'gridtiles.png', { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('tiles', 'gridtiles2.png', { frameWidth: 32, frameHeight: 32, margin: 1, spacing: 2 });
     }
 
     create ()
@@ -32,13 +34,13 @@ class Demo extends Scene
             let x = -800 + Math.floor(Math.random() * 1600);
             let y = -300 + Math.floor(Math.random() * 1200);
             let f = Math.floor(Math.random() * 140);
-            let s = Math.random() * 2;
-            let r = Math.random() * Math.PI * 2;
+            // let s = Math.random() * 2;
+            // let r = Math.random() * Math.PI * 2;
 
             brain.setPosition(x, y);
             brain.setFrame(f);
-            brain.setScale(s);
-            brain.setRotation(r);
+            // brain.setScale(s);
+            // brain.setRotation(r);
 
             buffer.add(brain);
         }
@@ -48,6 +50,12 @@ class Demo extends Scene
 
     update (delta: number)
     {
+        this.ccx = Math.sin(this.cx) * 2;
+        this.ccy = Math.cos(this.cx) * 2;
+
+        // this.game.renderer.camera.x = Math.floor(this.ccx);
+        // this.game.renderer.camera.y = Math.floor(this.ccy);
+
         this.game.renderer.camera.x = Math.sin(this.cx) * 2;
         this.game.renderer.camera.y = Math.cos(this.cx) * 2;
 

@@ -1594,127 +1594,6 @@ class Sprite extends DisplayObjectContainer {
     }
 }
 
-class SpriteBuffer {
-    constructor(game, maxSize) {
-        this.type = 'SpriteBuffer';
-        this.visible = true;
-        this.renderable = true;
-        this.children = [];
-        this.texture = null;
-        this.dirty = false;
-        this.game = game;
-        this.renderer = game.renderer;
-        this.gl = game.renderer.gl;
-        this.shader = game.renderer.shader;
-        this.resetBuffers(maxSize);
-    }
-    //  TODO: Split to own function so Shader can share it?
-    resetBuffers(maxSize) {
-        const gl = this.gl;
-        const shader = this.shader;
-        const indexSize = shader.indexSize;
-        this.indexType = gl.UNSIGNED_SHORT;
-        if (maxSize > 65535) {
-            if (!this.renderer.elementIndexExtension) {
-                console.warn('Browser does not support OES uint element index. SpriteBuffer.maxSize cannot exceed 65535');
-                maxSize = 65535;
-            }
-            else {
-                this.indexType = gl.UNSIGNED_INT;
-            }
-        }
-        let ibo = [];
-        //  Seed the index buffer
-        for (let i = 0; i < (maxSize * indexSize); i += indexSize) {
-            ibo.push(i + 0, i + 1, i + 2, i + 2, i + 3, i + 0);
-        }
-        this.data = new ArrayBuffer(maxSize * shader.quadByteSize);
-        if (this.indexType === gl.UNSIGNED_SHORT) {
-            this.index = new Uint16Array(ibo);
-        }
-        else {
-            this.index = new Uint32Array(ibo);
-        }
-        this.vertexViewF32 = new Float32Array(this.data);
-        this.vertexViewU32 = new Uint32Array(this.data);
-        this.vertexBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, this.data, gl.STATIC_DRAW);
-        this.indexBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.index, gl.STATIC_DRAW);
-        //  Tidy-up
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
-        ibo = [];
-        this.size = 0;
-        this.maxSize = maxSize;
-        this.quadIndexSize = shader.quadIndexSize;
-        this.activeTextures = [];
-    }
-    render() {
-        const gl = this.gl;
-        this.shader.bindBuffers(this.indexBuffer, this.vertexBuffer);
-        if (this.dirty) {
-            gl.bufferData(gl.ARRAY_BUFFER, this.data, gl.STATIC_DRAW);
-            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.index, gl.STATIC_DRAW);
-            this.dirty = false;
-        }
-        //  For now we'll allow just the one texture
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, this.activeTextures[0].glTexture);
-        gl.drawElements(gl.TRIANGLES, this.size * this.quadIndexSize, this.indexType, 0);
-    }
-    add(source) {
-        if (this.size === this.maxSize) {
-            return;
-        }
-        const textureIndex = 0;
-        this.activeTextures[textureIndex] = source.texture;
-        let offset = this.size * this.shader.quadElementSize;
-        const F32 = this.vertexViewF32;
-        const U32 = this.vertexViewU32;
-        const frame = source.frame;
-        const vertices = source.updateVertices();
-        const topLeft = vertices[0];
-        const topRight = vertices[1];
-        const bottomLeft = vertices[2];
-        const bottomRight = vertices[3];
-        F32[offset++] = topLeft.x;
-        F32[offset++] = topLeft.y;
-        F32[offset++] = frame.u0;
-        F32[offset++] = frame.v0;
-        F32[offset++] = textureIndex;
-        U32[offset++] = this.shader.packColor(topLeft.color, topLeft.alpha);
-        F32[offset++] = bottomLeft.x;
-        F32[offset++] = bottomLeft.y;
-        F32[offset++] = frame.u0;
-        F32[offset++] = frame.v1;
-        F32[offset++] = textureIndex;
-        U32[offset++] = this.shader.packColor(bottomLeft.color, bottomLeft.alpha);
-        F32[offset++] = bottomRight.x;
-        F32[offset++] = bottomRight.y;
-        F32[offset++] = frame.u1;
-        F32[offset++] = frame.v1;
-        F32[offset++] = textureIndex;
-        U32[offset++] = this.shader.packColor(bottomRight.color, bottomRight.alpha);
-        F32[offset++] = topRight.x;
-        F32[offset++] = topRight.y;
-        F32[offset++] = frame.u1;
-        F32[offset++] = frame.v0;
-        F32[offset++] = textureIndex;
-        U32[offset++] = this.shader.packColor(topRight.color, topRight.alpha);
-        this.size++;
-        this.dirty = true;
-    }
-    willRender() {
-        return (this.visible && this.renderable);
-    }
-    update() {
-    }
-    updateTransform() {
-    }
-}
-
 class Scene$1 {
     constructor(game) {
         this.game = game;
@@ -1732,41 +1611,107 @@ class Scene$1 {
     }
 }
 
+class Keyboard extends EventEmitter {
+    constructor() {
+        super();
+        this.keydownHandler = (event) => this.onKeyDown(event);
+        this.keyupHandler = (event) => this.onKeyUp(event);
+        this.blurHandler = () => this.onBlur();
+        window.addEventListener('keydown', this.keydownHandler);
+        window.addEventListener('keyup', this.keyupHandler);
+        window.addEventListener('blur', this.blurHandler);
+        this.keyMap = {
+            'Enter': 'enter',
+            'Escape': 'esc',
+            'Space': 'space',
+            'ArrowLeft': 'left',
+            'ArrowUp': 'up',
+            'ArrowRight': 'right',
+            'ArrowDown': 'down',
+            // MS Edge
+            13: 'enter',
+            27: 'esc',
+            32: 'space',
+            37: 'left',
+            38: 'up',
+            39: 'right',
+            40: 'down'
+        };
+        //  This nice bit of code is from kontra.js
+        for (let i = 0; i < 26; i++) {
+            this.keyMap[i + 65] = this.keyMap['Key' + String.fromCharCode(i + 65)] = String.fromCharCode(i + 97);
+        }
+        this.pressed = {};
+    }
+    onBlur() {
+        this.pressed = {};
+    }
+    onKeyDown(event) {
+        let key = this.keyMap[event.code || event.which];
+        if (key) {
+            event.preventDefault();
+            this.pressed[key] = true;
+            //  Key specific event
+            this.emit('keydown-' + key, event);
+        }
+        //  Global keydown event
+        this.emit('keydown', event);
+    }
+    onKeyUp(event) {
+        let key = this.keyMap[event.code || event.which];
+        if (key) {
+            this.pressed[key] = false;
+            //  Key specific event
+            this.emit('keyup-' + key, event);
+        }
+        //  Global keyup event
+        this.emit('keyup', event);
+    }
+    isDown(key) {
+        return !!this.pressed[key];
+    }
+}
+
 class Demo extends Scene$1 {
     constructor(game) {
         super(game);
-        this.cx = 0;
     }
     preload() {
         this.load.setPath('../assets/');
-        this.load.image('cat', 'ultimatevirtues.gif');
-        this.load.spritesheet('tiles', 'gridtiles.png', { frameWidth: 32, frameHeight: 32 });
+        this.load.image('ayu');
+        this.load.image('hotdog');
     }
     create() {
-        this.world.addChild(new Sprite(this, 400, 300, 'cat'));
-        const buffer = new SpriteBuffer(this.game, 100000);
-        const brain = new Sprite(this, 0, 0, 'tiles');
-        for (let i = 0; i < buffer.maxSize; i++) {
-            let x = -800 + Math.floor(Math.random() * 1600);
-            let y = -300 + Math.floor(Math.random() * 1200);
-            let f = Math.floor(Math.random() * 140);
-            let s = Math.random() * 2;
-            let r = Math.random() * Math.PI * 2;
-            brain.setPosition(x, y);
-            brain.setFrame(f);
-            brain.setScale(s);
-            brain.setRotation(r);
-            buffer.add(brain);
-        }
-        this.world.addChild(buffer);
+        this.sprite = new Sprite(this, 400, 300, 'ayu');
+        this.world.addChild(this.sprite);
+        this.keyboard = new Keyboard();
+        //  Press space bar to toggle the texture
+        this.keyboard.on('keydown-space', () => {
+            if (this.sprite.texture.key === 'ayu') {
+                this.sprite.setTexture('hotdog');
+            }
+            else {
+                this.sprite.setTexture('ayu');
+            }
+        });
     }
     update(delta) {
-        this.game.renderer.camera.x = Math.sin(this.cx) * 2;
-        this.game.renderer.camera.y = Math.cos(this.cx) * 2;
-        this.cx += 0.01;
+        //  Arrows to move
+        if (this.keyboard.isDown('left')) {
+            this.sprite.x -= 300 * delta;
+        }
+        else if (this.keyboard.isDown('right')) {
+            this.sprite.x += 300 * delta;
+        }
+        if (this.keyboard.isDown('up')) {
+            this.sprite.y -= 300 * delta;
+        }
+        else if (this.keyboard.isDown('down')) {
+            this.sprite.y += 300 * delta;
+        }
     }
 }
-function demo10 () {
+function demo11 () {
     let game = new Game({
         width: 800,
         height: 600,
@@ -1783,7 +1728,8 @@ function demo10 () {
 // demo7();
 // demo8();
 // demo9();
-demo10();
+// demo10();
+demo11();
 //  Next steps:
 //  * Camera alpha
 //  * Camera background color

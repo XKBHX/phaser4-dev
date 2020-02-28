@@ -50,7 +50,7 @@ export default class WebGLRenderer
         this.height = height;
         this.resolution = resolution;
 
-        const canvas = document.createElement('canvas'); 
+        const canvas = document.createElement('canvas');
 
         canvas.addEventListener('webglcontextlost', (event) => this.onContextLost(event), false);
         canvas.addEventListener('webglcontextrestored', () => this.onContextRestored(), false);
