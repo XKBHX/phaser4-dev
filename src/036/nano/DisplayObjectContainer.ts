@@ -3,6 +3,7 @@ import { Container } from './Container';
 
 export default class DisplayObjectContainer extends DisplayObject
 {
+    type: string = 'DisplayObjectContainer';
     children: Container[] = [];
 
     constructor ()

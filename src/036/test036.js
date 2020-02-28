@@ -229,20 +229,35 @@ class MultiTextureQuadShader {
     bind() {
         const gl = this.gl;
         const renderer = this.renderer;
-        const stride = this.vertexByteSize;
         const uniforms = this.uniforms;
-        const attribs = this.attribs;
         gl.useProgram(this.program);
         gl.uniformMatrix4fv(uniforms.projectionMatrix, false, renderer.projectionMatrix);
         gl.uniformMatrix4fv(uniforms.cameraMatrix, false, renderer.camera.matrix);
         gl.uniform1iv(uniforms.textureLocation, renderer.textureIndex);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+        this.bindBuffers(this.indexBuffer, this.vertexBuffer);
+    }
+    bindBuffers(indexBuffer, vertexBuffer) {
+        const gl = this.gl;
+        const stride = this.vertexByteSize;
+        const attribs = this.attribs;
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+        //  attributes must be reset whenever you change buffers
         gl.vertexAttribPointer(attribs.position, 2, gl.FLOAT, false, stride, 0); // size = 8
         gl.vertexAttribPointer(attribs.textureCoord, 2, gl.FLOAT, false, stride, 8); // size = 8
         gl.vertexAttribPointer(attribs.textureIndex, 1, gl.FLOAT, false, stride, 8 + 8); // size = 4
         gl.vertexAttribPointer(attribs.color, 4, gl.UNSIGNED_BYTE, true, stride, 8 + 8 + 4); // size = 4
         this.count = 0;
+    }
+    batchSpriteBuffer(buffer) {
+        if (buffer.size > 0) {
+            this.flush();
+            buffer.render();
+            //  Restore buffers
+            this.bindBuffers(this.indexBuffer, this.vertexBuffer);
+            return true;
+        }
+        return false;
     }
     batchSprite(sprite) {
         if (this.count === this.batchSize) {
@@ -441,6 +456,7 @@ class WebGLRenderer {
     initContext() {
         const gl = this.canvas.getContext('webgl', this.contextOptions);
         this.gl = gl;
+        this.elementIndexExtension = gl.getExtension('OES_element_index_uint');
         this.getMaxTextures();
         gl.disable(gl.DEPTH_TEST);
         gl.disable(gl.CULL_FACE);
@@ -576,8 +592,15 @@ class WebGLRenderer {
                     }
                     shader.batchSprite(entity);
                 }
-                //  Render the children, if it has any
-                if (entity.size) {
+                if (entity.type === 'SpriteBuffer') {
+                    if (shader.batchSpriteBuffer(entity)) {
+                        //  Reset active textures
+                        this.currentActiveTexture = 0;
+                        this.startActiveTexture++;
+                    }
+                }
+                else if (entity.size) {
+                    // Render the children, if it has any
                     this.renderChildren(entity);
                 }
             }
@@ -973,6 +996,7 @@ class DisplayObject {
 class DisplayObjectContainer extends DisplayObject {
     constructor() {
         super();
+        this.type = 'DisplayObjectContainer';
         this.children = [];
     }
     addChild(...child) {
@@ -1482,6 +1506,7 @@ class Vertex {
 class Sprite extends DisplayObjectContainer {
     constructor(scene, x, y, texture, frame) {
         super();
+        this.type = 'Sprite';
         // texture: Texture = null;
         // frame: Frame = null;
         this.vertices = [new Vertex(), new Vertex(), new Vertex(), new Vertex()];
@@ -1567,6 +1592,130 @@ class Sprite extends DisplayObjectContainer {
     }
 }
 
+class SpriteBuffer {
+    constructor(game, maxSize) {
+        this.type = 'SpriteBuffer';
+        this.visible = true;
+        this.renderable = true;
+        this.children = [];
+        this.texture = null;
+        this.dirty = false;
+        this.game = game;
+        this.renderer = game.renderer;
+        this.gl = game.renderer.gl;
+        this.shader = game.renderer.shader;
+        this.resetBuffers(maxSize);
+    }
+    //  TODO: Split to own function so Shader can share it?
+    resetBuffers(maxSize) {
+        const gl = this.gl;
+        const shader = this.shader;
+        const indexSize = shader.indexSize;
+        this.indexType = gl.UNSIGNED_SHORT;
+        if (maxSize > 65535) {
+            if (!this.renderer.elementIndexExtension) {
+                console.warn('Browser does not support OES uint element index. SpriteBuffer.maxSize cannot exceed 65535');
+                maxSize = 65535;
+            }
+            else {
+                this.indexType = gl.UNSIGNED_INT;
+            }
+        }
+        let ibo = [];
+        //  Seed the index buffer
+        for (let i = 0; i < (maxSize * indexSize); i += indexSize) {
+            ibo.push(i + 0, i + 1, i + 2, i + 2, i + 3, i + 0);
+        }
+        this.data = new ArrayBuffer(maxSize * shader.quadByteSize);
+        if (this.indexType === gl.UNSIGNED_SHORT) {
+            this.index = new Uint16Array(ibo);
+        }
+        else {
+            this.index = new Uint32Array(ibo);
+        }
+        this.vertexViewF32 = new Float32Array(this.data);
+        this.vertexViewU32 = new Uint32Array(this.data);
+        this.vertexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, this.data, gl.STATIC_DRAW);
+        this.indexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.index, gl.STATIC_DRAW);
+        //  Tidy-up
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        ibo = [];
+        this.size = 0;
+        this.maxSize = maxSize;
+        this.quadIndexSize = shader.quadIndexSize;
+        this.activeTextures = [];
+    }
+    render() {
+        const gl = this.gl;
+        this.shader.bindBuffers(this.indexBuffer, this.vertexBuffer);
+        // gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+        // gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+        // if (this.dirty)
+        // {
+        gl.bufferData(gl.ARRAY_BUFFER, this.data, gl.STATIC_DRAW);
+        // gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.index, gl.STATIC_DRAW);
+        // this.dirty = false;
+        // }
+        //  For now we'll allow just the one texture
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.activeTextures[0].glTexture);
+        gl.drawElements(gl.TRIANGLES, this.size * this.quadIndexSize, this.indexType, 0);
+    }
+    add(source) {
+        if (this.size === this.maxSize) {
+            return;
+        }
+        const textureIndex = 0;
+        this.activeTextures[textureIndex] = source.texture;
+        let offset = this.size * this.shader.quadElementSize;
+        const F32 = this.vertexViewF32;
+        const U32 = this.vertexViewU32;
+        const frame = source.frame;
+        const vertices = source.updateVertices();
+        const topLeft = vertices[0];
+        const topRight = vertices[1];
+        const bottomLeft = vertices[2];
+        const bottomRight = vertices[3];
+        F32[offset++] = topLeft.x;
+        F32[offset++] = topLeft.y;
+        F32[offset++] = frame.u0;
+        F32[offset++] = frame.v0;
+        F32[offset++] = textureIndex;
+        U32[offset++] = this.shader.packColor(topLeft.color, topLeft.alpha);
+        F32[offset++] = bottomLeft.x;
+        F32[offset++] = bottomLeft.y;
+        F32[offset++] = frame.u0;
+        F32[offset++] = frame.v1;
+        F32[offset++] = textureIndex;
+        U32[offset++] = this.shader.packColor(bottomLeft.color, bottomLeft.alpha);
+        F32[offset++] = bottomRight.x;
+        F32[offset++] = bottomRight.y;
+        F32[offset++] = frame.u1;
+        F32[offset++] = frame.v1;
+        F32[offset++] = textureIndex;
+        U32[offset++] = this.shader.packColor(bottomRight.color, bottomRight.alpha);
+        F32[offset++] = topRight.x;
+        F32[offset++] = topRight.y;
+        F32[offset++] = frame.u1;
+        F32[offset++] = frame.v0;
+        F32[offset++] = textureIndex;
+        U32[offset++] = this.shader.packColor(topRight.color, topRight.alpha);
+        this.size++;
+        this.dirty = true;
+    }
+    willRender() {
+        return (this.visible && this.renderable);
+    }
+    update() {
+    }
+    updateTransform() {
+    }
+}
+
 class Scene$1 {
     constructor(game) {
         this.game = game;
@@ -1584,168 +1733,6 @@ class Scene$1 {
     }
 }
 
-const easeCache = {
-    linear: (t) => {
-        return t;
-    },
-    inQuad: (t) => {
-        return t * t;
-    },
-    outQuad: (t) => {
-        return t * (2 - t);
-    },
-    inOutQuad: (t) => {
-        return t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-    },
-    inCubic: (t) => {
-        return t * t * t;
-    },
-    outCubic: (t) => {
-        return (--t) * t * t + 1;
-    },
-    inOutCubic: (t) => {
-        return t < .5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
-    },
-    inQuart: (t) => {
-        return t * t * t * t;
-    },
-    outQuart: (t) => {
-        return 1 - (--t) * t * t * t;
-    },
-    inOutQuart: (t) => {
-        return t < .5 ? 8 * t * t * t * t : 1 - 8 * (--t) * t * t * t;
-    },
-    inQuint: (t) => {
-        return t * t * t * t * t;
-    },
-    outQuint: (t) => {
-        return 1 + (--t) * t * t * t * t;
-    },
-    inOutQuint: (t) => {
-        return t < .5 ? 16 * t * t * t * t * t : 1 + 16 * (--t) * t * t * t * t;
-    },
-    inSine: (t) => {
-        return -1 * Math.cos(t / 1 * (Math.PI * 0.5)) + 1;
-    },
-    outSine: (t) => {
-        return Math.sin(t / 1 * (Math.PI * 0.5));
-    },
-    inOutSine: (t) => {
-        return -1 / 2 * (Math.cos(Math.PI * t) - 1);
-    },
-    inExpo: (t) => {
-        return (t == 0) ? 0 : Math.pow(2, 10 * (t - 1));
-    },
-    outExpo: (t) => {
-        return (t == 1) ? 1 : (-Math.pow(2, -10 * t) + 1);
-    },
-    inOutExpo: (t) => {
-        if (t == 0)
-            return 0;
-        if (t == 1)
-            return 1;
-        if ((t /= 1 / 2) < 1)
-            return 1 / 2 * Math.pow(2, 10 * (t - 1));
-        return 1 / 2 * (-Math.pow(2, -10 * --t) + 2);
-    },
-    inCirc: (t) => {
-        return -1 * (Math.sqrt(1 - t * t) - 1);
-    },
-    outCirc: (t) => {
-        return Math.sqrt(1 - (t = t - 1) * t);
-    },
-    inOutCirc: (t) => {
-        if ((t /= 1 / 2) < 1)
-            return -1 / 2 * (Math.sqrt(1 - t * t) - 1);
-        return 1 / 2 * (Math.sqrt(1 - (t -= 2) * t) + 1);
-    },
-    inElastic: (t) => {
-        if (t == 0)
-            return 0;
-        if (t == 1)
-            return 1;
-        let s = 1.70158;
-        let p = 0;
-        let a = 1;
-        if (!p)
-            p = 0.3;
-        {
-            s = p / (2 * Math.PI) * Math.asin(1 / a);
-        }
-        return -(a * Math.pow(2, 10 * (t -= 1)) * Math.sin((t - s) * (2 * Math.PI) / p));
-    },
-    outElastic: (t) => {
-        if (t == 0)
-            return 0;
-        if (t == 1)
-            return 1;
-        let s = 1.70158;
-        let p = 0;
-        let a = 1;
-        if (!p)
-            p = 0.3;
-        {
-            s = p / (2 * Math.PI) * Math.asin(1 / a);
-        }
-        return a * Math.pow(2, -10 * t) * Math.sin((t - s) * (2 * Math.PI) / p) + 1;
-    },
-    inOutElastic: (t) => {
-        if (t == 0)
-            return 0;
-        if ((t /= 1 / 2) == 2)
-            return 1;
-        let s = 1.70158;
-        let p = 0;
-        let a = 1;
-        if (!p)
-            p = (0.3 * 1.5);
-        {
-            s = p / (2 * Math.PI) * Math.asin(1 / a);
-        }
-        if (t < 1)
-            return -.5 * (a * Math.pow(2, 10 * (t -= 1)) * Math.sin((t - s) * (2 * Math.PI) / p));
-        return a * Math.pow(2, -10 * (t -= 1)) * Math.sin((t - s) * (2 * Math.PI) / p) * 0.5 + 1;
-    },
-    inBack: (t, s = 1.70158) => {
-        return 1 * t * t * ((s + 1) * t - s);
-    },
-    outBack: (t, s = 1.70158) => {
-        return 1 * ((t = t / 1 - 1) * t * ((s + 1) * t + s) + 1);
-    },
-    inOutBack: (t, s = 1.70158) => {
-        if ((t /= 1 / 2) < 1)
-            return 1 / 2 * (t * t * (((s *= (1.525)) + 1) * t - s));
-        return 1 / 2 * ((t -= 2) * t * (((s *= (1.525)) + 1) * t + s) + 2);
-    },
-    inBounce: (t) => {
-        return 1 - easeCache.outBounce(1 - t);
-    },
-    outBounce: (t) => {
-        if ((t /= 1) < (1 / 2.75)) {
-            return (7.5625 * t * t);
-        }
-        else if (t < (2 / 2.75)) {
-            return (7.5625 * (t -= (1.5 / 2.75)) * t + .75);
-        }
-        else if (t < (2.5 / 2.75)) {
-            return (7.5625 * (t -= (2.25 / 2.75)) * t + .9375);
-        }
-        else {
-            return (7.5625 * (t -= (2.625 / 2.75)) * t + .984375);
-        }
-    },
-    inOutBounce: (t) => {
-        if (t < 1 / 2)
-            return easeCache.inBounce(t * 2) * 0.5;
-        return easeCache.outBounce(t * 2 - 1) * 0.5 + 0.5;
-    }
-};
-function Ease(progress, easing) {
-    if (easeCache[easing]) {
-        return easeCache[easing](progress);
-    }
-}
-
 class Demo extends Scene$1 {
     constructor(game) {
         super(game);
@@ -1754,26 +1741,20 @@ class Demo extends Scene$1 {
         this.load.image('brain', '../assets/brain.png');
     }
     create() {
-        this.sprite1 = new Sprite(this, 400, 100, 'brain');
-        this.world.addChild(this.sprite1);
-        this.duration = 2000;
-        this.elapsed = 0;
+        const buffer = new SpriteBuffer(this.game, 1000);
+        const brain = new Sprite(this, 0, 0, 'brain');
+        for (let i = 0; i < 100; i++) {
+            let x = Math.floor(Math.random() * 800);
+            let y = Math.floor(Math.random() * 600);
+            brain.setPosition(x, y);
+            buffer.add(brain);
+        }
+        this.world.addChild(buffer);
     }
     update(delta) {
-        this.elapsed += (delta * 1000);
-        let reset = false;
-        if (this.elapsed > this.duration) {
-            this.elapsed = this.duration;
-            reset = true;
-        }
-        let v = Ease(this.elapsed / this.duration, 'inOutSine');
-        this.sprite1.y = 100 + (v * 300);
-        if (reset) {
-            this.elapsed = 0;
-        }
     }
 }
-function demo9 () {
+function demo10 () {
     let game = new Game({
         width: 800,
         height: 600,
@@ -1789,7 +1770,8 @@ function demo9 () {
 // demo6();
 // demo7();
 // demo8();
-demo9();
+// demo9();
+demo10();
 //  Next steps:
 //  * Camera alpha
 //  * Camera background color

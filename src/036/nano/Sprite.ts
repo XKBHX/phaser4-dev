@@ -6,6 +6,8 @@ import DisplayObjectContainer from './DisplayObjectContainer';
 
 export default class Sprite extends DisplayObjectContainer
 {
+    type: string = 'Sprite';
+
     readonly scene: Scene;
 
     // texture: Texture = null;

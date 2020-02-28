@@ -5,6 +5,7 @@ import DisplayObjectContainer from './DisplayObjectContainer';
 import Sprite from './Sprite';
 import { Container } from './Container';
 import Camera from './Camera';
+import SpriteBuffer from './SpriteBuffer';
 
 export default class WebGLRenderer
 {
@@ -41,6 +42,7 @@ export default class WebGLRenderer
     autoResize: boolean = true;
 
     contextLost: boolean = false;
+    elementIndexExtension: OES_element_index_uint;
 
     constructor (width: number, height: number, resolution: number = 1)
     {
@@ -66,6 +68,8 @@ export default class WebGLRenderer
         const gl = this.canvas.getContext('webgl', this.contextOptions);
 
         this.gl = gl;
+
+        this.elementIndexExtension = gl.getExtension('OES_element_index_uint');
 
         this.getMaxTextures();
 
@@ -294,9 +298,18 @@ export default class WebGLRenderer
                     shader.batchSprite(entity as Sprite);
                 }
 
-                //  Render the children, if it has any
-                if (entity.size)
+                if (entity.type === 'SpriteBuffer')
                 {
+                    if (shader.batchSpriteBuffer(entity as SpriteBuffer))
+                    {
+                        //  Reset active textures
+                        this.currentActiveTexture = 0;
+                        this.startActiveTexture++;
+                    }
+                }
+                else if (entity.size)
+                {
+                    // Render the children, if it has any
                     this.renderChildren(entity);
                 }
             }

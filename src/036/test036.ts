@@ -7,11 +7,13 @@ import demo6 from './demo6'; // test container children
 import demo7 from './demo7'; // Camera class (position, scale, rotation)
 import demo8 from './demo8'; // Event Emitter
 import demo9 from './demo9'; // Ease function
+import demo10 from './demo10'; // Sprite Buffer
 
 // demo6();
 // demo7();
 // demo8();
-demo9();
+// demo9();
+demo10();
 
 //  Next steps:
 

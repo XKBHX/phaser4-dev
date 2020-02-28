@@ -1,6 +1,7 @@
 import WebGLRenderer from './WebGLRenderer';
 import Sprite from './Sprite';
 import ISpriteMultiShader from './ISpriteMultiShader';
+import SpriteBuffer from './SpriteBuffer';
 
 const shaderSource = {
 
@@ -352,9 +353,7 @@ export default class MultiTextureQuadShader
     {
         const gl = this.gl;
         const renderer = this.renderer;
-        const stride = this.vertexByteSize;
         const uniforms = this.uniforms;
-        const attribs = this.attribs;
 
         gl.useProgram(this.program);
 
@@ -362,15 +361,43 @@ export default class MultiTextureQuadShader
         gl.uniformMatrix4fv(uniforms.cameraMatrix, false, renderer.camera.matrix);
         gl.uniform1iv(uniforms.textureLocation, renderer.textureIndex);
 
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+        this.bindBuffers(this.indexBuffer, this.vertexBuffer);
+    }
 
-        gl.vertexAttribPointer(attribs.position, 2, gl.FLOAT, false, stride, 0);            // size = 8
-        gl.vertexAttribPointer(attribs.textureCoord, 2, gl.FLOAT, false, stride, 8);        // size = 8
-        gl.vertexAttribPointer(attribs.textureIndex, 1, gl.FLOAT, false, stride, 8 + 8);    // size = 4
-        gl.vertexAttribPointer(attribs.color, 4, gl.UNSIGNED_BYTE, true, stride, 8 + 8 + 4);       // size = 4
+    bindBuffers (indexBuffer: WebGLBuffer, vertexBuffer: WebGLBuffer)
+    {
+        const gl = this.gl;
+        const stride = this.vertexByteSize;
+        const attribs = this.attribs;
+
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+
+        //  attributes must be reset whenever you change buffers
+
+        gl.vertexAttribPointer(attribs.position, 2, gl.FLOAT, false, stride, 0);                // size = 8
+        gl.vertexAttribPointer(attribs.textureCoord, 2, gl.FLOAT, false, stride, 8);            // size = 8
+        gl.vertexAttribPointer(attribs.textureIndex, 1, gl.FLOAT, false, stride, 8 + 8);        // size = 4
+        gl.vertexAttribPointer(attribs.color, 4, gl.UNSIGNED_BYTE, true, stride, 8 + 8 + 4);    // size = 4
 
         this.count = 0;
+    }
+
+    batchSpriteBuffer (buffer: SpriteBuffer): boolean
+    {
+        if (buffer.size > 0)
+        {
+            this.flush();
+
+            buffer.render();
+
+            //  Restore buffers
+            this.bindBuffers(this.indexBuffer, this.vertexBuffer);
+
+            return true;
+        }
+
+        return false;
     }
 
     batchSprite (sprite: Sprite)
