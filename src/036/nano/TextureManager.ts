@@ -2,6 +2,7 @@ import Texture from './Texture';
 import Game from './Game';
 import SpriteSheetParser from './SpriteSheetParser';
 import IFrameConfig from './IFrameConfig';
+import AtlasParser from './AtlasParser';
 
 export default class TextureManager
 {
@@ -61,5 +62,22 @@ export default class TextureManager
         return texture;
     }
 
+    addAtlas (key: string, source: HTMLImageElement, atlasData: Object): Texture
+    {
+        let texture = null;
+
+        if (!this.textures.has(key))
+        {
+            texture = new Texture(key, source);
+
+            texture.glTexture = this.game.renderer.createGLTexture(texture.image);
+
+            AtlasParser(texture, atlasData);
+
+            this.textures.set(key, texture);
+        }
+
+        return texture;
+    }
 
 }

@@ -88,6 +88,15 @@ export default class Loader
 
     fileComplete (file: File)
     {
+        //  Link file?
+        if (file.linkFile && file.linkFile.hasLoaded)
+        {
+            const imageFile = (file.type === 'atlasimage') ? file : file.linkFile;
+            const jsonFile = (file.type === 'atlasjson') ? file : file.linkFile;
+
+            this.game.textures.addAtlas(file.key, imageFile.data, jsonFile.data);
+        }
+
         this.inflight.delete(file.url);
 
         this.nextFile();
@@ -123,6 +132,80 @@ export default class Loader
         this.queue.push(file);
 
         return this;
+    }
+
+    atlas (key: string, textureURL?: string, atlasURL?: string)
+    {
+        let textureFile = new File('atlasimage', key, this.getURL(key, textureURL, '.png'), (file: File) => this.imageTagLoader(file));
+        let JSONFile = new File('atlasjson', key, this.getURL(key, atlasURL, '.json'), (file: File) => this.XHRLoader(file));
+
+        JSONFile.config = { responseType: 'text' };
+
+        textureFile.linkFile = JSONFile;
+        JSONFile.linkFile = textureFile;
+
+        this.queue.push(textureFile);
+        this.queue.push(JSONFile);
+
+        return this;
+    }
+
+    json (key: string, url?: string)
+    {
+        let file = new File('json', key, this.getURL(key, url, '.json'), (file: File) => this.XHRLoader(file));
+
+        file.config = { responseType: 'text' };
+
+        this.queue.push(file);
+
+        return this;
+    }
+
+    csv (key: string, url?: string)
+    {
+        let file = new File('csv', key, this.getURL(key, url, '.csv'), (file: File) => this.XHRLoader(file));
+
+        file.config = { responseType: 'text' };
+
+        this.queue.push(file);
+
+        return this;
+    }
+
+    XHRLoader (file: File)
+    {
+        const xhr = new XMLHttpRequest();
+
+        xhr.open('GET', file.url, true);
+
+        xhr.responseType = file.config['responseType'];
+
+        xhr.onload = (event: ProgressEvent) => {
+
+            file.hasLoaded = true;
+
+            if (file.type === 'json' || file.type === 'atlasjson')
+            {
+                file.data = JSON.parse(xhr.responseText);
+            }
+            else
+            {
+                file.data = xhr.responseText;
+            }
+
+            this.fileComplete(file);
+
+        };
+
+        xhr.onerror = () => {
+
+            file.hasLoaded = true;
+
+            this.fileError(file);
+
+        };
+
+        xhr.send();
     }
 
     imageTagLoader (file: File)
