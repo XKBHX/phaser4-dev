@@ -15,9 +15,9 @@ import demo12 from './demo12'; // Texture Atlas Loader (array + hash + tp3 + tri
 // demo7();
 // demo8();
 // demo9();
-// demo10();
+demo10();
 // demo11();
-demo12();
+// demo12();
 
 //  Next steps:
 

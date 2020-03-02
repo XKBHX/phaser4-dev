@@ -20,12 +20,10 @@ function AddToDOM(element, parent) {
     target.appendChild(element);
     return element;
 }
-//# sourceMappingURL=AddToDOM.js.map
 
 function isCordova() {
     return (window.hasOwnProperty('cordova'));
 }
-//# sourceMappingURL=isCordova.js.map
 
 function DOMContentLoaded(callback) {
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
@@ -49,7 +47,6 @@ function DOMContentLoaded(callback) {
         window.addEventListener('load', check, true);
     }
 }
-//# sourceMappingURL=DOMContentLoaded.js.map
 
 //  From Pixi v5
 const fragTemplate = [
@@ -863,7 +860,6 @@ class Vec2 {
         return data[Symbol.iterator]();
     }
 }
-//# sourceMappingURL=Vec2.js.map
 
 class DisplayObject {
     constructor() {
@@ -1588,7 +1584,7 @@ class Game extends EventEmitter {
         requestAnimationFrame(() => this.step());
     }
     banner(version) {
-        console.log('%cPhaser Nano v' + version + '%c https://phaser4.io', 'padding: 2px 20px; color: #fff; background: linear-gradient(to right, #00bcc3, #3e0081 10%, #3e0081 90%, #3e0081 10%, #00bcc3)', '');
+        console.log('%c  %c  %cPhaser Nano v' + version + '%c https://phaser4.io', 'padding: 2px; background: linear-gradient(to right, #00bcc3, #3e0081)', 'padding: 2px; background: #3e0081 url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAJ1BMVEUALon///+9tJQAAABv9v92d2IAn6qHEhL/DQ3/fCUOOlNMPUD/uz24pItZAAAAaElEQVQI12OAA/YCKKPyOANbWgKQUdFZkOLiBmJ0zHIRdAEKWXR0uQimABnWu3elpIEYhoKCYS4ui8EModBQRQMG09AgQSBQBmpvBzOABhYpAYEBg3FpEJAOZgCqAdEGDAzGIACk4QAAsv0aPCHrnowAAAAASUVORK5CYII=) no-repeat;', 'padding: 2px 20px 2px 8px; color: #fff; background: linear-gradient(to right, #3e0081 90%, #3e0081 10%, #00bcc3)', '');
     }
     step() {
         const now = Date.now();
@@ -1721,6 +1717,127 @@ class Sprite extends DisplayObjectContainer {
     }
 }
 
+class SpriteBuffer {
+    constructor(game, maxSize) {
+        this.type = 'SpriteBuffer';
+        this.visible = true;
+        this.renderable = true;
+        this.children = [];
+        this.texture = null;
+        this.dirty = false;
+        this.game = game;
+        this.renderer = game.renderer;
+        this.gl = game.renderer.gl;
+        this.shader = game.renderer.shader;
+        this.resetBuffers(maxSize);
+    }
+    //  TODO: Split to own function so Shader can share it?
+    resetBuffers(maxSize) {
+        const gl = this.gl;
+        const shader = this.shader;
+        const indexSize = shader.indexSize;
+        this.indexType = gl.UNSIGNED_SHORT;
+        if (maxSize > 65535) {
+            if (!this.renderer.elementIndexExtension) {
+                console.warn('Browser does not support OES uint element index. SpriteBuffer.maxSize cannot exceed 65535');
+                maxSize = 65535;
+            }
+            else {
+                this.indexType = gl.UNSIGNED_INT;
+            }
+        }
+        let ibo = [];
+        //  Seed the index buffer
+        for (let i = 0; i < (maxSize * indexSize); i += indexSize) {
+            ibo.push(i + 0, i + 1, i + 2, i + 2, i + 3, i + 0);
+        }
+        this.data = new ArrayBuffer(maxSize * shader.quadByteSize);
+        if (this.indexType === gl.UNSIGNED_SHORT) {
+            this.index = new Uint16Array(ibo);
+        }
+        else {
+            this.index = new Uint32Array(ibo);
+        }
+        this.vertexViewF32 = new Float32Array(this.data);
+        this.vertexViewU32 = new Uint32Array(this.data);
+        this.vertexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, this.data, gl.STATIC_DRAW);
+        this.indexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.index, gl.STATIC_DRAW);
+        //  Tidy-up
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        ibo = [];
+        this.size = 0;
+        this.maxSize = maxSize;
+        this.quadIndexSize = shader.quadIndexSize;
+        this.activeTextures = [];
+    }
+    render() {
+        const gl = this.gl;
+        this.shader.bindBuffers(this.indexBuffer, this.vertexBuffer);
+        if (this.dirty) {
+            gl.bufferData(gl.ARRAY_BUFFER, this.data, gl.STATIC_DRAW);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.index, gl.STATIC_DRAW);
+            this.dirty = false;
+        }
+        //  For now we'll allow just the one texture
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.activeTextures[0].glTexture);
+        gl.drawElements(gl.TRIANGLES, this.size * this.quadIndexSize, this.indexType, 0);
+    }
+    add(source) {
+        if (this.size === this.maxSize) {
+            return;
+        }
+        const textureIndex = 0;
+        this.activeTextures[textureIndex] = source.texture;
+        let offset = this.size * this.shader.quadElementSize;
+        const F32 = this.vertexViewF32;
+        const U32 = this.vertexViewU32;
+        const frame = source.frame;
+        const vertices = source.updateVertices();
+        const topLeft = vertices[0];
+        const topRight = vertices[1];
+        const bottomLeft = vertices[2];
+        const bottomRight = vertices[3];
+        F32[offset++] = topLeft.x;
+        F32[offset++] = topLeft.y;
+        F32[offset++] = frame.u0;
+        F32[offset++] = frame.v0;
+        F32[offset++] = textureIndex;
+        U32[offset++] = this.shader.packColor(topLeft.color, topLeft.alpha);
+        F32[offset++] = bottomLeft.x;
+        F32[offset++] = bottomLeft.y;
+        F32[offset++] = frame.u0;
+        F32[offset++] = frame.v1;
+        F32[offset++] = textureIndex;
+        U32[offset++] = this.shader.packColor(bottomLeft.color, bottomLeft.alpha);
+        F32[offset++] = bottomRight.x;
+        F32[offset++] = bottomRight.y;
+        F32[offset++] = frame.u1;
+        F32[offset++] = frame.v1;
+        F32[offset++] = textureIndex;
+        U32[offset++] = this.shader.packColor(bottomRight.color, bottomRight.alpha);
+        F32[offset++] = topRight.x;
+        F32[offset++] = topRight.y;
+        F32[offset++] = frame.u1;
+        F32[offset++] = frame.v0;
+        F32[offset++] = textureIndex;
+        U32[offset++] = this.shader.packColor(topRight.color, topRight.alpha);
+        this.size++;
+        this.dirty = true;
+    }
+    willRender() {
+        return (this.visible && this.renderable);
+    }
+    update() {
+    }
+    updateTransform() {
+    }
+}
+
 class Scene$1 {
     constructor(game) {
         this.game = game;
@@ -1741,21 +1858,44 @@ class Scene$1 {
 class Demo extends Scene$1 {
     constructor(game) {
         super(game);
+        this.cx = 0;
+        this.ccx = 0;
+        this.ccy = 0;
     }
     preload() {
         this.load.setPath('../assets/');
-        this.load.atlas('test', 'atlas-notrim.png', 'atlas-notrim.json');
-        // this.load.atlas('test', 'atlas-trimmed.png', 'atlas-trimmed.json');
+        this.load.image('cat', 'ultimatevirtues.gif');
+        this.load.spritesheet('tiles', 'gridtiles2.png', { frameWidth: 32, frameHeight: 32, margin: 1, spacing: 2 });
     }
     create() {
-        this.sprite = new Sprite(this, 400, 300, 'test', 'hello');
-        this.world.addChild(this.sprite);
+        this.world.addChild(new Sprite(this, 400, 300, 'cat'));
+        const buffer = new SpriteBuffer(this.game, 100000);
+        const brain = new Sprite(this, 0, 0, 'tiles');
+        for (let i = 0; i < buffer.maxSize; i++) {
+            let x = -800 + Math.floor(Math.random() * 1600);
+            let y = -300 + Math.floor(Math.random() * 1200);
+            let f = Math.floor(Math.random() * 140);
+            // let s = Math.random() * 2;
+            // let r = Math.random() * Math.PI * 2;
+            brain.setPosition(x, y);
+            brain.setFrame(f);
+            // brain.setScale(s);
+            // brain.setRotation(r);
+            buffer.add(brain);
+        }
+        this.world.addChild(buffer);
     }
-    update() {
-        this.sprite.rotation += 0.01;
+    update(delta) {
+        this.ccx = Math.sin(this.cx) * 2;
+        this.ccy = Math.cos(this.cx) * 2;
+        // this.game.renderer.camera.x = Math.floor(this.ccx);
+        // this.game.renderer.camera.y = Math.floor(this.ccy);
+        this.game.renderer.camera.x = Math.sin(this.cx) * 2;
+        this.game.renderer.camera.y = Math.cos(this.cx) * 2;
+        this.cx += 0.01;
     }
 }
-function demo12 () {
+function demo10 () {
     let game = new Game({
         width: 800,
         height: 600,
@@ -1772,9 +1912,9 @@ function demo12 () {
 // demo7();
 // demo8();
 // demo9();
-// demo10();
+demo10();
 // demo11();
-demo12();
+// demo12();
 //  Next steps:
 //  * Camera alpha
 //  * Camera background color

@@ -1,5 +1,5 @@
 import Sprite from './SpriteMergedTransform';
-import Texture from './Texture';
+import Texture from './Texture22';
 import SingleTexturedQuadShaderColor from './SingleTexturedQuadShaderColorCamera';
 import { Matrix4, Translate, Rotate } from '@phaserjs/math-matrix4';
 import { Ortho } from '@phaserjs/math-matrix4-funcs';

@@ -1,5 +1,5 @@
 import Sprite from './TexturedSprite';
-import Texture from './Texture';
+import Texture from './Texture22';
 import MultiTexturedQuadShader from './MultiTexturedQuadShader';
 import { Ortho } from '@phaserjs/math-matrix4-funcs';
 

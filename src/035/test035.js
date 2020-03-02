@@ -44,6 +44,7 @@ class Matrix2D {
         return data[Symbol.iterator]();
     }
 }
+//# sourceMappingURL=Matrix2D.js.map
 
 class Vec2 {
     /**
@@ -104,6 +105,7 @@ class Vec2 {
         return data[Symbol.iterator]();
     }
 }
+//# sourceMappingURL=Vec2.js.map
 
 class Transform {
     constructor(x = 0, y = 0, rotation = 0, scaleX = 1, scaleY = 1) {
@@ -229,6 +231,7 @@ class Transform {
         return this._skew.y;
     }
 }
+//# sourceMappingURL=Transform.js.map
 
 function part25 () {
     //  Single quad with shader
@@ -484,8 +487,10 @@ function part25 () {
     render();
 }
 
-// part24();
 part25();
+// bunnymarkNoColor();
+// bunnymarkSingleTexture();
+// bunnymarkNoColorMerged();
 //  Next steps:
 //  * Encode color as a single float, rather than a vec4
 //  * Update Merged Transform to cache rotation and scale

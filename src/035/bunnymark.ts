@@ -1,5 +1,5 @@
 import Bunny from './Bunny';
-import Texture from './Texture';
+import Texture from './Texture22';
 import MultiTexturedQuadShader from './MultiTexturedQuadShaderColor';
 import { Ortho } from '@phaserjs/math-matrix4-funcs';
 
