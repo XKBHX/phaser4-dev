@@ -9,13 +9,15 @@ import demo8 from './demo8'; // Event Emitter
 import demo9 from './demo9'; // Ease function
 import demo10 from './demo10'; // Sprite Buffer
 import demo11 from './demo11'; // Keyboard
+import demo12 from './demo12'; // Texture Atlas Loader (array + hash + tp3 + trimmed)
 
 // demo6();
 // demo7();
 // demo8();
 // demo9();
 // demo10();
-demo11();
+// demo11();
+demo12();
 
 //  Next steps:
 
@@ -26,16 +28,16 @@ demo11();
 //  * Camera ignore | ignore except
 //  * Camera scroll factor (?)
 //  * Cache world values?
-//  * Texture Atlas Loader
 //  * Multi Texture re-use old texture IDs when count > max supported
 //  * Single Texture shader
-//  * Static Batch shader (Static Container?)
 //  * Tile Layer
 //  * Input point translation
 //  * Instead of a Quad class, try a class that can have any number of vertices in it (ala Rope), or any vertex moved
 
 //  Done:
 
+//  X Static Batch shader (Sprite Buffer)
+//  X Texture Atlas Loader
 //  X Don't defer updateTransform - do immediately
 //  X Context lost handler
 //  X Renderer resize handler

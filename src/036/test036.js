@@ -667,6 +667,12 @@ class Loader {
         this.onComplete();
     }
     fileComplete(file) {
+        //  Link file?
+        if (file.linkFile && file.linkFile.hasLoaded) {
+            const imageFile = (file.type === 'atlasimage') ? file : file.linkFile;
+            const jsonFile = (file.type === 'atlasjson') ? file : file.linkFile;
+            this.game.textures.addAtlas(file.key, imageFile.data, jsonFile.data);
+        }
         this.inflight.delete(file.url);
         this.nextFile();
     }
@@ -687,6 +693,48 @@ class Loader {
         file.config = frameConfig;
         this.queue.push(file);
         return this;
+    }
+    atlas(key, textureURL, atlasURL) {
+        let textureFile = new File('atlasimage', key, this.getURL(key, textureURL, '.png'), (file) => this.imageTagLoader(file));
+        let JSONFile = new File('atlasjson', key, this.getURL(key, atlasURL, '.json'), (file) => this.XHRLoader(file));
+        JSONFile.config = { responseType: 'text' };
+        textureFile.linkFile = JSONFile;
+        JSONFile.linkFile = textureFile;
+        this.queue.push(textureFile);
+        this.queue.push(JSONFile);
+        return this;
+    }
+    json(key, url) {
+        let file = new File('json', key, this.getURL(key, url, '.json'), (file) => this.XHRLoader(file));
+        file.config = { responseType: 'text' };
+        this.queue.push(file);
+        return this;
+    }
+    csv(key, url) {
+        let file = new File('csv', key, this.getURL(key, url, '.csv'), (file) => this.XHRLoader(file));
+        file.config = { responseType: 'text' };
+        this.queue.push(file);
+        return this;
+    }
+    XHRLoader(file) {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', file.url, true);
+        xhr.responseType = file.config['responseType'];
+        xhr.onload = (event) => {
+            file.hasLoaded = true;
+            if (file.type === 'json' || file.type === 'atlasjson') {
+                file.data = JSON.parse(xhr.responseText);
+            }
+            else {
+                file.data = xhr.responseText;
+            }
+            this.fileComplete(file);
+        };
+        xhr.onerror = () => {
+            file.hasLoaded = true;
+            this.fileError(file);
+        };
+        xhr.send();
     }
     imageTagLoader(file) {
         // console.log('Loader.imageTagLoader', file.key);
@@ -1122,22 +1170,41 @@ class Scene {
 
 class Frame {
     constructor(texture, key, x, y, width, height) {
+        this.trimmed = false;
         this.texture = texture;
         this.key = key;
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
+        this.sourceSizeWidth = width;
+        this.sourceSizeHeight = height;
         this.updateUVs();
+    }
+    setPivot(x, y) {
+        this.pivot = { x, y };
+    }
+    setSourceSize(width, height) {
+        this.sourceSizeWidth = width;
+        this.sourceSizeHeight = height;
+    }
+    setTrim(width, height, x, y, w, h) {
+        this.trimmed = true;
+        this.sourceSizeWidth = width;
+        this.sourceSizeHeight = height;
+        this.spriteSourceSizeX = x;
+        this.spriteSourceSizeY = y;
+        this.spriteSourceSizeWidth = w;
+        this.spriteSourceSizeHeight = h;
     }
     updateUVs() {
         const { x, y, width, height } = this;
-        const sourceWidth = this.texture.width;
-        const sourceHeight = this.texture.height;
-        this.u0 = x / sourceWidth;
-        this.v0 = y / sourceHeight;
-        this.u1 = (x + width) / sourceWidth;
-        this.v1 = (y + height) / sourceHeight;
+        const baseTextureWidth = this.texture.width;
+        const baseTextureHeight = this.texture.height;
+        this.u0 = x / baseTextureWidth;
+        this.v0 = y / baseTextureHeight;
+        this.u1 = (x + width) / baseTextureWidth;
+        this.v1 = (y + height) / baseTextureHeight;
     }
 }
 
@@ -1226,6 +1293,44 @@ function SpriteSheetParser (texture, x, y, width, height, frameConfig) {
     }
 }
 
+function AtlasParser (texture, data) {
+    let frames;
+    if (Array.isArray(data.textures)) {
+        //  TP3 Format
+        frames = data.textures[0].frames;
+    }
+    else if (Array.isArray(data.frames)) {
+        //  TP2 Format Array
+        frames = data.frames;
+    }
+    else if (data.hasOwnProperty('frames')) {
+        //  TP2 Format Hash
+        frames = Object.values(data.frames);
+    }
+    else {
+        console.warn('Invalid Texture Atlas JSON');
+    }
+    if (frames) {
+        let newFrame;
+        for (let i = 0; i < frames.length; i++) {
+            let src = frames[i];
+            //  The frame values are the exact coordinates to cut the frame out of the atlas from
+            newFrame = texture.add(src.filename, src.frame.x, src.frame.y, src.frame.w, src.frame.h);
+            //  These are the original (non-trimmed) sprite values
+            if (src.trimmed) {
+                newFrame.setTrim(src.sourceSize.w, src.sourceSize.h, src.spriteSourceSize.x, src.spriteSourceSize.y, src.spriteSourceSize.w, src.spriteSourceSize.h);
+            }
+            else {
+                newFrame.setSourceSize(src.sourceSize.w, src.sourceSize.h);
+            }
+            if (src.rotated) ;
+            if (src.anchor) {
+                newFrame.setPivot(src.anchor.x, src.anchor.y);
+            }
+        }
+    }
+}
+
 class TextureManager {
     constructor(game) {
         this.game = game;
@@ -1254,6 +1359,16 @@ class TextureManager {
             texture = new Texture(key, source);
             texture.glTexture = this.game.renderer.createGLTexture(texture.image);
             SpriteSheetParser(texture, 0, 0, texture.width, texture.height, frameConfig);
+            this.textures.set(key, texture);
+        }
+        return texture;
+    }
+    addAtlas(key, source, atlasData) {
+        let texture = null;
+        if (!this.textures.has(key)) {
+            texture = new Texture(key, source);
+            texture.glTexture = this.game.renderer.createGLTexture(texture.image);
+            AtlasParser(texture, atlasData);
             this.textures.set(key, texture);
         }
         return texture;
@@ -1509,10 +1624,7 @@ class Sprite extends DisplayObjectContainer {
     constructor(scene, x, y, texture, frame) {
         super();
         this.type = 'Sprite';
-        // texture: Texture = null;
-        // frame: Frame = null;
         this.vertices = [new Vertex(), new Vertex(), new Vertex(), new Vertex()];
-        // private _alpha: number = 1;
         this._tint = 0xffffff;
         this.scene = scene;
         this.setTexture(texture, frame);
@@ -1530,7 +1642,11 @@ class Sprite extends DisplayObjectContainer {
     setFrame(key) {
         const frame = this.texture.get(key);
         this.frame = frame;
-        return this.setSize(frame.width, frame.height);
+        this.setSize(frame.sourceSizeWidth, frame.sourceSizeHeight);
+        if (frame.pivot) {
+            this.setOrigin(frame.pivot.x, frame.pivot.y);
+        }
+        return this;
     }
     setAlpha(topLeft = 1, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
         const vertices = this.vertices;
@@ -1549,36 +1665,47 @@ class Sprite extends DisplayObjectContainer {
         return this;
     }
     updateVertices() {
-        //  Update Vertices:
-        const w = this.width;
-        const h = this.height;
-        const x0 = -(this._origin.x * w);
-        const x1 = x0 + w;
-        const y0 = -(this._origin.y * h);
-        const y1 = y0 + h;
+        const frame = this.frame;
+        const origin = this._origin;
+        let w0 = 0;
+        let w1 = 0;
+        let h0 = 0;
+        let h1 = 0;
         const { a, b, c, d, tx, ty } = this.worldTransform;
-        //  Cache the calculations to avoid 8 getX/Y function calls:
-        const x0a = x0 * a;
-        const x0b = x0 * b;
-        const y0c = y0 * c;
-        const y0d = y0 * d;
-        const x1a = x1 * a;
-        const x1b = x1 * b;
-        const y1c = y1 * c;
-        const y1d = y1 * d;
+        if (frame.trimmed) {
+            w1 = frame.spriteSourceSizeX - (origin.x * frame.sourceSizeWidth);
+            w0 = w1 + frame.spriteSourceSizeWidth;
+            h1 = frame.spriteSourceSizeY - (origin.y * frame.sourceSizeHeight);
+            h0 = h1 + frame.spriteSourceSizeHeight;
+        }
+        else {
+            w1 = -origin.x * frame.sourceSizeWidth;
+            w0 = w1 + frame.sourceSizeWidth;
+            h1 = -origin.y * frame.sourceSizeHeight;
+            h0 = h1 + frame.sourceSizeHeight;
+        }
+        //  Cache the calculations to avoid duplicates
+        const w1a = w1 * a;
+        const w1b = w1 * b;
+        const h1c = h1 * c;
+        const h1d = h1 * d;
+        const w0a = w0 * a;
+        const w0b = w0 * b;
+        const h0c = h0 * c;
+        const h0d = h0 * d;
         const vertices = this.vertices;
         //  top left
-        vertices[0].x = x0a + y0c + tx;
-        vertices[0].y = x0b + y0d + ty;
+        vertices[0].x = w1a + h1c + tx;
+        vertices[0].y = w1b + h1d + ty;
         //  top right
-        vertices[1].x = x1a + y0c + tx;
-        vertices[1].y = x1b + y0d + ty;
+        vertices[1].x = w0a + h1c + tx;
+        vertices[1].y = w0b + h1d + ty;
         //  bottom left
-        vertices[2].x = x0a + y1c + tx;
-        vertices[2].y = x0b + y1d + ty;
+        vertices[2].x = w1a + h0c + tx;
+        vertices[2].y = w1b + h0d + ty;
         //  bottom right
-        vertices[3].x = x1a + y1c + tx;
-        vertices[3].y = x1b + y1d + ty;
+        vertices[3].x = w0a + h0c + tx;
+        vertices[3].y = w0b + h0d + ty;
         return vertices;
     }
     set alpha(value) {
@@ -1611,107 +1738,24 @@ class Scene$1 {
     }
 }
 
-class Keyboard extends EventEmitter {
-    constructor() {
-        super();
-        this.keydownHandler = (event) => this.onKeyDown(event);
-        this.keyupHandler = (event) => this.onKeyUp(event);
-        this.blurHandler = () => this.onBlur();
-        window.addEventListener('keydown', this.keydownHandler);
-        window.addEventListener('keyup', this.keyupHandler);
-        window.addEventListener('blur', this.blurHandler);
-        this.keyMap = {
-            'Enter': 'enter',
-            'Escape': 'esc',
-            'Space': 'space',
-            'ArrowLeft': 'left',
-            'ArrowUp': 'up',
-            'ArrowRight': 'right',
-            'ArrowDown': 'down',
-            // MS Edge
-            13: 'enter',
-            27: 'esc',
-            32: 'space',
-            37: 'left',
-            38: 'up',
-            39: 'right',
-            40: 'down'
-        };
-        //  This nice bit of code is from kontra.js
-        for (let i = 0; i < 26; i++) {
-            this.keyMap[i + 65] = this.keyMap['Key' + String.fromCharCode(i + 65)] = String.fromCharCode(i + 97);
-        }
-        this.pressed = {};
-    }
-    onBlur() {
-        this.pressed = {};
-    }
-    onKeyDown(event) {
-        let key = this.keyMap[event.code || event.which];
-        if (key) {
-            event.preventDefault();
-            this.pressed[key] = true;
-            //  Key specific event
-            this.emit('keydown-' + key, event);
-        }
-        //  Global keydown event
-        this.emit('keydown', event);
-    }
-    onKeyUp(event) {
-        let key = this.keyMap[event.code || event.which];
-        if (key) {
-            this.pressed[key] = false;
-            //  Key specific event
-            this.emit('keyup-' + key, event);
-        }
-        //  Global keyup event
-        this.emit('keyup', event);
-    }
-    isDown(key) {
-        return !!this.pressed[key];
-    }
-}
-
 class Demo extends Scene$1 {
     constructor(game) {
         super(game);
     }
     preload() {
         this.load.setPath('../assets/');
-        this.load.image('ayu');
-        this.load.image('hotdog');
+        this.load.atlas('test', 'atlas-notrim.png', 'atlas-notrim.json');
+        // this.load.atlas('test', 'atlas-trimmed.png', 'atlas-trimmed.json');
     }
     create() {
-        this.sprite = new Sprite(this, 400, 300, 'ayu');
+        this.sprite = new Sprite(this, 400, 300, 'test', 'hello');
         this.world.addChild(this.sprite);
-        this.keyboard = new Keyboard();
-        //  Press space bar to toggle the texture
-        this.keyboard.on('keydown-space', () => {
-            if (this.sprite.texture.key === 'ayu') {
-                this.sprite.setTexture('hotdog');
-            }
-            else {
-                this.sprite.setTexture('ayu');
-            }
-        });
     }
-    update(delta) {
-        //  Arrows to move
-        if (this.keyboard.isDown('left')) {
-            this.sprite.x -= 300 * delta;
-        }
-        else if (this.keyboard.isDown('right')) {
-            this.sprite.x += 300 * delta;
-        }
-        if (this.keyboard.isDown('up')) {
-            this.sprite.y -= 300 * delta;
-        }
-        else if (this.keyboard.isDown('down')) {
-            this.sprite.y += 300 * delta;
-        }
+    update() {
+        this.sprite.rotation += 0.01;
     }
 }
-function demo11 () {
+function demo12 () {
     let game = new Game({
         width: 800,
         height: 600,
@@ -1729,7 +1773,8 @@ function demo11 () {
 // demo8();
 // demo9();
 // demo10();
-demo11();
+// demo11();
+demo12();
 //  Next steps:
 //  * Camera alpha
 //  * Camera background color
@@ -1738,14 +1783,14 @@ demo11();
 //  * Camera ignore | ignore except
 //  * Camera scroll factor (?)
 //  * Cache world values?
-//  * Texture Atlas Loader
 //  * Multi Texture re-use old texture IDs when count > max supported
 //  * Single Texture shader
-//  * Static Batch shader (Static Container?)
 //  * Tile Layer
 //  * Input point translation
 //  * Instead of a Quad class, try a class that can have any number of vertices in it (ala Rope), or any vertex moved
 //  Done:
+//  X Static Batch shader (Sprite Buffer)
+//  X Texture Atlas Loader
 //  X Don't defer updateTransform - do immediately
 //  X Context lost handler
 //  X Renderer resize handler
