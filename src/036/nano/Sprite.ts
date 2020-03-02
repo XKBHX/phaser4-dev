@@ -10,12 +10,8 @@ export default class Sprite extends DisplayObjectContainer
 
     readonly scene: Scene;
 
-    // texture: Texture = null;
-    // frame: Frame = null;
-
     vertices: Vertex[] = [ new Vertex(), new Vertex(), new Vertex(), new Vertex() ];
 
-    // private _alpha: number = 1;
     private _tint: number = 0xffffff;
 
     constructor (scene: Scene, x: number, y: number, texture: string, frame?: string | number)
@@ -45,11 +41,18 @@ export default class Sprite extends DisplayObjectContainer
 
     setFrame (key?: string | number)
     {
-        const frame = this.texture.get(key);
+        const frame: Frame = this.texture.get(key);
 
         this.frame = frame;
 
-        return this.setSize(frame.width, frame.height);
+        this.setSize(frame.sourceSizeWidth, frame.sourceSizeHeight);
+
+        if (frame.pivot)
+        {
+            this.setOrigin(frame.pivot.x, frame.pivot.y);
+        }
+
+        return this;
     }
 
     setAlpha (topLeft: number = 1, topRight: number = topLeft, bottomLeft: number = topLeft, bottomRight: number = topLeft)
@@ -78,47 +81,62 @@ export default class Sprite extends DisplayObjectContainer
 
     updateVertices (): Vertex[]
     {
-        //  Update Vertices:
+        const frame = this.frame;
+        const origin = this._origin;
 
-        const w: number = this.width;
-        const h: number = this.height;
-
-        const x0: number = -(this._origin.x * w);
-        const x1: number = x0 + w;
-        const y0: number = -(this._origin.y * h);
-        const y1: number = y0 + h;
+        let w0: number = 0;
+        let w1: number = 0;
+        let h0: number = 0;
+        let h1: number = 0;
 
         const { a, b, c, d, tx, ty } = this.worldTransform;
 
-        //  Cache the calculations to avoid 8 getX/Y function calls:
+        if (frame.trimmed)
+        {
+            w1 = frame.spriteSourceSizeX - (origin.x * frame.sourceSizeWidth);
+            w0 = w1 + frame.spriteSourceSizeWidth;
 
-        const x0a: number = x0 * a;
-        const x0b: number = x0 * b;
-        const y0c: number = y0 * c;
-        const y0d: number = y0 * d;
+            h1 = frame.spriteSourceSizeY - (origin.y * frame.sourceSizeHeight);
+            h0 = h1 + frame.spriteSourceSizeHeight;
+        }
+        else
+        {
+            w1 = -origin.x * frame.sourceSizeWidth;
+            w0 = w1 + frame.sourceSizeWidth;
 
-        const x1a: number = x1 * a;
-        const x1b: number = x1 * b;
-        const y1c: number = y1 * c;
-        const y1d: number = y1 * d;
+            h1 = -origin.y * frame.sourceSizeHeight;
+            h0 = h1 + frame.sourceSizeHeight;
+        }
+
+        //  Cache the calculations to avoid duplicates
+
+        const w1a: number = w1 * a;
+        const w1b: number = w1 * b;
+        const h1c: number = h1 * c;
+        const h1d: number = h1 * d;
+
+        const w0a: number = w0 * a;
+        const w0b: number = w0 * b;
+        const h0c: number = h0 * c;
+        const h0d: number = h0 * d;
 
         const vertices = this.vertices;
 
         //  top left
-        vertices[0].x = x0a + y0c + tx;
-        vertices[0].y = x0b + y0d + ty;
+        vertices[0].x = w1a + h1c + tx;
+        vertices[0].y = w1b + h1d + ty;
 
         //  top right
-        vertices[1].x = x1a + y0c + tx;
-        vertices[1].y = x1b + y0d + ty;
+        vertices[1].x = w0a + h1c + tx;
+        vertices[1].y = w0b + h1d + ty;
 
         //  bottom left
-        vertices[2].x = x0a + y1c + tx;
-        vertices[2].y = x0b + y1d + ty;
+        vertices[2].x = w1a + h0c + tx;
+        vertices[2].y = w1b + h0d + ty;
 
         //  bottom right
-        vertices[3].x = x1a + y1c + tx;
-        vertices[3].y = x1b + y1d + ty;
+        vertices[3].x = w0a + h0c + tx;
+        vertices[3].y = w0b + h0d + ty;
 
         return vertices;
     }
