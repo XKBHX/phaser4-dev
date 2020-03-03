@@ -71,7 +71,7 @@ export default function ()
     //  Number of bunnies to start with
     let startBunnyCount = 1000;
 
-    const maxSpritesPerBatch = 2000;
+    const maxSpritesPerBatch = 4096;
     // const maxSpritesPerBatch = 10000;
 
     //  The size in bytes per element in the dataArray

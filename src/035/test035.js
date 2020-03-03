@@ -57,7 +57,6 @@ class Vec2 {
         return data[Symbol.iterator]();
     }
 }
-//# sourceMappingURL=Vec2.js.map
 
 class BunnyMergedTransform {
     constructor(x, y, texture) {
@@ -379,7 +378,7 @@ function bunnymarkSingleTexture () {
     let isAdding = false;
     //  Number of bunnies to start with
     let startBunnyCount = 1000;
-    const maxSpritesPerBatch = 2000;
+    const maxSpritesPerBatch = 4096;
     // const maxSpritesPerBatch = 10000;
     //  The size in bytes per element in the dataArray
     const size = 4;
@@ -563,13 +562,35 @@ function bunnymarkSingleTexture () {
     }
 }
 
-window.onload = () => {
-    // part25();
-    // bunnymark();
-    // bunnymarkNoColor();
-    bunnymarkSingleTexture();
-    // bunnymarkNoColorMerged();
-};
+// part25();
+// bunnymark();
+// bunnymarkNoColor();
+// bunnymarkSingleTexture();
+// bunnymarkNoColorMerged();
+// DOMContentLoaded(bunnymarkNoColorMerged);
+DOMContentLoaded(bunnymarkSingleTexture);
+function DOMContentLoaded(callback) {
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        callback();
+        return;
+    }
+    const check = () => {
+        document.removeEventListener('deviceready', check, true);
+        document.removeEventListener('DOMContentLoaded', check, true);
+        window.removeEventListener('load', check, true);
+        callback();
+    };
+    if (!document.body) {
+        window.setTimeout(check, 20);
+    }
+    else if (window.hasOwnProperty('cordova')) {
+        document.addEventListener('deviceready', check, true);
+    }
+    else {
+        document.addEventListener('DOMContentLoaded', check, true);
+        window.addEventListener('load', check, true);
+    }
+}
 //  Next steps:
 //  * Encode color as a single float, rather than a vec4
 //  * Update Merged Transform to cache rotation and scale

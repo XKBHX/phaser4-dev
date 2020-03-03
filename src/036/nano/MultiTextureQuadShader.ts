@@ -211,7 +211,7 @@ export default class MultiTextureQuadShader
         this.gl = renderer.gl;
 
         const {
-            batchSize = 2000,
+            batchSize = 4096,
             dataSize = 4,
             indexSize = 4,
             vertexElementSize = 6,

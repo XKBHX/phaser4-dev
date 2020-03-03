@@ -176,7 +176,7 @@ export default function ()
     let startBunnyCount = 1000;
 
     // const maxSpritesPerBatch = 2000;
-    const maxSpritesPerBatch = 10000;
+    const maxSpritesPerBatch = 4096;
 
     //  The size in bytes per element in the dataArray
     const size = 4;

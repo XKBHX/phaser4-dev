@@ -29,15 +29,48 @@ import part24 from './part24'; // Texture Frame
 import part25 from './part25'; // Single quad + single custom shader
 import part26 from './part26'; // Update Merged Transform to cache rotation and scale
 
-window.onload = () => {
+// part25();
+// bunnymark();
+// bunnymarkNoColor();
+// bunnymarkSingleTexture();
+// bunnymarkNoColorMerged();
 
-    // part25();
-    // bunnymark();
-    // bunnymarkNoColor();
-    bunnymarkSingleTexture();
-    // bunnymarkNoColorMerged();
+// DOMContentLoaded(bunnymarkNoColorMerged);
+DOMContentLoaded(bunnymarkSingleTexture);
 
-};
+function DOMContentLoaded (callback: () => void)
+{
+    if (document.readyState === 'complete' || document.readyState === 'interactive')
+    {
+        callback();
+
+        return;
+    }
+
+    const check = () =>
+    {
+        document.removeEventListener('deviceready', check, true);
+        document.removeEventListener('DOMContentLoaded', check, true);
+        window.removeEventListener('load', check, true);
+
+        callback();
+    };
+
+    if (!document.body)
+    {
+        window.setTimeout(check, 20);
+    }
+    else if (window.hasOwnProperty('cordova'))
+    {
+        document.addEventListener('deviceready', check, true);
+    }
+    else
+    {
+        document.addEventListener('DOMContentLoaded', check, true);
+        window.addEventListener('load', check, true);
+    }
+}
+
 
 //  Next steps:
 
