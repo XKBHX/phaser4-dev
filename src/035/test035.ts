@@ -29,10 +29,15 @@ import part24 from './part24'; // Texture Frame
 import part25 from './part25'; // Single quad + single custom shader
 import part26 from './part26'; // Update Merged Transform to cache rotation and scale
 
-part25();
-// bunnymarkNoColor();
-// bunnymarkSingleTexture();
-// bunnymarkNoColorMerged();
+window.onload = () => {
+
+    // part25();
+    // bunnymark();
+    // bunnymarkNoColor();
+    bunnymarkSingleTexture();
+    // bunnymarkNoColorMerged();
+
+};
 
 //  Next steps:
 

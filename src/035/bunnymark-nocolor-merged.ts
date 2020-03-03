@@ -1,7 +1,6 @@
 import Bunny from './BunnyMergedTransform';
 import Texture from './Texture22';
 import MultiTexturedQuadShader from './MultiTexturedQuadShaderColor';
-import { Ortho } from '@phaserjs/math-matrix4-funcs';
 
 //  Multi-Texture Assigned at run-time, not hard coded into render
 
@@ -96,7 +95,7 @@ export default function ()
 
     const contextOptions: WebGLContextAttributes = {
         alpha: false,
-        antialias: true,
+        antialias: false,
         premultipliedAlpha: false,
         stencil: false,
         preserveDrawingBuffer: false
@@ -232,9 +231,18 @@ export default function ()
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(ibo), gl.STATIC_DRAW);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
+    function ortho (width: number, height: number, near: number, far: number): Float32Array
+    {
+        const m00: number = -2 * (1 / -width);
+        const m11: number = -2 * (1 / height);
+        const m22: number = 2 * (1 / (near - far));
+
+        return new Float32Array([ m00, 0, 0, 0, 0, m11, 0, 0, 0, 0, m22, 0, -1, 1, 0, 1 ]);
+    }
+
     //  This matrix will convert from pixels to clip space - it only needs to be set when the canvas is sized
-    const projectionMatrix = Ortho(0, resolution.x, resolution.y, 0, -1000, 1000);
-    
+    const projectionMatrix = ortho(resolution.x, resolution.y, -1000, 1000);
+
     const stride = 20;
 
     //  Textures ...
@@ -352,6 +360,17 @@ export default function ()
             gl.bindTexture(gl.TEXTURE_2D, textures[i].glTexture);
         }
 
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+
+        // gl.viewport(0, 0, canvas.width, canvas.height);
+
+        // gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
+        // gl.uniform1iv(uTextureLocation, uTextureLocationIndex);
+
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+
         render();
     }
 
@@ -395,16 +414,16 @@ export default function ()
         gl.clearColor(0, 0, 0, 1);
         gl.clear(gl.COLOR_BUFFER_BIT);
 
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        // gl.enable(gl.BLEND);
+        // gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
         gl.viewport(0, 0, canvas.width, canvas.height);
 
         gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
         gl.uniform1iv(uTextureLocation, uTextureLocationIndex);
 
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+        // gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+        // gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
 
         /**
          * Each vertex contains:
