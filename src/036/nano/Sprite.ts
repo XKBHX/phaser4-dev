@@ -8,20 +8,15 @@ export default class Sprite extends DisplayObjectContainer
 {
     type: string = 'Sprite';
 
-    readonly scene: Scene;
-
     vertices: Vertex[] = [ new Vertex(), new Vertex(), new Vertex(), new Vertex() ];
 
     private _tint: number = 0xffffff;
 
     constructor (scene: Scene, x: number, y: number, texture: string, frame?: string | number)
     {
-        super();
-
-        this.scene = scene;
+        super(scene, x, y);
 
         this.setTexture(texture, frame);
-
         this.setPosition(x, y);
     }
 
@@ -52,6 +47,8 @@ export default class Sprite extends DisplayObjectContainer
             this.setOrigin(frame.pivot.x, frame.pivot.y);
         }
 
+        this.dirty = true;
+
         return this;
     }
 
@@ -64,6 +61,8 @@ export default class Sprite extends DisplayObjectContainer
         vertices[2].alpha = bottomLeft;
         vertices[3].alpha = bottomRight;
 
+        this.dirty = true;
+
         return this;
     }
 
@@ -75,6 +74,8 @@ export default class Sprite extends DisplayObjectContainer
         vertices[1].color = topRight;
         vertices[2].color = bottomLeft;
         vertices[3].color = bottomRight;
+
+        this.dirty = true;
 
         return this;
     }

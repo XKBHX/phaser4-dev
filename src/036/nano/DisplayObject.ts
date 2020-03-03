@@ -1,13 +1,17 @@
 import Texture from './Texture';
 import Frame from './Frame';
-import { Vec2 } from '@phaserjs/math-vec2';
+import Vec2 from './Vec2';
 import DisplayObjectContainer from './DisplayObjectContainer';
+import Scene from './Scene';
 
 export default class DisplayObject
 {
+    readonly scene: Scene;
+
     texture: Texture = null;
     frame: Frame = null;
 
+    dirty: boolean = true;
     visible: boolean = true;
     renderable: boolean = true;
     parent: DisplayObjectContainer;
@@ -27,14 +31,18 @@ export default class DisplayObject
     localTransform: { a: number; b: number; c: number; d: number; tx: number; ty: number; };
     worldTransform: { a: number; b: number; c: number; d: number; tx: number; ty: number; };
 
-    constructor ()
+    constructor (scene: Scene, x: number, y: number)
     {
         this.localTransform = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
         this.worldTransform = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
+
+        this.scene = scene;
     }
 
     updateTransform ()
     {
+        this.dirty = true;
+
         const parent = this.parent;
         const lt = this.localTransform;
         const wt = this.worldTransform;
@@ -114,7 +122,12 @@ export default class DisplayObject
 
     setAlpha (alpha: number = 1)
     {
-        this._alpha = alpha;
+        if (alpha !== this._alpha)
+        {
+            this._alpha = alpha;
+
+            this.dirty = true;
+        }
 
         return this;
     }
@@ -268,6 +281,8 @@ export default class DisplayObject
     set alpha (value: number)
     {
         this._alpha = value;
+
+        this.dirty = true;
     }
 
 }

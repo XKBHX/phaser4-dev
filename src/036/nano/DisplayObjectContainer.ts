@@ -1,14 +1,17 @@
 import DisplayObject from './DisplayObject';
 import { Container } from './Container';
+import Scene from './Scene';
 
 export default class DisplayObjectContainer extends DisplayObject
 {
     type: string = 'DisplayObjectContainer';
     children: Container[] = [];
 
-    constructor ()
+    constructor (scene: Scene, x: number, y: number)
     {
-        super();
+        super(scene, x, y);
+
+        this.setPosition(x, y);
     }
 
     addChild (...child: Container[])
@@ -156,6 +159,13 @@ export default class DisplayObjectContainer extends DisplayObject
 
     update (dt: number)
     {
+        if (this.dirty)
+        {
+            this.scene.game.dirtyFrame++;
+
+            this.dirty = false;
+        }
+
         const children = this.children;
 
         for (let i = 0; i < children.length; i++)

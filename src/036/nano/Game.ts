@@ -1,4 +1,5 @@
-import { DOMContentLoaded, AddToDOM } from '@phaserjs/dom';
+import DOMContentLoaded from './DOMContentLoaded';
+import AddToDOM from './AddToDOM';
 import WebGLRenderer from './WebGLRenderer';
 import Loader from './Loader';
 import Scene from './Scene';
@@ -23,6 +24,12 @@ export default class Game extends EventEmitter
     private lastTick: number;
     lifetime: number = 0;
     elapsed: number = 0;
+
+    //  The current game frame
+    frame: number = 0;
+
+    //  How many Game Objects were made dirty this frame?
+    dirtyFrame: number = 0;
 
     constructor (config?: IGameConfig)
     {
@@ -89,8 +96,8 @@ export default class Game extends EventEmitter
 
         });
 
-        window.addEventListener('blur', () => this.pause());
-        window.addEventListener('focus', () => this.resume());
+        // window.addEventListener('blur', () => this.pause());
+        // window.addEventListener('focus', () => this.resume());
 
         const scene = this.scene;
 
@@ -193,16 +200,20 @@ export default class Game extends EventEmitter
         this.lifetime += dt;
         this.elapsed = dt;
         this.lastTick = now;
+
+        //  The frame always advances by 1 each step (even when paused)
+        this.frame++;
     
         if (this.isPaused)
         {
-            //  Otherwise SpectorGL can't debug the scene
-            this.renderer.render(this.scene.world);
+            this.renderer.render(this.scene.world, 0);
 
             requestAnimationFrame(() => this.step());
 
             return;
         }
+
+        this.dirtyFrame = 0;
 
         this.emit('step', dt);
 
@@ -210,7 +221,7 @@ export default class Game extends EventEmitter
 
         this.scene.update(dt, now);
 
-        this.renderer.render(this.scene.world);
+        this.renderer.render(this.scene.world, this.dirtyFrame);
 
         requestAnimationFrame(() => this.step());
     }

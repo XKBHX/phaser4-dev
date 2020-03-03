@@ -5,8 +5,6 @@ import Sprite from './Sprite';
 import Texture from './Texture';
 import DisplayObjectContainer from './DisplayObjectContainer';
 import { Container } from './Container';
-import Frame from './Frame';
-import Vertex from './Vertex';
 
 export default class SpriteBuffer
 {
@@ -237,6 +235,7 @@ export default class SpriteBuffer
 
     update ()
     {
+        this.game.dirtyFrame++;
     }
 
     updateTransform ()

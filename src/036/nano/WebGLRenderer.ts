@@ -39,6 +39,7 @@ export default class WebGLRenderer
     startActiveTexture: number;
 
     clearBeforeRender: boolean = true;
+    optimizeRedraw: boolean = true;
     autoResize: boolean = true;
 
     contextLost: boolean = false;
@@ -209,9 +210,18 @@ export default class WebGLRenderer
         return glTexture;
     }
 
-    render (world: DisplayObjectContainer)
+    render (world: DisplayObjectContainer, dirtyFrame: number)
     {
         if (this.contextLost)
+        {
+            return;
+        }
+
+        const gl = this.gl;
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        if (this.optimizeRedraw && dirtyFrame === 0)
         {
             return;
         }
@@ -223,15 +233,12 @@ export default class WebGLRenderer
 
         //  CLS
 
-        const gl = this.gl;
-        const cls = this.clearColor;
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.viewport(0, 0, this.width, this.height);
 
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-        gl.viewport(0, 0, this.width, this.height);
+        const cls = this.clearColor;
 
         if (this.clearBeforeRender)
         {

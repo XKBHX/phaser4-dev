@@ -15,7 +15,7 @@ export default class Scene
         this.game = game;
         this.load = game.loader;
         this.textures = game.textures;
-        this.world = new DisplayObjectContainer();
+        this.world = new DisplayObjectContainer(this, 0, 0);
     }
 
     init ()
