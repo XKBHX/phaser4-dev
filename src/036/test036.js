@@ -103,7 +103,7 @@ void main (void)
     vertexShader: `
 precision highp float;
 
-attribute vec2 aVertexPosition;
+attribute vec3 aVertexPosition;
 attribute vec2 aTextureCoord;
 attribute float aTextureId;
 attribute vec4 aTintColor;
@@ -121,14 +121,14 @@ void main (void)
     vTextureId = aTextureId;
     vTintColor = aTintColor;
 
-    gl_Position = uProjectionMatrix * uCameraMatrix * vec4(aVertexPosition, 0.0, 1.0);
+    gl_Position = uProjectionMatrix * uCameraMatrix * vec4(aVertexPosition, 1.0);
 }`
 };
-class MultiTextureQuadShader {
+class MultiTextureDepthQuadShader {
     constructor(renderer, config = {}) {
         this.renderer = renderer;
         this.gl = renderer.gl;
-        const { batchSize = 2000, dataSize = 4, indexSize = 4, vertexElementSize = 6, quadIndexSize = 6, fragmentShader = shaderSource.fragmentShader, vertexShader = shaderSource.vertexShader } = config;
+        const { batchSize = 4096, dataSize = 4, indexSize = 4, vertexElementSize = 7, quadIndexSize = 6, fragmentShader = shaderSource.fragmentShader, vertexShader = shaderSource.vertexShader } = config;
         this.batchSize = batchSize;
         this.dataSize = dataSize;
         this.indexSize = indexSize;
@@ -236,10 +236,10 @@ class MultiTextureQuadShader {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
         //  attributes must be reset whenever you change buffers
-        gl.vertexAttribPointer(attribs.position, 2, gl.FLOAT, false, stride, 0); // size = 8
-        gl.vertexAttribPointer(attribs.textureCoord, 2, gl.FLOAT, false, stride, 8); // size = 8
-        gl.vertexAttribPointer(attribs.textureIndex, 1, gl.FLOAT, false, stride, 8 + 8); // size = 4
-        gl.vertexAttribPointer(attribs.color, 4, gl.UNSIGNED_BYTE, true, stride, 8 + 8 + 4); // size = 4
+        gl.vertexAttribPointer(attribs.position, 3, gl.FLOAT, false, stride, 0); // size = 12
+        gl.vertexAttribPointer(attribs.textureCoord, 2, gl.FLOAT, false, stride, 12); // size = 8
+        gl.vertexAttribPointer(attribs.textureIndex, 1, gl.FLOAT, false, stride, 12 + 8); // size = 4
+        gl.vertexAttribPointer(attribs.color, 4, gl.UNSIGNED_BYTE, true, stride, 12 + 8 + 4); // size = 4
         this.count = 0;
     }
     batchSpriteBuffer(buffer) {
@@ -268,24 +268,28 @@ class MultiTextureQuadShader {
         const bottomRight = vertices[3];
         F32[offset++] = topLeft.x;
         F32[offset++] = topLeft.y;
+        F32[offset++] = sprite.z;
         F32[offset++] = frame.u0;
         F32[offset++] = frame.v0;
         F32[offset++] = textureIndex;
         U32[offset++] = this.packColor(topLeft.color, topLeft.alpha);
         F32[offset++] = bottomLeft.x;
         F32[offset++] = bottomLeft.y;
+        F32[offset++] = sprite.z;
         F32[offset++] = frame.u0;
         F32[offset++] = frame.v1;
         F32[offset++] = textureIndex;
         U32[offset++] = this.packColor(bottomLeft.color, bottomLeft.alpha);
         F32[offset++] = bottomRight.x;
         F32[offset++] = bottomRight.y;
+        F32[offset++] = sprite.z;
         F32[offset++] = frame.u1;
         F32[offset++] = frame.v1;
         F32[offset++] = textureIndex;
         U32[offset++] = this.packColor(bottomRight.color, bottomRight.alpha);
         F32[offset++] = topRight.x;
         F32[offset++] = topRight.y;
+        F32[offset++] = sprite.z;
         F32[offset++] = frame.u1;
         F32[offset++] = frame.v0;
         F32[offset++] = textureIndex;
@@ -444,7 +448,8 @@ class WebGLRenderer {
         canvas.addEventListener('webglcontextrestored', () => this.onContextRestored(), false);
         this.canvas = canvas;
         this.initContext();
-        this.shader = new MultiTextureQuadShader(this);
+        // this.shader = new MultiTextureQuadShader(this);
+        this.shader = new MultiTextureDepthQuadShader(this);
         this.camera = new Camera(this);
     }
     initContext() {
@@ -452,8 +457,9 @@ class WebGLRenderer {
         this.gl = gl;
         this.elementIndexExtension = gl.getExtension('OES_element_index_uint');
         this.getMaxTextures();
-        gl.disable(gl.DEPTH_TEST);
-        gl.disable(gl.CULL_FACE);
+        // https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/depthFunc
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LESS);
         if (this.shader) {
             this.shader.gl = gl;
         }
@@ -471,7 +477,7 @@ class WebGLRenderer {
             canvas.style.height = this.height / resolution + 'px';
         }
         this.gl.viewport(0, 0, this.width, this.height);
-        this.projectionMatrix = this.ortho(width, height, -1000, 1000);
+        this.projectionMatrix = this.ortho(width, height, -10000, 10000);
     }
     ortho(width, height, near, far) {
         const m00 = -2 * (1 / -width);
@@ -555,13 +561,18 @@ class WebGLRenderer {
         const cls = this.clearColor;
         if (this.clearBeforeRender) {
             gl.clearColor(cls[0], cls[1], cls[2], cls[3]);
-            gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         }
+        else {
+            gl.clear(gl.DEPTH_BUFFER_BIT);
+        }
+        this.spriteCount = 0;
         shader.bind();
-        this.renderChildren(world);
+        // this.renderChildren(world);
+        this.renderChildrenFrontToBack(world);
         shader.flush();
     }
-    renderChildren(container) {
+    renderChildrenFrontToBack(container) {
         const gl = this.gl;
         const shader = this.shader;
         const maxTextures = this.maxTextures;
@@ -569,7 +580,7 @@ class WebGLRenderer {
         const startActiveTexture = this.startActiveTexture;
         let currentActiveTexture = this.currentActiveTexture;
         const children = container.children;
-        for (let i = 0; i < children.length; i++) {
+        for (let i = children.length - 1; i >= 0; i--) {
             let entity = children[i];
             if (entity.willRender()) {
                 //  Entity has a texture ...
@@ -588,6 +599,7 @@ class WebGLRenderer {
                         }
                     }
                     shader.batchSprite(entity);
+                    this.spriteCount++;
                 }
                 if (entity.type === 'SpriteBuffer') {
                     if (shader.batchSpriteBuffer(entity)) {
@@ -598,7 +610,7 @@ class WebGLRenderer {
                 }
                 else if (entity.size) {
                     // Render the children, if it has any
-                    this.renderChildren(entity);
+                    this.renderChildrenFrontToBack(entity);
                 }
             }
         }
@@ -1638,6 +1650,7 @@ class Sprite extends DisplayObjectContainer {
     constructor(scene, x, y, texture, frame) {
         super(scene, x, y);
         this.type = 'Sprite';
+        this.z = 0;
         this.vertices = [new Vertex(), new Vertex(), new Vertex(), new Vertex()];
         this._tint = 0xffffff;
         this.setTexture(texture, frame);
@@ -1754,107 +1767,28 @@ class Scene$1 {
     }
 }
 
-class Keyboard extends EventEmitter {
-    constructor() {
-        super();
-        this.keydownHandler = (event) => this.onKeyDown(event);
-        this.keyupHandler = (event) => this.onKeyUp(event);
-        this.blurHandler = () => this.onBlur();
-        window.addEventListener('keydown', this.keydownHandler);
-        window.addEventListener('keyup', this.keyupHandler);
-        window.addEventListener('blur', this.blurHandler);
-        this.keyMap = {
-            'Enter': 'enter',
-            'Escape': 'esc',
-            'Space': 'space',
-            'ArrowLeft': 'left',
-            'ArrowUp': 'up',
-            'ArrowRight': 'right',
-            'ArrowDown': 'down',
-            // MS Edge
-            13: 'enter',
-            27: 'esc',
-            32: 'space',
-            37: 'left',
-            38: 'up',
-            39: 'right',
-            40: 'down'
-        };
-        //  This nice bit of code is from kontra.js
-        for (let i = 0; i < 26; i++) {
-            this.keyMap[i + 65] = this.keyMap['Key' + String.fromCharCode(i + 65)] = String.fromCharCode(i + 97);
-        }
-        this.pressed = {};
-    }
-    onBlur() {
-        this.pressed = {};
-    }
-    onKeyDown(event) {
-        let key = this.keyMap[event.code || event.which];
-        if (key) {
-            event.preventDefault();
-            this.pressed[key] = true;
-            //  Key specific event
-            this.emit('keydown-' + key, event);
-        }
-        //  Global keydown event
-        this.emit('keydown', event);
-    }
-    onKeyUp(event) {
-        let key = this.keyMap[event.code || event.which];
-        if (key) {
-            this.pressed[key] = false;
-            //  Key specific event
-            this.emit('keyup-' + key, event);
-        }
-        //  Global keyup event
-        this.emit('keyup', event);
-    }
-    isDown(key) {
-        return !!this.pressed[key];
-    }
-}
-
 class Demo extends Scene$1 {
     constructor(game) {
         super(game);
+        //  Or we can't debug it with Spector!
+        this.game.renderer.optimizeRedraw = false;
     }
     preload() {
         this.load.setPath('../assets/');
-        this.load.image('ayu');
-        this.load.image('hotdog');
+        this.load.atlas('test', 'atlas-notrim.png', 'atlas-notrim.json');
     }
     create() {
-        this.sprite = new Sprite(this, 400, 300, 'ayu');
-        this.world.addChild(this.sprite);
-        this.keyboard = new Keyboard();
-        //  Press space bar to toggle the texture
-        this.keyboard.on('keydown-space', () => {
-            if (this.sprite.texture.key === 'ayu') {
-                this.sprite.setTexture('hotdog');
-            }
-            else {
-                this.sprite.setTexture('ayu');
-            }
-        });
+        this.sprite1 = new Sprite(this, 400, 300, 'test', 'brain');
+        this.sprite2 = new Sprite(this, 400, 300, 'test', 'f-texture');
+        this.sprite1.z = 1;
+        this.sprite2.z = 0;
+        this.world.addChild(this.sprite1, this.sprite2);
     }
-    update(delta) {
-        //  Arrows to move
-        if (this.keyboard.isDown('left')) {
-            this.sprite.x -= 300 * delta;
-        }
-        else if (this.keyboard.isDown('right')) {
-            this.sprite.x += 300 * delta;
-        }
-        if (this.keyboard.isDown('up')) {
-            this.sprite.y -= 300 * delta;
-        }
-        else if (this.keyboard.isDown('down')) {
-            this.sprite.y += 300 * delta;
-        }
+    update() {
+        // this.sprite1.rotation += 0.01;
     }
 }
-function demo11 () {
+function demo13 () {
     let game = new Game({
         width: 800,
         height: 600,
@@ -1872,8 +1806,9 @@ function demo11 () {
 // demo8();
 // demo9();
 // demo10();
-demo11();
+// demo11();
 // demo12();
+demo13();
 //  Next steps:
 //  * Camera alpha
 //  * Camera background color

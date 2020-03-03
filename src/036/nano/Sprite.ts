@@ -8,6 +8,8 @@ export default class Sprite extends DisplayObjectContainer
 {
     type: string = 'Sprite';
 
+    z: number = 0;
+
     vertices: Vertex[] = [ new Vertex(), new Vertex(), new Vertex(), new Vertex() ];
 
     private _tint: number = 0xffffff;

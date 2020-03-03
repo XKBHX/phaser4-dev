@@ -57,8 +57,9 @@ class Vec2 {
         return data[Symbol.iterator]();
     }
 }
+//# sourceMappingURL=Vec2.js.map
 
-class BunnyMergedTransform {
+class BunnyDepth {
     constructor(x, y, texture) {
         this.rgba = { r: 1, g: 1, b: 1, a: 1 };
         this.visible = true;
@@ -97,13 +98,6 @@ class BunnyMergedTransform {
         this._origin.set(originX, originY);
         return this;
     }
-    updateCache() {
-        const { _rotation, _skew, _scale } = this;
-        this._a = Math.cos(_rotation + _skew.y) * _scale.x;
-        this._b = Math.sin(_rotation + _skew.y) * _scale.x;
-        this._c = -Math.sin(_rotation - _skew.x) * _scale.y;
-        this._d = Math.cos(_rotation - _skew.x) * _scale.y;
-    }
     setTexture(texture) {
         this.texture = texture;
         this._size.set(texture.width, texture.height);
@@ -111,7 +105,7 @@ class BunnyMergedTransform {
         // this.updateVertices();
         return this;
     }
-    step(dataTA, offset) {
+    stepNoTexture(dataTA, offset, depth) {
         this.x += this.speedX;
         this.y += this.speedY;
         this.speedY += this.gravity;
@@ -159,92 +153,26 @@ class BunnyMergedTransform {
         this.bottomLeft.set(x0a + y1c + _tx, x0b + y1d + _ty);
         this.bottomRight.set(x1a + y1c + _tx, x1b + y1d + _ty);
         //  Batch:
-        const textureIndex = this.texture.glIndex;
         dataTA[offset + 0] = this.topLeft.x;
         dataTA[offset + 1] = this.topLeft.y;
-        dataTA[offset + 2] = this.uv.topLeft.x;
-        dataTA[offset + 3] = this.uv.topLeft.y;
-        dataTA[offset + 4] = textureIndex;
+        dataTA[offset + 2] = depth;
+        dataTA[offset + 3] = this.uv.topLeft.x;
+        dataTA[offset + 4] = this.uv.topLeft.y;
         dataTA[offset + 5] = this.bottomLeft.x;
         dataTA[offset + 6] = this.bottomLeft.y;
-        dataTA[offset + 7] = this.uv.bottomLeft.x;
-        dataTA[offset + 8] = this.uv.bottomLeft.y;
-        dataTA[offset + 9] = textureIndex;
+        dataTA[offset + 7] = depth;
+        dataTA[offset + 8] = this.uv.bottomLeft.x;
+        dataTA[offset + 9] = this.uv.bottomLeft.y;
         dataTA[offset + 10] = this.bottomRight.x;
         dataTA[offset + 11] = this.bottomRight.y;
-        dataTA[offset + 12] = this.uv.bottomRight.x;
-        dataTA[offset + 13] = this.uv.bottomRight.y;
-        dataTA[offset + 14] = textureIndex;
+        dataTA[offset + 12] = depth;
+        dataTA[offset + 13] = this.uv.bottomRight.x;
+        dataTA[offset + 14] = this.uv.bottomRight.y;
         dataTA[offset + 15] = this.topRight.x;
         dataTA[offset + 16] = this.topRight.y;
-        dataTA[offset + 17] = this.uv.topRight.x;
-        dataTA[offset + 18] = this.uv.topRight.y;
-        dataTA[offset + 19] = textureIndex;
-    }
-    stepNoTexture(dataTA, offset) {
-        this.x += this.speedX;
-        this.y += this.speedY;
-        this.speedY += this.gravity;
-        if (this.x > this.bounds.right) {
-            this.speedX *= -1;
-            this.x = this.bounds.right;
-        }
-        else if (this.x < this.bounds.left) {
-            this.speedX *= -1;
-            this.x = this.bounds.left;
-        }
-        if (this.y > this.bounds.bottom) {
-            this.speedY *= -0.85;
-            this.y = this.bounds.bottom;
-            if (Math.random() > 0.5) {
-                this.speedY -= Math.random() * 6;
-            }
-        }
-        else if (this.y < this.bounds.top) {
-            this.speedY = 0;
-            this.y = this.bounds.top;
-        }
-        //  Transform.update:
-        this._tx = this.x;
-        this._ty = this.y;
-        //  Update Vertices:
-        const w = this._size.x;
-        const h = this._size.y;
-        const x0 = -(this._origin.x * w);
-        const x1 = x0 + w;
-        const y0 = -(this._origin.y * h);
-        const y1 = y0 + h;
-        const { _a, _b, _c, _d, _tx, _ty } = this;
-        //  Cache the calculations to avoid 8 getX/Y function calls:
-        const x0a = x0 * _a;
-        const x0b = x0 * _b;
-        const y0c = y0 * _c;
-        const y0d = y0 * _d;
-        const x1a = x1 * _a;
-        const x1b = x1 * _b;
-        const y1c = y1 * _c;
-        const y1d = y1 * _d;
-        this.topLeft.set(x0a + y0c + _tx, x0b + y0d + _ty);
-        this.topRight.set(x1a + y0c + _tx, x1b + y0d + _ty);
-        this.bottomLeft.set(x0a + y1c + _tx, x0b + y1d + _ty);
-        this.bottomRight.set(x1a + y1c + _tx, x1b + y1d + _ty);
-        //  Batch:
-        dataTA[offset + 0] = this.topLeft.x;
-        dataTA[offset + 1] = this.topLeft.y;
-        dataTA[offset + 2] = this.uv.topLeft.x;
-        dataTA[offset + 3] = this.uv.topLeft.y;
-        dataTA[offset + 4] = this.bottomLeft.x;
-        dataTA[offset + 5] = this.bottomLeft.y;
-        dataTA[offset + 6] = this.uv.bottomLeft.x;
-        dataTA[offset + 7] = this.uv.bottomLeft.y;
-        dataTA[offset + 8] = this.bottomRight.x;
-        dataTA[offset + 9] = this.bottomRight.y;
-        dataTA[offset + 10] = this.uv.bottomRight.x;
-        dataTA[offset + 11] = this.uv.bottomRight.y;
-        dataTA[offset + 12] = this.topRight.x;
-        dataTA[offset + 13] = this.topRight.y;
-        dataTA[offset + 14] = this.uv.topRight.x;
-        dataTA[offset + 15] = this.uv.topRight.y;
+        dataTA[offset + 17] = depth;
+        dataTA[offset + 18] = this.uv.topRight.x;
+        dataTA[offset + 19] = this.uv.topRight.y;
     }
     set x(value) {
         this._position.x = value;
@@ -304,7 +232,7 @@ class Texture {
     }
 }
 
-var SingleTexturedQuadShaderColor = {
+var SingleTexturedQuadShaderDepth = {
     fragmentShader: `
 precision mediump float;
 
@@ -317,7 +245,7 @@ void main (void)
     gl_FragColor = texture2D(uTexture, vTextureCoord);
 }`,
     vertexShader: `
-attribute vec2 aVertexPosition;
+attribute vec3 aVertexPosition;
 attribute vec2 aTextureCoord;
 
 uniform mat4 uProjectionMatrix;
@@ -328,7 +256,7 @@ void main (void)
 {
     vTextureCoord = aTextureCoord;
 
-    gl_Position = uProjectionMatrix * vec4(aVertexPosition, 0.0, 1.0);
+    gl_Position = uProjectionMatrix * vec4(aVertexPosition, 1.0);
 }`
 };
 
@@ -336,7 +264,7 @@ void main (void)
 //  gains us 6fps when rendering 150,000 bunnies. Without the 'if' it's 46fps. With, it's 40fps.
 //  200,000 bunnies = 30fps (with multi texture), 35fps with single texture.
 //  100,000 bunnies = 57-60fps (with multi texture), 60fps with single texture.
-function bunnymarkSingleTexture () {
+function bunnymarkSingleTextureDepth () {
     const resolution = { x: 800, y: 600 };
     const bounds = { left: 0, top: 0, right: resolution.x, bottom: resolution.y };
     const canvas = document.getElementById('game');
@@ -352,10 +280,10 @@ function bunnymarkSingleTexture () {
     const gl = canvas.getContext('webgl', contextOptions);
     //  Create the shaders
     const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragmentShader, SingleTexturedQuadShaderColor.fragmentShader);
+    gl.shaderSource(fragmentShader, SingleTexturedQuadShaderDepth.fragmentShader);
     gl.compileShader(fragmentShader);
     const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vertexShader, SingleTexturedQuadShaderColor.vertexShader);
+    gl.shaderSource(vertexShader, SingleTexturedQuadShaderDepth.vertexShader);
     gl.compileShader(vertexShader);
     const program = gl.createProgram();
     gl.attachShader(program, vertexShader);
@@ -371,7 +299,7 @@ function bunnymarkSingleTexture () {
     //  number of bunnies on the stage
     let count = 0;
     //  The maximum number of bunnies to render
-    let maxCount = 200000;
+    let maxCount = 500000;
     //  Number of bunnies to add each frame
     let amount = 200;
     //  Are we adding bunnies or not?
@@ -386,12 +314,12 @@ function bunnymarkSingleTexture () {
     /**
      * Each vertex contains:
      *
-     *  position (x,y - 2 floats)
+     *  position (x,y,z - 3 floats)
      *  texture coord (x,y - 2 floats)
      */
-    const singleVertexSize = 16;
+    const singleVertexSize = 20;
     //  Size of a single sprite in array elements
-    const singleSpriteSize = 16;
+    const singleSpriteSize = 20;
     //  Size in bytes of a single sprite
     const singleSpriteByteSize = singleVertexSize * size;
     //  Size in bytes of a single vertex indicies
@@ -423,7 +351,7 @@ function bunnymarkSingleTexture () {
         return new Float32Array([m00, 0, 0, 0, 0, m11, 0, 0, 0, 0, m22, 0, -1, 1, 0, 1]);
     }
     //  This matrix will convert from pixels to clip space - it only needs to be set when the canvas is sized
-    const projectionMatrix = ortho(resolution.x, resolution.y, -1000, 1000);
+    const projectionMatrix = ortho(resolution.x, resolution.y, -10000, 10000);
     const stride = singleVertexSize;
     //  Textures ...
     const textures = [];
@@ -449,7 +377,7 @@ function bunnymarkSingleTexture () {
     function addBunnies(num) {
         for (let i = 0; i < num; i++) {
             let x = (count % 2) * 800;
-            let bunny = new BunnyMergedTransform(x, 0, textures[0]);
+            let bunny = new BunnyDepth(x, 0, textures[0]);
             bunny.bounds = bounds;
             bunnies.push(bunny);
             count++;
@@ -458,8 +386,6 @@ function bunnymarkSingleTexture () {
     let stats;
     let counter;
     let paused = false;
-    window['bunnies'] = bunnies;
-    console.log('max', maxSpritesPerBatch, 'size', bufferByteSize);
     function create() {
         {
             addBunnies(startBunnyCount);
@@ -489,6 +415,7 @@ function bunnymarkSingleTexture () {
         }
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        gl.enable(gl.DEPTH_TEST);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
         render();
@@ -515,9 +442,9 @@ function bunnymarkSingleTexture () {
             counter.innerText = count.toString();
         }
         gl.clearColor(0, 0, 0, 1);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-        // gl.enable(gl.BLEND);
-        // gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         gl.viewport(0, 0, canvas.width, canvas.height);
         gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
         gl.uniform1i(uTextureLocation, 0);
@@ -527,10 +454,10 @@ function bunnymarkSingleTexture () {
         /**
          * Each vertex contains:
          *
-         *  position (x,y - 2 floats)
+         *  position (x,y,z - 3 floats)
          *  texture coord (x,y - 2 floats)
          *
-         * 4 floats = 4 * 4 bytes = 16 bytes per vertex. This is our stride.
+         * 5 floats = 5 * 4 bytes = 20 bytes per vertex. This is our stride.
          *
          * The offset is how much data should be skipped at the start of each chunk.
          *
@@ -538,13 +465,13 @@ function bunnymarkSingleTexture () {
          * Position is 2 floats, so the offset for the coord is 2 * 4 bytes = 8 bytes.
          * Texture Coord is 2 floats, so the offset for Texture Index is 2 * 4 bytes = 8 bytes, plus the 8 from position
          */
-        gl.vertexAttribPointer(vertexPositionAttrib, 2, gl.FLOAT, false, stride, 0); // size = 8
-        gl.vertexAttribPointer(vertexTextureCoord, 2, gl.FLOAT, false, stride, 8); // size = 8
+        gl.vertexAttribPointer(vertexPositionAttrib, 3, gl.FLOAT, false, stride, 0); // size = 12
+        gl.vertexAttribPointer(vertexTextureCoord, 2, gl.FLOAT, false, stride, 12); // size = 8
         let size = 0;
-        for (let i = 0; i < bunnies.length; i++) {
+        for (let i = bunnies.length - 1; i >= 0; i--) {
             let bunny = bunnies[i];
             //  The offset here is the offset into the array, NOT a byte size!
-            bunny.stepNoTexture(dataTA, size * singleSpriteSize);
+            bunny.stepNoTexture(dataTA, size * singleSpriteSize, i / 10000);
             //  if size = batch limit, flush here
             if (size === maxSpritesPerBatch) {
                 flush(size);
@@ -568,7 +495,8 @@ function bunnymarkSingleTexture () {
 // bunnymarkSingleTexture();
 // bunnymarkNoColorMerged();
 // DOMContentLoaded(bunnymarkNoColorMerged);
-DOMContentLoaded(bunnymarkSingleTexture);
+// DOMContentLoaded(bunnymarkSingleTexture);
+DOMContentLoaded(bunnymarkSingleTextureDepth);
 function DOMContentLoaded(callback) {
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
         callback();

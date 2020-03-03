@@ -22,6 +22,7 @@ import bunnymark from './bunnymark';
 import bunnymarkNoColor from './bunnymark-nocolor';
 import bunnymarkNoColorMerged from './bunnymark-nocolor-merged';
 import bunnymarkSingleTexture from './bunnymark-single-texture';
+import bunnymarkSingleTextureDepth from './bunnymark-single-texture-depth';
 import part21 from './part21'; // static sprite test
 import part22 from './part22'; // subData test into a static buffer
 import part23 from './part23'; // Camera matrix
@@ -36,7 +37,8 @@ import part26 from './part26'; // Update Merged Transform to cache rotation and 
 // bunnymarkNoColorMerged();
 
 // DOMContentLoaded(bunnymarkNoColorMerged);
-DOMContentLoaded(bunnymarkSingleTexture);
+// DOMContentLoaded(bunnymarkSingleTexture);
+DOMContentLoaded(bunnymarkSingleTextureDepth);
 
 function DOMContentLoaded (callback: () => void)
 {
