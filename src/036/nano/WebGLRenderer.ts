@@ -231,13 +231,13 @@ export default class WebGLRenderer
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
+        this.dirtySprites = 0;
+        this.cachedSprites = 0;
+
         if (this.optimizeRedraw && dirtyFrame === 0)
         {
             return;
         }
-
-        this.dirtySprites = 0;
-        this.cachedSprites = 0;
 
         this.currentActiveTexture = 0;
         this.startActiveTexture++;

@@ -10,7 +10,7 @@ import demo9 from './demo9'; // Ease function
 import demo10 from './demo10'; // Sprite Buffer
 import demo11 from './demo11'; // Keyboard
 import demo12 from './demo12'; // Texture Atlas Loader (array + hash + tp3 + trimmed)
-import demo13 from './demo13'; // Depth test
+import demo13 from './demo13'; // Cache test
 
 // demo6();
 // demo7();

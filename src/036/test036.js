@@ -511,11 +511,11 @@ class WebGLRenderer {
         }
         const gl = this.gl;
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        this.dirtySprites = 0;
+        this.cachedSprites = 0;
         if (this.optimizeRedraw && dirtyFrame === 0) {
             return;
         }
-        this.dirtySprites = 0;
-        this.cachedSprites = 0;
         this.currentActiveTexture = 0;
         this.startActiveTexture++;
         const shader = this.shader;
@@ -1743,36 +1743,142 @@ class Scene$1 {
     }
 }
 
+class Keyboard extends EventEmitter {
+    constructor() {
+        super();
+        this.keydownHandler = (event) => this.onKeyDown(event);
+        this.keyupHandler = (event) => this.onKeyUp(event);
+        this.blurHandler = () => this.onBlur();
+        window.addEventListener('keydown', this.keydownHandler);
+        window.addEventListener('keyup', this.keyupHandler);
+        window.addEventListener('blur', this.blurHandler);
+        this.keyMap = {
+            'Enter': 'enter',
+            'Escape': 'esc',
+            'Space': 'space',
+            'ArrowLeft': 'left',
+            'ArrowUp': 'up',
+            'ArrowRight': 'right',
+            'ArrowDown': 'down',
+            // MS Edge
+            13: 'enter',
+            27: 'esc',
+            32: 'space',
+            37: 'left',
+            38: 'up',
+            39: 'right',
+            40: 'down'
+        };
+        //  This nice bit of code is from kontra.js
+        for (let i = 0; i < 26; i++) {
+            this.keyMap[i + 65] = this.keyMap['Key' + String.fromCharCode(i + 65)] = String.fromCharCode(i + 97);
+        }
+        this.pressed = {};
+    }
+    onBlur() {
+        this.pressed = {};
+    }
+    onKeyDown(event) {
+        let key = this.keyMap[event.code || event.which];
+        if (key) {
+            event.preventDefault();
+            this.pressed[key] = true;
+            //  Key specific event
+            this.emit('keydown-' + key, event);
+        }
+        //  Global keydown event
+        this.emit('keydown', event);
+    }
+    onKeyUp(event) {
+        let key = this.keyMap[event.code || event.which];
+        if (key) {
+            this.pressed[key] = false;
+            //  Key specific event
+            this.emit('keyup-' + key, event);
+        }
+        //  Global keyup event
+        this.emit('keyup', event);
+    }
+    isDown(key) {
+        return !!this.pressed[key];
+    }
+}
+
+class Fish extends Sprite {
+    constructor(scene, x, y, texture, frame) {
+        super(scene, x, y, texture, frame);
+        this.animFrame = 0;
+        this.animSpeed = 100;
+        this.nextFrame = 100;
+    }
+    update(delta) {
+        super.update(delta);
+        this.nextFrame -= delta * 1000;
+        if (this.nextFrame < 0) {
+            this.nextFrame = this.animSpeed;
+            this.animFrame++;
+            if (this.animFrame > 5) {
+                this.animFrame = 0;
+            }
+            this.setFrame('fish characters_000000' + this.animFrame);
+        }
+    }
+}
 class Demo extends Scene$1 {
     constructor(game) {
         super(game);
         //  Or we can't debug it with Spector!
-        this.game.renderer.optimizeRedraw = false;
+        // this.game.renderer.optimizeRedraw = false;
+        const text = document.getElementById('cacheStats');
+        this.game.on('render', (dirty, cached) => {
+            const cacheUtilisation = (cached / (cached + dirty)) * 100;
+            text['value'] = 'Cached: ' + cacheUtilisation + '% - Dirty: ' + dirty + ' / ' + cached;
+        });
     }
     preload() {
         this.load.setPath('../assets/');
-        this.load.atlas('test', 'atlas-notrim.png', 'atlas-notrim.json');
-        this.load.image('bubble', 'bubble256.png');
+        this.load.atlas('assets', 'bubbles.png', 'bubbles.json');
+        this.load.image('background', 'bubbles-background.png');
     }
     create() {
-        const text = document.getElementById('cacheStats');
-        this.sprite1 = new Sprite(this, 400, 240, 'test', 'brain');
-        this.sprite2 = new Sprite(this, 400, 300, 'test', 'f-texture');
-        this.sprite3 = new Sprite(this, 400, 250, 'bubble');
-        this.world.addChild(this.sprite2, this.sprite1, this.sprite3);
-        this.game.on('render', (d, c) => {
-            text['value'] = 'Cached: ' + c + ' Dirty: ' + d;
-        });
+        const bg = new Sprite(this, 0, 0, 'background').setOrigin(0, 0);
+        const header = new Sprite(this, 384, 8, 'assets', 'Header-Ui').setOrigin(0.5, 0);
+        this.world.addChild(bg, header);
+        //  Bubbles
+        let rowMax = 10;
+        let startX = 64;
+        let starty = 128;
+        let frame = 1;
+        for (let y = 0; y < 6; y++) {
+            for (let x = 0; x < rowMax; x++) {
+                frame = 1 + Math.floor(Math.random() * 8);
+                let bubble = new Sprite(this, startX + (x * 70), starty + (y * 62), 'assets', 'bubbles-0' + frame).setScale(0.40);
+                this.world.addChild(bubble);
+            }
+            rowMax--;
+            startX += 35;
+        }
+        //  Fish cannon
+        const fish = new Fish(this, 384 + 160, 900, 'assets', 'fish characters_0000000');
+        const nextBubble = new Sprite(this, 384 + 160, 930, 'assets', 'bubbles-01').setScale(0.40);
+        const cannon = new Sprite(this, 384, 1000, 'assets', 'cannon_0000000').setOrigin(0.5, 1);
+        this.world.addChild(fish, nextBubble, cannon);
+        this.keyboard = new Keyboard();
+        this.cannon = cannon;
     }
-    update() {
-        this.sprite2.rotation += 0.01;
+    update(delta) {
+        if (this.keyboard.isDown('left') && this.cannon.rotation >= -1) {
+            this.cannon.rotation -= 4 * delta;
+        }
+        else if (this.keyboard.isDown('right') && this.cannon.rotation <= 1) {
+            this.cannon.rotation += 4 * delta;
+        }
     }
 }
 function demo13 () {
     let game = new Game({
-        width: 800,
-        height: 600,
-        backgroundColor: 0x000033,
+        width: 768,
+        height: 1024,
         parent: 'gameParent',
         scene: Demo
     });
