@@ -98,6 +98,9 @@ void main (void)
 
     %forloop%
 
+    //if (color.a < 0.001)
+    //    discard;
+
     gl_FragColor = color * vec4(vTintColor.bgr * vTintColor.a, vTintColor.a);
 }`,
     vertexShader: `
@@ -458,8 +461,8 @@ class WebGLRenderer {
         this.elementIndexExtension = gl.getExtension('OES_element_index_uint');
         this.getMaxTextures();
         // https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/depthFunc
-        gl.enable(gl.DEPTH_TEST);
-        gl.depthFunc(gl.LESS);
+        // gl.enable(gl.DEPTH_TEST);
+        // gl.depthFunc(gl.LESS);
         if (this.shader) {
             this.shader.gl = gl;
         }
@@ -558,6 +561,9 @@ class WebGLRenderer {
         gl.viewport(0, 0, this.width, this.height);
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        // gl.blendFunc(gl.ONE, gl.ONE_MINUS_DST_ALPHA);
+        // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        // gl.blendFunc(gl.ONE_MINUS_SRC_ALPHA, gl.ONE_MINUS_DST_ALPHA);
         const cls = this.clearColor;
         if (this.clearBeforeRender) {
             gl.clearColor(cls[0], cls[1], cls[2], cls[3]);
@@ -580,7 +586,8 @@ class WebGLRenderer {
         const startActiveTexture = this.startActiveTexture;
         let currentActiveTexture = this.currentActiveTexture;
         const children = container.children;
-        for (let i = children.length - 1; i >= 0; i--) {
+        // for (let i: number = children.length - 1; i >= 0; i--)
+        for (let i = 0; i < children.length; i++) {
             let entity = children[i];
             if (entity.willRender()) {
                 //  Entity has a texture ...
@@ -1776,13 +1783,25 @@ class Demo extends Scene$1 {
     preload() {
         this.load.setPath('../assets/');
         this.load.atlas('test', 'atlas-notrim.png', 'atlas-notrim.json');
+        this.load.image('bubble', 'bubble256.png');
     }
     create() {
-        this.sprite1 = new Sprite(this, 400, 300, 'test', 'brain');
+        /**
+         * Need to split into 2 passes. First, opaque objects (a Frame level property?)
+         * Render them all with depth buffer enabled, using z index.
+         *
+         * Then, disable depth buffer and render all transparent objects, back to front,
+         * using a shader that tests against the depth buffer to see if the fragment
+         * should be drawn or not.
+         */
+        this.sprite1 = new Sprite(this, 400, 240, 'test', 'brain');
         this.sprite2 = new Sprite(this, 400, 300, 'test', 'f-texture');
-        this.sprite1.z = 1;
+        this.sprite3 = new Sprite(this, 400, 250, 'bubble');
+        this.sprite1.z = 2;
         this.sprite2.z = 0;
-        this.world.addChild(this.sprite1, this.sprite2);
+        this.sprite3.z = 3;
+        this.world.addChild(this.sprite1, this.sprite2, this.sprite3);
+        // this.world.addChild(this.sprite3, this.sprite2, this.sprite1);
     }
     update() {
         // this.sprite1.rotation += 0.01;

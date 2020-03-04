@@ -79,8 +79,8 @@ export default class WebGLRenderer
         this.getMaxTextures();
 
         // https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/depthFunc
-        gl.enable(gl.DEPTH_TEST);
-        gl.depthFunc(gl.LESS);
+        // gl.enable(gl.DEPTH_TEST);
+        // gl.depthFunc(gl.LESS);
 
         if (this.shader)
         {
@@ -242,6 +242,9 @@ export default class WebGLRenderer
 
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        // gl.blendFunc(gl.ONE, gl.ONE_MINUS_DST_ALPHA);
+        // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        // gl.blendFunc(gl.ONE_MINUS_SRC_ALPHA, gl.ONE_MINUS_DST_ALPHA);
 
         const cls = this.clearColor;
 
@@ -278,7 +281,8 @@ export default class WebGLRenderer
 
         const children = container.children;
 
-        for (let i: number = children.length - 1; i >= 0; i--)
+        // for (let i: number = children.length - 1; i >= 0; i--)
+        for (let i: number = 0; i < children.length; i++)
         {
             let entity = children[i];
 

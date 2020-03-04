@@ -20,6 +20,9 @@ void main (void)
 
     %forloop%
 
+    //if (color.a < 0.001)
+    //    discard;
+
     gl_FragColor = color * vec4(vTintColor.bgr * vTintColor.a, vTintColor.a);
 }`,
     
