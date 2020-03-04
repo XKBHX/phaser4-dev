@@ -342,13 +342,6 @@ export default class MultiTextureQuadShader
         };
     }
 
-    packColor (rgb: number, alpha: number): number
-    {
-        let ua = ((alpha * 255) | 0) & 0xFF;
-
-        return ((ua << 24) | rgb) >>> 0;
-    }
-
     bind ()
     {
         const gl = this.gl;
@@ -375,10 +368,10 @@ export default class MultiTextureQuadShader
 
         //  attributes must be reset whenever you change buffers
 
-        gl.vertexAttribPointer(attribs.position, 2, gl.FLOAT, false, stride, 0);                // size = 8
-        gl.vertexAttribPointer(attribs.textureCoord, 2, gl.FLOAT, false, stride, 8);            // size = 8
-        gl.vertexAttribPointer(attribs.textureIndex, 1, gl.FLOAT, false, stride, 8 + 8);        // size = 4
-        gl.vertexAttribPointer(attribs.color, 4, gl.UNSIGNED_BYTE, true, stride, 8 + 8 + 4);    // size = 4
+        gl.vertexAttribPointer(attribs.position, 2, gl.FLOAT, false, stride, 0);        // size = 8
+        gl.vertexAttribPointer(attribs.textureCoord, 2, gl.FLOAT, false, stride, 8);    // size = 8, offset = position
+        gl.vertexAttribPointer(attribs.textureIndex, 1, gl.FLOAT, false, stride, 16);   // size = 4, offset = position + tex coord
+        gl.vertexAttribPointer(attribs.color, 4, gl.UNSIGNED_BYTE, true, stride, 20);   // size = 4, offset = position + tex coord + index
 
         this.count = 0;
     }
@@ -407,48 +400,7 @@ export default class MultiTextureQuadShader
             this.flush();
         }
 
-        let offset = this.count * this.quadElementSize;
-
-        const F32 = this.vertexViewF32;
-        const U32 = this.vertexViewU32;
-
-        const frame = sprite.frame;
-        const textureIndex = frame.texture.glIndex;
-
-        const vertices = sprite.updateVertices();
-
-        const topLeft = vertices[0];
-        const topRight = vertices[1];
-        const bottomLeft = vertices[2];
-        const bottomRight = vertices[3];
-
-        F32[offset++] = topLeft.x;
-        F32[offset++] = topLeft.y;
-        F32[offset++] = frame.u0;
-        F32[offset++] = frame.v0;
-        F32[offset++] = textureIndex;
-        U32[offset++] = this.packColor(topLeft.color, topLeft.alpha);
-
-        F32[offset++] = bottomLeft.x;
-        F32[offset++] = bottomLeft.y;
-        F32[offset++] = frame.u0;
-        F32[offset++] = frame.v1;
-        F32[offset++] = textureIndex;
-        U32[offset++] = this.packColor(bottomLeft.color, bottomLeft.alpha);
-
-        F32[offset++] = bottomRight.x;
-        F32[offset++] = bottomRight.y;
-        F32[offset++] = frame.u1;
-        F32[offset++] = frame.v1;
-        F32[offset++] = textureIndex;
-        U32[offset++] = this.packColor(bottomRight.color, bottomRight.alpha);
-
-        F32[offset++] = topRight.x;
-        F32[offset++] = topRight.y;
-        F32[offset++] = frame.u1;
-        F32[offset++] = frame.v0;
-        F32[offset++] = textureIndex;
-        U32[offset++] = this.packColor(topRight.color, topRight.alpha);
+        sprite.updateVertices(this.vertexViewF32, this.vertexViewU32, this.count * this.quadElementSize);
 
         this.count++;
     }

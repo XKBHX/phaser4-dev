@@ -98,15 +98,12 @@ void main (void)
 
     %forloop%
 
-    //if (color.a < 0.001)
-    //    discard;
-
     gl_FragColor = color * vec4(vTintColor.bgr * vTintColor.a, vTintColor.a);
 }`,
     vertexShader: `
 precision highp float;
 
-attribute vec3 aVertexPosition;
+attribute vec2 aVertexPosition;
 attribute vec2 aTextureCoord;
 attribute float aTextureId;
 attribute vec4 aTintColor;
@@ -124,14 +121,14 @@ void main (void)
     vTextureId = aTextureId;
     vTintColor = aTintColor;
 
-    gl_Position = uProjectionMatrix * uCameraMatrix * vec4(aVertexPosition, 1.0);
+    gl_Position = uProjectionMatrix * uCameraMatrix * vec4(aVertexPosition, 0.0, 1.0);
 }`
 };
-class MultiTextureDepthQuadShader {
+class MultiTextureQuadShader {
     constructor(renderer, config = {}) {
         this.renderer = renderer;
         this.gl = renderer.gl;
-        const { batchSize = 4096, dataSize = 4, indexSize = 4, vertexElementSize = 7, quadIndexSize = 6, fragmentShader = shaderSource.fragmentShader, vertexShader = shaderSource.vertexShader } = config;
+        const { batchSize = 4096, dataSize = 4, indexSize = 4, vertexElementSize = 6, quadIndexSize = 6, fragmentShader = shaderSource.fragmentShader, vertexShader = shaderSource.vertexShader } = config;
         this.batchSize = batchSize;
         this.dataSize = dataSize;
         this.indexSize = indexSize;
@@ -218,10 +215,6 @@ class MultiTextureDepthQuadShader {
             textureLocation: uTextureLocation
         };
     }
-    packColor(rgb, alpha) {
-        let ua = ((alpha * 255) | 0) & 0xFF;
-        return ((ua << 24) | rgb) >>> 0;
-    }
     bind() {
         const gl = this.gl;
         const renderer = this.renderer;
@@ -239,10 +232,10 @@ class MultiTextureDepthQuadShader {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
         //  attributes must be reset whenever you change buffers
-        gl.vertexAttribPointer(attribs.position, 3, gl.FLOAT, false, stride, 0); // size = 12
-        gl.vertexAttribPointer(attribs.textureCoord, 2, gl.FLOAT, false, stride, 12); // size = 8
-        gl.vertexAttribPointer(attribs.textureIndex, 1, gl.FLOAT, false, stride, 12 + 8); // size = 4
-        gl.vertexAttribPointer(attribs.color, 4, gl.UNSIGNED_BYTE, true, stride, 12 + 8 + 4); // size = 4
+        gl.vertexAttribPointer(attribs.position, 2, gl.FLOAT, false, stride, 0); // size = 8
+        gl.vertexAttribPointer(attribs.textureCoord, 2, gl.FLOAT, false, stride, 8); // size = 8, offset = position
+        gl.vertexAttribPointer(attribs.textureIndex, 1, gl.FLOAT, false, stride, 16); // size = 4, offset = position + tex coord
+        gl.vertexAttribPointer(attribs.color, 4, gl.UNSIGNED_BYTE, true, stride, 20); // size = 4, offset = position + tex coord + index
         this.count = 0;
     }
     batchSpriteBuffer(buffer) {
@@ -259,44 +252,7 @@ class MultiTextureDepthQuadShader {
         if (this.count === this.batchSize) {
             this.flush();
         }
-        let offset = this.count * this.quadElementSize;
-        const F32 = this.vertexViewF32;
-        const U32 = this.vertexViewU32;
-        const frame = sprite.frame;
-        const textureIndex = frame.texture.glIndex;
-        const vertices = sprite.updateVertices();
-        const topLeft = vertices[0];
-        const topRight = vertices[1];
-        const bottomLeft = vertices[2];
-        const bottomRight = vertices[3];
-        F32[offset++] = topLeft.x;
-        F32[offset++] = topLeft.y;
-        F32[offset++] = sprite.z;
-        F32[offset++] = frame.u0;
-        F32[offset++] = frame.v0;
-        F32[offset++] = textureIndex;
-        U32[offset++] = this.packColor(topLeft.color, topLeft.alpha);
-        F32[offset++] = bottomLeft.x;
-        F32[offset++] = bottomLeft.y;
-        F32[offset++] = sprite.z;
-        F32[offset++] = frame.u0;
-        F32[offset++] = frame.v1;
-        F32[offset++] = textureIndex;
-        U32[offset++] = this.packColor(bottomLeft.color, bottomLeft.alpha);
-        F32[offset++] = bottomRight.x;
-        F32[offset++] = bottomRight.y;
-        F32[offset++] = sprite.z;
-        F32[offset++] = frame.u1;
-        F32[offset++] = frame.v1;
-        F32[offset++] = textureIndex;
-        U32[offset++] = this.packColor(bottomRight.color, bottomRight.alpha);
-        F32[offset++] = topRight.x;
-        F32[offset++] = topRight.y;
-        F32[offset++] = sprite.z;
-        F32[offset++] = frame.u1;
-        F32[offset++] = frame.v0;
-        F32[offset++] = textureIndex;
-        U32[offset++] = this.packColor(topRight.color, topRight.alpha);
+        sprite.updateVertices(this.vertexViewF32, this.vertexViewU32, this.count * this.quadElementSize);
         this.count++;
     }
     flush() {
@@ -439,6 +395,8 @@ class WebGLRenderer {
         };
         this.clearColor = [0, 0, 0, 1];
         this.maxTextures = 0;
+        this.dirtySprites = 0;
+        this.cachedSprites = 0;
         this.clearBeforeRender = true;
         this.optimizeRedraw = true;
         this.autoResize = true;
@@ -451,8 +409,7 @@ class WebGLRenderer {
         canvas.addEventListener('webglcontextrestored', () => this.onContextRestored(), false);
         this.canvas = canvas;
         this.initContext();
-        // this.shader = new MultiTextureQuadShader(this);
-        this.shader = new MultiTextureDepthQuadShader(this);
+        this.shader = new MultiTextureQuadShader(this);
         this.camera = new Camera(this);
     }
     initContext() {
@@ -525,7 +482,10 @@ class WebGLRenderer {
         this.startActiveTexture = 0;
     }
     isSizePowerOfTwo(width, height) {
-        return (width > 0 && (width & (width - 1)) === 0 && height > 0 && (height & (height - 1)) === 0);
+        if (width < 1 || height < 1) {
+            return false;
+        }
+        return ((width & (width - 1)) === 0) && ((height & (height - 1)) === 0);
     }
     createGLTexture(source) {
         const gl = this.gl;
@@ -554,6 +514,8 @@ class WebGLRenderer {
         if (this.optimizeRedraw && dirtyFrame === 0) {
             return;
         }
+        this.dirtySprites = 0;
+        this.cachedSprites = 0;
         this.currentActiveTexture = 0;
         this.startActiveTexture++;
         const shader = this.shader;
@@ -561,24 +523,17 @@ class WebGLRenderer {
         gl.viewport(0, 0, this.width, this.height);
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-        // gl.blendFunc(gl.ONE, gl.ONE_MINUS_DST_ALPHA);
-        // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-        // gl.blendFunc(gl.ONE_MINUS_SRC_ALPHA, gl.ONE_MINUS_DST_ALPHA);
         const cls = this.clearColor;
         if (this.clearBeforeRender) {
             gl.clearColor(cls[0], cls[1], cls[2], cls[3]);
-            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        }
-        else {
-            gl.clear(gl.DEPTH_BUFFER_BIT);
+            gl.clear(gl.COLOR_BUFFER_BIT);
         }
         this.spriteCount = 0;
         shader.bind();
-        // this.renderChildren(world);
-        this.renderChildrenFrontToBack(world);
+        this.renderChildren(world);
         shader.flush();
     }
-    renderChildrenFrontToBack(container) {
+    renderChildren(container) {
         const gl = this.gl;
         const shader = this.shader;
         const maxTextures = this.maxTextures;
@@ -586,12 +541,10 @@ class WebGLRenderer {
         const startActiveTexture = this.startActiveTexture;
         let currentActiveTexture = this.currentActiveTexture;
         const children = container.children;
-        // for (let i: number = children.length - 1; i >= 0; i--)
         for (let i = 0; i < children.length; i++) {
             let entity = children[i];
             if (entity.willRender()) {
-                //  Entity has a texture ...
-                if (entity.texture) {
+                if (entity.hasTexture) {
                     let texture = entity.texture;
                     if (texture.glIndexCounter < startActiveTexture) {
                         texture.glIndexCounter = startActiveTexture;
@@ -605,8 +558,13 @@ class WebGLRenderer {
                             this.currentActiveTexture = currentActiveTexture;
                         }
                     }
+                    if (entity.dirty) {
+                        this.dirtySprites++;
+                    }
+                    else {
+                        this.cachedSprites++;
+                    }
                     shader.batchSprite(entity);
-                    this.spriteCount++;
                 }
                 if (entity.type === 'SpriteBuffer') {
                     if (shader.batchSpriteBuffer(entity)) {
@@ -617,7 +575,7 @@ class WebGLRenderer {
                 }
                 else if (entity.size) {
                     // Render the children, if it has any
-                    this.renderChildrenFrontToBack(entity);
+                    this.renderChildren(entity);
                 }
             }
         }
@@ -881,12 +839,11 @@ class Vec2 {
 }
 
 class DisplayObject {
-    constructor(scene, x, y) {
-        this.texture = null;
-        this.frame = null;
+    constructor(scene, x = 0, y = 0) {
         this.dirty = true;
         this.visible = true;
         this.renderable = true;
+        this.hasTexture = false;
         this._position = new Vec2();
         this._scale = new Vec2(1, 1);
         this._skew = new Vec2();
@@ -895,7 +852,12 @@ class DisplayObject {
         this._alpha = 1;
         this.localTransform = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
         this.worldTransform = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
+        this._position.set(x, y);
+        this.setScene(scene);
+    }
+    setScene(scene) {
         this.scene = scene;
+        return this;
     }
     updateTransform() {
         this.dirty = true;
@@ -911,7 +873,7 @@ class DisplayObject {
             wt.d = lt.d;
             wt.tx = lt.tx;
             wt.ty = lt.ty;
-            return;
+            return this;
         }
         const pt = parent.worldTransform;
         let { a, b, c, d, tx, ty } = lt;
@@ -921,44 +883,6 @@ class DisplayObject {
         wt.d = c * pt.b + d * pt.d;
         wt.tx = tx * pt.a + ty * pt.c + pt.tx;
         wt.ty = tx * pt.b + ty * pt.d + pt.ty;
-        /*
-        a = wt.a;
-        b = wt.b;
-        c = wt.c;
-        d = wt.d;
-
-        const determ = (a * d) - (b * c);
-
-        if (a || b)
-        {
-            const r = Math.sqrt((a * a) + (b * b));
-
-            // this.worldRotation = (b > 0) ? Math.acos(a / r) : -Math.acos(a / r);
-            // this.worldScale.x = r;
-            // this.worldScale.y = determ / r;
-        }
-        else if (c || d)
-        {
-            var s = Math.sqrt((c * c) + (d * d));
-
-            // this.worldRotation = Phaser.Math.HALF_PI - ((d > 0) ? Math.acos(-c / s) : -Math.acos(c / s));
-            // this.worldScale.x = determ / s;
-            // this.worldScale.y = s;
-        }
-        else
-        {
-            // this.worldScale.x = 0;
-            // this.worldScale.y = 0;
-        }
-
-        //  Set the World values
-        // this.worldAlpha = this.alpha * p.worldAlpha;
-        // this.worldPosition.x = wt.tx;
-        // this.worldPosition.y = wt.ty;
-
-        // reset the bounds each time this is called!
-        // this._currentBounds = null;
-        */
         return this;
     }
     willRender() {
@@ -993,8 +917,11 @@ class DisplayObject {
         return this;
     }
     setRotation(rotation) {
-        this._rotation = rotation;
-        return this.updateCache();
+        if (rotation !== this._rotation) {
+            this._rotation = rotation;
+            this.updateCache();
+        }
+        return this;
     }
     updateCache() {
         const transform = this.localTransform;
@@ -1020,36 +947,46 @@ class DisplayObject {
         return this._position.y;
     }
     set rotation(value) {
-        this._rotation = value;
-        this.updateCache();
+        if (value !== this._rotation) {
+            this._rotation = value;
+            this.updateCache();
+        }
     }
     get rotation() {
         return this._rotation;
     }
     set scaleX(value) {
-        this._scale.x = value;
-        this.updateCache();
+        if (value !== this._scale.x) {
+            this._scale.x = value;
+            this.updateCache();
+        }
     }
     get scaleX() {
         return this._scale.x;
     }
     set scaleY(value) {
-        this._scale.y = value;
-        this.updateCache();
+        if (value !== this._scale.y) {
+            this._scale.y = value;
+            this.updateCache();
+        }
     }
     get scaleY() {
         return this._scale.y;
     }
     set skewX(value) {
-        this._skew.x = value;
-        this.updateCache();
+        if (value !== this._skew.x) {
+            this._skew.x = value;
+            this.updateCache();
+        }
     }
     get skewX() {
         return this._skew.x;
     }
     set skewY(value) {
-        this._skew.y = value;
-        this.updateCache();
+        if (value !== this._skew.y) {
+            this._skew.y = value;
+            this.updateCache();
+        }
     }
     get skewY() {
         return this._skew.y;
@@ -1058,17 +995,18 @@ class DisplayObject {
         return this._alpha;
     }
     set alpha(value) {
-        this._alpha = value;
-        this.dirty = true;
+        if (value !== this._alpha) {
+            this._alpha = value;
+            this.dirty = true;
+        }
     }
 }
 
 class DisplayObjectContainer extends DisplayObject {
-    constructor(scene, x, y) {
+    constructor(scene, x = 0, y = 0) {
         super(scene, x, y);
         this.type = 'DisplayObjectContainer';
         this.children = [];
-        this.setPosition(x, y);
     }
     addChild(...child) {
         child.forEach((entity) => {
@@ -1158,7 +1096,6 @@ class DisplayObjectContainer extends DisplayObject {
     update(dt) {
         if (this.dirty) {
             this.scene.game.dirtyFrame++;
-            this.dirty = false;
         }
         const children = this.children;
         for (let i = 0; i < children.length; i++) {
@@ -1640,28 +1577,28 @@ class Game extends EventEmitter {
         this.scene.world.update(dt);
         this.scene.update(dt, now);
         this.renderer.render(this.scene.world, this.dirtyFrame);
+        this.emit('render', this.renderer.dirtySprites, this.renderer.cachedSprites);
         requestAnimationFrame(() => this.step());
     }
 }
 
-class Vertex {
-    constructor(x = 0, y = 0, color = 16777215, alpha = 1) {
-        this.x = x;
-        this.y = y;
-        this.color = color;
-        this.alpha = alpha;
-    }
+function PackColor (rgb, alpha) {
+    let ua = ((alpha * 255) | 0) & 0xFF;
+    return ((ua << 24) | rgb) >>> 0;
 }
 
 class Sprite extends DisplayObjectContainer {
     constructor(scene, x, y, texture, frame) {
         super(scene, x, y);
         this.type = 'Sprite';
-        this.z = 0;
-        this.vertices = [new Vertex(), new Vertex(), new Vertex(), new Vertex()];
         this._tint = 0xffffff;
+        this._prevTextureID = -1;
+        this.vertexData = new Float32Array(24).fill(0);
+        this.vertexTint = new Uint32Array(4).fill(0xffffff);
+        this.vertexAlpha = new Float32Array(4).fill(1);
+        this.vertexColor = new Uint32Array(4).fill(4294967295);
         this.setTexture(texture, frame);
-        this.setPosition(x, y);
+        this.updateTransform();
     }
     setTexture(key, frame) {
         if (key instanceof Texture) {
@@ -1679,70 +1616,102 @@ class Sprite extends DisplayObjectContainer {
         if (frame.pivot) {
             this.setOrigin(frame.pivot.x, frame.pivot.y);
         }
+        const data = this.vertexData;
+        //  This rarely changes, so we'll set it here, rather than every frame:
+        data[2] = frame.u0;
+        data[3] = frame.v0;
+        data[8] = frame.u0;
+        data[9] = frame.v1;
+        data[14] = frame.u1;
+        data[15] = frame.v1;
+        data[20] = frame.u1;
+        data[21] = frame.v0;
+        this.dirty = true;
+        this.hasTexture = true;
+        return this;
+    }
+    packColors() {
+        const alpha = this.vertexAlpha;
+        const tint = this.vertexTint;
+        const color = this.vertexColor;
+        //  In lots of cases, this *never* changes, so cache it here:
+        color[0] = PackColor(tint[0], alpha[0]);
+        color[1] = PackColor(tint[1], alpha[1]);
+        color[2] = PackColor(tint[2], alpha[2]);
+        color[3] = PackColor(tint[3], alpha[3]);
         this.dirty = true;
         return this;
     }
     setAlpha(topLeft = 1, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
-        const vertices = this.vertices;
-        vertices[0].alpha = topLeft;
-        vertices[1].alpha = topRight;
-        vertices[2].alpha = bottomLeft;
-        vertices[3].alpha = bottomRight;
-        this.dirty = true;
-        return this;
+        const alpha = this.vertexAlpha;
+        alpha[0] = topLeft;
+        alpha[1] = topRight;
+        alpha[2] = bottomLeft;
+        alpha[3] = bottomRight;
+        return this.packColors();
     }
     setTint(topLeft = 0xffffff, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
-        const vertices = this.vertices;
-        vertices[0].color = topLeft;
-        vertices[1].color = topRight;
-        vertices[2].color = bottomLeft;
-        vertices[3].color = bottomRight;
-        this.dirty = true;
-        return this;
+        const tint = this.vertexTint;
+        tint[0] = topLeft;
+        tint[1] = topRight;
+        tint[2] = bottomLeft;
+        tint[3] = bottomRight;
+        return this.packColors();
     }
-    updateVertices() {
-        const frame = this.frame;
-        const origin = this._origin;
-        let w0 = 0;
-        let w1 = 0;
-        let h0 = 0;
-        let h1 = 0;
-        const { a, b, c, d, tx, ty } = this.worldTransform;
-        if (frame.trimmed) {
-            w1 = frame.spriteSourceSizeX - (origin.x * frame.sourceSizeWidth);
-            w0 = w1 + frame.spriteSourceSizeWidth;
-            h1 = frame.spriteSourceSizeY - (origin.y * frame.sourceSizeHeight);
-            h0 = h1 + frame.spriteSourceSizeHeight;
+    updateVertices(F32, U32, offset) {
+        const data = this.vertexData;
+        //  Skip all of this if not dirty
+        if (this.dirty) {
+            const frame = this.frame;
+            const origin = this._origin;
+            let w0;
+            let w1;
+            let h0;
+            let h1;
+            const { a, b, c, d, tx, ty } = this.worldTransform;
+            if (frame.trimmed) {
+                w1 = frame.spriteSourceSizeX - (origin.x * frame.sourceSizeWidth);
+                w0 = w1 + frame.spriteSourceSizeWidth;
+                h1 = frame.spriteSourceSizeY - (origin.y * frame.sourceSizeHeight);
+                h0 = h1 + frame.spriteSourceSizeHeight;
+            }
+            else {
+                w1 = -origin.x * frame.sourceSizeWidth;
+                w0 = w1 + frame.sourceSizeWidth;
+                h1 = -origin.y * frame.sourceSizeHeight;
+                h0 = h1 + frame.sourceSizeHeight;
+            }
+            //  top left
+            data[0] = (w1 * a) + (h1 * c) + tx;
+            data[1] = (w1 * b) + (h1 * d) + ty;
+            //  bottom left
+            data[6] = (w1 * a) + (h0 * c) + tx;
+            data[7] = (w1 * b) + (h0 * d) + ty;
+            //  bottom right
+            data[12] = (w0 * a) + (h0 * c) + tx;
+            data[13] = (w0 * b) + (h0 * d) + ty;
+            //  top right
+            data[18] = (w0 * a) + (h1 * c) + tx;
+            data[19] = (w0 * b) + (h1 * d) + ty;
+            this.dirty = false;
         }
-        else {
-            w1 = -origin.x * frame.sourceSizeWidth;
-            w0 = w1 + frame.sourceSizeWidth;
-            h1 = -origin.y * frame.sourceSizeHeight;
-            h0 = h1 + frame.sourceSizeHeight;
+        const textureIndex = this.texture.glIndex;
+        //  Do we have a different texture ID?
+        if (textureIndex !== this._prevTextureID) {
+            this._prevTextureID = textureIndex;
+            data[4] = textureIndex;
+            data[10] = textureIndex;
+            data[16] = textureIndex;
+            data[22] = textureIndex;
         }
-        //  Cache the calculations to avoid duplicates
-        const w1a = w1 * a;
-        const w1b = w1 * b;
-        const h1c = h1 * c;
-        const h1d = h1 * d;
-        const w0a = w0 * a;
-        const w0b = w0 * b;
-        const h0c = h0 * c;
-        const h0d = h0 * d;
-        const vertices = this.vertices;
-        //  top left
-        vertices[0].x = w1a + h1c + tx;
-        vertices[0].y = w1b + h1d + ty;
-        //  top right
-        vertices[1].x = w0a + h1c + tx;
-        vertices[1].y = w0b + h1d + ty;
-        //  bottom left
-        vertices[2].x = w1a + h0c + tx;
-        vertices[2].y = w1b + h0d + ty;
-        //  bottom right
-        vertices[3].x = w0a + h0c + tx;
-        vertices[3].y = w0b + h0d + ty;
-        return vertices;
+        //  Copy the data to the array buffer
+        F32.set(data, offset);
+        const color = this.vertexColor;
+        //  Copy the vertex colors to the Uint32 view (as the data copy above overwrites them)
+        U32[offset + 5] = color[0];
+        U32[offset + 11] = color[2];
+        U32[offset + 17] = color[3];
+        U32[offset + 23] = color[1];
     }
     set alpha(value) {
         this._alpha = value;
@@ -1786,25 +1755,17 @@ class Demo extends Scene$1 {
         this.load.image('bubble', 'bubble256.png');
     }
     create() {
-        /**
-         * Need to split into 2 passes. First, opaque objects (a Frame level property?)
-         * Render them all with depth buffer enabled, using z index.
-         *
-         * Then, disable depth buffer and render all transparent objects, back to front,
-         * using a shader that tests against the depth buffer to see if the fragment
-         * should be drawn or not.
-         */
+        const text = document.getElementById('cacheStats');
         this.sprite1 = new Sprite(this, 400, 240, 'test', 'brain');
         this.sprite2 = new Sprite(this, 400, 300, 'test', 'f-texture');
         this.sprite3 = new Sprite(this, 400, 250, 'bubble');
-        this.sprite1.z = 2;
-        this.sprite2.z = 0;
-        this.sprite3.z = 3;
-        this.world.addChild(this.sprite1, this.sprite2, this.sprite3);
-        // this.world.addChild(this.sprite3, this.sprite2, this.sprite1);
+        this.world.addChild(this.sprite2, this.sprite1, this.sprite3);
+        this.game.on('render', (d, c) => {
+            text['value'] = 'Cached: ' + c + ' Dirty: ' + d;
+        });
     }
     update() {
-        // this.sprite1.rotation += 0.01;
+        this.sprite2.rotation += 0.01;
     }
 }
 function demo13 () {

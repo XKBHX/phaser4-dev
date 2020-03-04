@@ -25,30 +25,24 @@ class Demo extends Scene
 
     create ()
     {
-        /**
-         * Need to split into 2 passes. First, opaque objects (a Frame level property?)
-         * Render them all with depth buffer enabled, using z index.
-         * 
-         * Then, disable depth buffer and render all transparent objects, back to front,
-         * using a shader that tests against the depth buffer to see if the fragment
-         * should be drawn or not.
-         */
+        const text = document.getElementById('cacheStats');
 
         this.sprite1 = new Sprite(this, 400, 240, 'test', 'brain');
         this.sprite2 = new Sprite(this, 400, 300, 'test', 'f-texture');
         this.sprite3 = new Sprite(this, 400, 250, 'bubble');
 
-        this.sprite1.z = 2;
-        this.sprite2.z = 0;
-        this.sprite3.z = 3;
+        this.world.addChild(this.sprite2, this.sprite1, this.sprite3);
 
-        this.world.addChild(this.sprite1, this.sprite2, this.sprite3);
-        // this.world.addChild(this.sprite3, this.sprite2, this.sprite1);
+        this.game.on('render', (d, c) => {
+
+            text['value'] = 'Cached: ' + c + ' Dirty: ' + d;
+
+        });
     }
 
     update ()
     {
-        // this.sprite1.rotation += 0.01;
+        this.sprite2.rotation += 0.01;
     }
 }
 

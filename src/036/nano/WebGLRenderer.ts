@@ -1,6 +1,5 @@
 import CheckShaderMaxIfStatements from './CheckShaderMaxIfStatements';
-// import MultiTextureQuadShader from './MultiTextureQuadShader';
-import MultiTextureDepthQuadShader from './MultiTextureDepthQuadShader';
+import MultiTextureQuadShader from './MultiTextureQuadShader';
 import Texture from './Texture';
 import DisplayObjectContainer from './DisplayObjectContainer';
 import Sprite from './Sprite';
@@ -23,8 +22,7 @@ export default class WebGLRenderer
 
     clearColor = [ 0, 0, 0, 1 ];
 
-    // shader: MultiTextureQuadShader;
-    shader: MultiTextureDepthQuadShader;
+    shader: MultiTextureQuadShader;
 
     width: number;
     height: number;
@@ -40,6 +38,9 @@ export default class WebGLRenderer
     currentActiveTexture: number;
     startActiveTexture: number;
     spriteCount: number;
+
+    dirtySprites: number = 0;
+    cachedSprites: number = 0;
 
     clearBeforeRender: boolean = true;
     optimizeRedraw: boolean = true;
@@ -63,8 +64,7 @@ export default class WebGLRenderer
 
         this.initContext();
 
-        // this.shader = new MultiTextureQuadShader(this);
-        this.shader = new MultiTextureDepthQuadShader(this);
+        this.shader = new MultiTextureQuadShader(this);
         this.camera = new Camera(this);
     }
 
@@ -181,7 +181,12 @@ export default class WebGLRenderer
 
     isSizePowerOfTwo (width: number, height: number): boolean
     {
-        return (width > 0 && (width & (width - 1)) === 0 && height > 0 && (height & (height - 1)) === 0);
+        if (width < 1 || height < 1)
+        {
+            return false;
+        }
+
+        return ((width & (width - 1)) === 0) && ((height & (height - 1)) === 0);
     }
 
     createGLTexture (source: TexImageSource): WebGLTexture
@@ -231,6 +236,9 @@ export default class WebGLRenderer
             return;
         }
 
+        this.dirtySprites = 0;
+        this.cachedSprites = 0;
+
         this.currentActiveTexture = 0;
         this.startActiveTexture++;
 
@@ -242,106 +250,24 @@ export default class WebGLRenderer
 
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-        // gl.blendFunc(gl.ONE, gl.ONE_MINUS_DST_ALPHA);
-        // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-        // gl.blendFunc(gl.ONE_MINUS_SRC_ALPHA, gl.ONE_MINUS_DST_ALPHA);
 
         const cls = this.clearColor;
 
         if (this.clearBeforeRender)
         {
             gl.clearColor(cls[0], cls[1], cls[2], cls[3]);
-            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        }
-        else
-        {
-            gl.clear(gl.DEPTH_BUFFER_BIT);
+            gl.clear(gl.COLOR_BUFFER_BIT);
         }
 
         this.spriteCount = 0;
 
         shader.bind();
 
-        // this.renderChildren(world);
-        this.renderChildrenFrontToBack(world);
+        this.renderChildren(world);
 
         shader.flush();
     }
 
-    renderChildrenFrontToBack (container: Container)
-    {
-        const gl = this.gl;
-        const shader = this.shader;
-
-        const maxTextures = this.maxTextures;
-        const activeTextures = this.activeTextures;
-        const startActiveTexture = this.startActiveTexture;
-
-        let currentActiveTexture = this.currentActiveTexture;
-
-        const children = container.children;
-
-        // for (let i: number = children.length - 1; i >= 0; i--)
-        for (let i: number = 0; i < children.length; i++)
-        {
-            let entity = children[i];
-
-            if (entity.willRender())
-            {
-                //  Entity has a texture ...
-                if (entity.texture)
-                {
-                    let texture = entity.texture;
-
-                    if (texture.glIndexCounter < startActiveTexture)
-                    {
-                        texture.glIndexCounter = startActiveTexture;
-        
-                        if (currentActiveTexture < maxTextures)
-                        {
-                            //  Make this texture active
-                            activeTextures[currentActiveTexture] = texture;
-        
-                            texture.glIndex = currentActiveTexture;
-        
-                            gl.activeTexture(gl.TEXTURE0 + currentActiveTexture);
-                            gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
-        
-                            currentActiveTexture++;
-
-                            this.currentActiveTexture = currentActiveTexture;
-                        }
-                        else
-                        {
-                            //  We've run out, flush + recycle the oldest one
-                            //  TODO
-                        }
-                    }
-
-                    shader.batchSprite(entity as Sprite);
-
-                    this.spriteCount++;
-                }
-
-                if (entity.type === 'SpriteBuffer')
-                {
-                    if (shader.batchSpriteBuffer(entity as SpriteBuffer))
-                    {
-                        //  Reset active textures
-                        this.currentActiveTexture = 0;
-                        this.startActiveTexture++;
-                    }
-                }
-                else if (entity.size)
-                {
-                    // Render the children, if it has any
-                    this.renderChildrenFrontToBack(entity);
-                }
-            }
-        }
-    }
-
-    /*
     renderChildren (container: Container)
     {
         const gl = this.gl;
@@ -361,10 +287,9 @@ export default class WebGLRenderer
 
             if (entity.willRender())
             {
-                //  Entity has a texture ...
-                if (entity.texture)
+                if (entity.hasTexture)
                 {
-                    let texture = entity.texture;
+                    let texture = (entity as Sprite).texture;
 
                     if (texture.glIndexCounter < startActiveTexture)
                     {
@@ -389,6 +314,15 @@ export default class WebGLRenderer
                             //  We've run out, flush + recycle the oldest one
                             //  TODO
                         }
+                    }
+
+                    if (entity.dirty)
+                    {
+                        this.dirtySprites++;
+                    }
+                    else
+                    {
+                        this.cachedSprites++;
                     }
 
                     shader.batchSprite(entity as Sprite);
@@ -411,6 +345,5 @@ export default class WebGLRenderer
             }
         }
     }
-    */
 
 }

@@ -17,6 +17,7 @@ export default class SpriteBuffer
 
     visible: boolean = true;
     renderable: boolean = true;
+    hasTexture: boolean = true;
     parent: DisplayObjectContainer;
     children: Container[] = [];
     texture: Texture = null;

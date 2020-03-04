@@ -223,6 +223,8 @@ export default class Game extends EventEmitter
 
         this.renderer.render(this.scene.world, this.dirtyFrame);
 
+        this.emit('render', this.renderer.dirtySprites, this.renderer.cachedSprites);
+
         requestAnimationFrame(() => this.step());
     }
 
