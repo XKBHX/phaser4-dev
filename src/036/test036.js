@@ -1199,12 +1199,22 @@ class Texture {
         if (!key) {
             return this.firstFrame;
         }
+        if (key instanceof Frame) {
+            key = key.key;
+        }
         let frame = this.frames.get(key);
         if (!frame) {
             console.warn('Texture.frame missing: ' + key);
             frame = this.firstFrame;
         }
         return frame;
+    }
+    getFrames(frames) {
+        const output = [];
+        frames.forEach((key) => {
+            output.push(this.get(key));
+        });
+        return output;
     }
 }
 
@@ -1636,7 +1646,13 @@ class Sprite extends DisplayObjectContainer {
         else {
             this.texture = this.scene.textures.get(key);
         }
-        return this.setFrame(frame);
+        if (!this.texture) {
+            console.warn('Invalid Texture key: ' + key);
+        }
+        else {
+            this.setFrame(frame);
+        }
+        return this;
     }
     setFrame(key) {
         const frame = this.texture.get(key);
@@ -1755,22 +1771,264 @@ class Sprite extends DisplayObjectContainer {
     }
 }
 
-class Demo extends Scene {
-    constructor(game) {
-        super(game);
+class AnimatedSprite extends Sprite {
+    constructor(scene, x, y, texture, frame) {
+        super(scene, x, y, texture, frame);
+        this.type = 'AnimatedSprite';
+        this.frameIndex = 0;
+        this.animSpeed = 0;
+        this.nextFrame = 0;
+        this.isPlaying = false;
+        this.anims = new Map();
     }
-    create() {
-        this.textures.addColor('red', '#ff0000', 128, 128);
-        // this.textures.addGrid('grid', '#ff0000', '#00ff00', 128, 128, 4, 8);
-        this.textures.addGrid('stripes', '#ff0000', '#00ff00', 256, 256, 8, 1);
-        this.sprite = new Sprite(this, 400, 300, 'stripes');
-        this.world.addChild(this.sprite);
+    addAnimation(key, frames) {
+        if (!this.anims.has(key)) {
+            this.anims.set(key, this.texture.getFrames(frames));
+        }
+        return this;
     }
-    update() {
-        this.sprite.rotation += 0.01;
+    addAnimationFromAtlas(key, prefix, start, end, zeroPad = 0, suffix = '') {
+        const frameKeys = [];
+        const diff = (start < end) ? 1 : -1;
+        //  Adjust because we use i !== end in the for loop
+        end += diff;
+        for (let i = start; i !== end; i += diff) {
+            frameKeys.push(prefix + i.toString().padStart(zeroPad, '0') + suffix);
+        }
+        return this.addAnimation(key, frameKeys);
+    }
+    removeAnimation(key) {
+        this.anims.delete(key);
+        return this;
+    }
+    clearAnimations() {
+        this.anims.clear();
+        return this;
+    }
+    //  If animation already playing, call this does nothing (use restart to restart one)
+    play(key, speed = 24, repeat = 0, startFrame = 0, yoyo = false) {
+        if (this.isPlaying) {
+            if (this.currentAnim !== key) {
+                this.stop();
+            }
+            else {
+                //  This animation is already playing? Just return then.
+                return this;
+            }
+        }
+        if (this.anims.has(key)) {
+            this.currentFrames = this.anims.get(key);
+            this.currentAnim = key;
+            this.frameIndex = startFrame;
+            this.animSpeed = 1000 / speed;
+            this.nextFrame = this.animSpeed;
+            this.isPlaying = true;
+        }
+        return this;
+    }
+    stop() {
+        this.isPlaying = false;
+        //  emit event?
+    }
+    update(delta) {
+        super.update(delta);
+        if (!this.isPlaying) {
+            return;
+        }
+        this.nextFrame -= delta * 1000;
+        if (this.nextFrame <= 0) {
+            this.frameIndex++;
+            if (this.frameIndex === this.currentFrames.length) {
+                this.frameIndex = 0;
+            }
+            this.setFrame(this.currentFrames[this.frameIndex]);
+            this.nextFrame += this.animSpeed;
+        }
     }
 }
-function demo14 () {
+
+class Scene$1 {
+    constructor(game) {
+        this.game = game;
+        this.load = game.loader;
+        this.textures = game.textures;
+        this.world = new DisplayObjectContainer(this, 0, 0);
+    }
+    init() {
+    }
+    preload() {
+    }
+    create() {
+    }
+    update(delta, time) {
+    }
+}
+
+class Sprite$1 extends DisplayObjectContainer {
+    constructor(scene, x, y, texture, frame) {
+        super(scene, x, y);
+        this.type = 'Sprite';
+        this._tint = 0xffffff;
+        this._prevTextureID = -1;
+        this.vertexData = new Float32Array(24).fill(0);
+        this.vertexTint = new Uint32Array(4).fill(0xffffff);
+        this.vertexAlpha = new Float32Array(4).fill(1);
+        this.vertexColor = new Uint32Array(4).fill(4294967295);
+        this.setTexture(texture, frame);
+        this.updateTransform();
+    }
+    setTexture(key, frame) {
+        if (key instanceof Texture) {
+            this.texture = key;
+        }
+        else {
+            this.texture = this.scene.textures.get(key);
+        }
+        if (!this.texture) {
+            console.warn('Invalid Texture key: ' + key);
+        }
+        else {
+            this.setFrame(frame);
+        }
+        return this;
+    }
+    setFrame(key) {
+        const frame = this.texture.get(key);
+        this.frame = frame;
+        this.setSize(frame.sourceSizeWidth, frame.sourceSizeHeight);
+        if (frame.pivot) {
+            this.setOrigin(frame.pivot.x, frame.pivot.y);
+        }
+        const data = this.vertexData;
+        //  This rarely changes, so we'll set it here, rather than every frame:
+        data[2] = frame.u0;
+        data[3] = frame.v0;
+        data[8] = frame.u0;
+        data[9] = frame.v1;
+        data[14] = frame.u1;
+        data[15] = frame.v1;
+        data[20] = frame.u1;
+        data[21] = frame.v0;
+        this.dirty = true;
+        this.hasTexture = true;
+        return this;
+    }
+    packColors() {
+        const alpha = this.vertexAlpha;
+        const tint = this.vertexTint;
+        const color = this.vertexColor;
+        //  In lots of cases, this *never* changes, so cache it here:
+        color[0] = PackColor(tint[0], alpha[0]);
+        color[1] = PackColor(tint[1], alpha[1]);
+        color[2] = PackColor(tint[2], alpha[2]);
+        color[3] = PackColor(tint[3], alpha[3]);
+        this.dirty = true;
+        return this;
+    }
+    setAlpha(topLeft = 1, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
+        const alpha = this.vertexAlpha;
+        alpha[0] = topLeft;
+        alpha[1] = topRight;
+        alpha[2] = bottomLeft;
+        alpha[3] = bottomRight;
+        return this.packColors();
+    }
+    setTint(topLeft = 0xffffff, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
+        const tint = this.vertexTint;
+        tint[0] = topLeft;
+        tint[1] = topRight;
+        tint[2] = bottomLeft;
+        tint[3] = bottomRight;
+        return this.packColors();
+    }
+    updateVertices(F32, U32, offset) {
+        const data = this.vertexData;
+        //  Skip all of this if not dirty
+        if (this.dirty) {
+            const frame = this.frame;
+            const origin = this._origin;
+            let w0;
+            let w1;
+            let h0;
+            let h1;
+            const { a, b, c, d, tx, ty } = this.worldTransform;
+            if (frame.trimmed) {
+                w1 = frame.spriteSourceSizeX - (origin.x * frame.sourceSizeWidth);
+                w0 = w1 + frame.spriteSourceSizeWidth;
+                h1 = frame.spriteSourceSizeY - (origin.y * frame.sourceSizeHeight);
+                h0 = h1 + frame.spriteSourceSizeHeight;
+            }
+            else {
+                w1 = -origin.x * frame.sourceSizeWidth;
+                w0 = w1 + frame.sourceSizeWidth;
+                h1 = -origin.y * frame.sourceSizeHeight;
+                h0 = h1 + frame.sourceSizeHeight;
+            }
+            //  top left
+            data[0] = (w1 * a) + (h1 * c) + tx;
+            data[1] = (w1 * b) + (h1 * d) + ty;
+            //  bottom left
+            data[6] = (w1 * a) + (h0 * c) + tx;
+            data[7] = (w1 * b) + (h0 * d) + ty;
+            //  bottom right
+            data[12] = (w0 * a) + (h0 * c) + tx;
+            data[13] = (w0 * b) + (h0 * d) + ty;
+            //  top right
+            data[18] = (w0 * a) + (h1 * c) + tx;
+            data[19] = (w0 * b) + (h1 * d) + ty;
+            this.dirty = false;
+        }
+        const textureIndex = this.texture.glIndex;
+        //  Do we have a different texture ID?
+        if (textureIndex !== this._prevTextureID) {
+            this._prevTextureID = textureIndex;
+            data[4] = textureIndex;
+            data[10] = textureIndex;
+            data[16] = textureIndex;
+            data[22] = textureIndex;
+        }
+        //  Copy the data to the array buffer
+        F32.set(data, offset);
+        const color = this.vertexColor;
+        //  Copy the vertex colors to the Uint32 view (as the data copy above overwrites them)
+        U32[offset + 5] = color[0];
+        U32[offset + 11] = color[2];
+        U32[offset + 17] = color[3];
+        U32[offset + 23] = color[1];
+    }
+    set alpha(value) {
+        this._alpha = value;
+        this.setAlpha(value);
+    }
+    get tint() {
+        return this._tint;
+    }
+    set tint(value) {
+        this._tint = value;
+        this.setTint(value);
+    }
+}
+
+class Demo extends Scene$1 {
+    constructor(game) {
+        super(game);
+        this.game.renderer.optimizeRedraw = false;
+    }
+    preload() {
+        this.load.setPath('../assets/');
+        this.load.image('background', 'farm-background.png');
+        this.load.atlas('chicken', 'chicken.png', 'chicken.json');
+    }
+    create() {
+        this.world.addChild(new Sprite$1(this, 400, 300, 'background'));
+        const chicken = new AnimatedSprite(this, 400, 400, 'chicken', '__orange_chicken_idle_000');
+        chicken.addAnimationFromAtlas('idle', '__orange_chicken_idle_', 0, 19, 3);
+        chicken.addAnimationFromAtlas('peck', '__orange_chicken_peck_', 0, 9, 3);
+        chicken.play('idle', 14);
+        this.world.addChild(chicken);
+    }
+}
+function demo15 () {
     let game = new Game({
         width: 800,
         height: 600,
@@ -1791,8 +2049,10 @@ function demo14 () {
 // demo11();
 // demo12();
 // demo13();
-demo14();
+// demo14();
+demo15();
 //  Next steps:
+//  * Base64 Loader Test
 //  * Camera alpha
 //  * Camera background color
 //  * Camera stencil?

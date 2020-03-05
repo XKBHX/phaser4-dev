@@ -12,6 +12,7 @@ import demo11 from './demo11'; // Keyboard
 import demo12 from './demo12'; // Texture Atlas Loader (array + hash + tp3 + trimmed)
 import demo13 from './demo13'; // Cache test
 import demo14 from './demo14'; // TextureManager.addColor
+import demo15 from './demo15'; // Animated Sprite via Texture Atlas
 
 // demo6();
 // demo7();
@@ -21,10 +22,12 @@ import demo14 from './demo14'; // TextureManager.addColor
 // demo11();
 // demo12();
 // demo13();
-demo14();
+// demo14();
+demo15();
 
 //  Next steps:
 
+//  * Base64 Loader Test
 //  * Camera alpha
 //  * Camera background color
 //  * Camera stencil?
