@@ -52,12 +52,17 @@ export default class Texture
         return frame;
     }
 
-    get (key?: string | number)
+    get (key?: string | number | Frame)
     {
         //  null, undefined, empty string, zero
         if (!key)
         {
             return this.firstFrame;
+        }
+
+        if (key instanceof Frame)
+        {
+            key = key.key;
         }
 
         let frame: Frame = this.frames.get(key);
@@ -70,6 +75,19 @@ export default class Texture
         }
 
         return frame;
+    }
+
+    getFrames (frames: string[] | number[]): Frame[]
+    {
+        const output: Frame[] = [];
+
+        frames.forEach((key: string | number) => {
+
+            output.push(this.get(key));
+
+        });
+
+        return output;
     }
 
 }
