@@ -1178,10 +1178,10 @@ class Texture {
         this.glIndexCounter = -1;
         this.key = key;
         this.image = image;
+        this.width = image.width;
+        this.height = image.height;
         this.frames = new Map();
-        this.width = this.image.width;
-        this.height = this.image.height;
-        this.add('__BASE', 0, 0, this.width, this.height);
+        this.add('__BASE', 0, 0, image.width, image.height);
     }
     add(key, x, y, width, height) {
         if (this.frames.has(key)) {
@@ -1336,6 +1336,35 @@ class TextureManager {
             this.textures.set(key, texture);
         }
         return texture;
+    }
+    addColor(key, color, width = 32, height = 32) {
+        return this.addGrid(key, color, color, width, height, 0, 0);
+    }
+    addGrid(key, color1, color2, width = 32, height = 32, cols = 2, rows = 2) {
+        let texture = null;
+        if (!this.textures.has(key)) {
+            const ctx = this.createCanvas(width, height);
+            const colWidth = width / cols;
+            const rowHeight = height / rows;
+            ctx.fillStyle = color1;
+            ctx.fillRect(0, 0, width, height);
+            ctx.fillStyle = color2;
+            for (let y = 0; y < rows; y++) {
+                for (let x = (y % 2); x < cols; x += 2) {
+                    ctx.fillRect(x * colWidth, y * rowHeight, colWidth, rowHeight);
+                }
+            }
+            texture = new Texture(key, ctx.canvas);
+            texture.glTexture = this.game.renderer.createGLTexture(texture.image);
+            this.textures.set(key, texture);
+        }
+        return texture;
+    }
+    createCanvas(width, height) {
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        return canvas.getContext('2d');
     }
 }
 
@@ -1726,159 +1755,26 @@ class Sprite extends DisplayObjectContainer {
     }
 }
 
-class Scene$1 {
-    constructor(game) {
-        this.game = game;
-        this.load = game.loader;
-        this.textures = game.textures;
-        this.world = new DisplayObjectContainer(this, 0, 0);
-    }
-    init() {
-    }
-    preload() {
-    }
-    create() {
-    }
-    update(delta, time) {
-    }
-}
-
-class Keyboard extends EventEmitter {
-    constructor() {
-        super();
-        this.keydownHandler = (event) => this.onKeyDown(event);
-        this.keyupHandler = (event) => this.onKeyUp(event);
-        this.blurHandler = () => this.onBlur();
-        window.addEventListener('keydown', this.keydownHandler);
-        window.addEventListener('keyup', this.keyupHandler);
-        window.addEventListener('blur', this.blurHandler);
-        this.keyMap = {
-            'Enter': 'enter',
-            'Escape': 'esc',
-            'Space': 'space',
-            'ArrowLeft': 'left',
-            'ArrowUp': 'up',
-            'ArrowRight': 'right',
-            'ArrowDown': 'down',
-            // MS Edge
-            13: 'enter',
-            27: 'esc',
-            32: 'space',
-            37: 'left',
-            38: 'up',
-            39: 'right',
-            40: 'down'
-        };
-        //  This nice bit of code is from kontra.js
-        for (let i = 0; i < 26; i++) {
-            this.keyMap[i + 65] = this.keyMap['Key' + String.fromCharCode(i + 65)] = String.fromCharCode(i + 97);
-        }
-        this.pressed = {};
-    }
-    onBlur() {
-        this.pressed = {};
-    }
-    onKeyDown(event) {
-        let key = this.keyMap[event.code || event.which];
-        if (key) {
-            event.preventDefault();
-            this.pressed[key] = true;
-            //  Key specific event
-            this.emit('keydown-' + key, event);
-        }
-        //  Global keydown event
-        this.emit('keydown', event);
-    }
-    onKeyUp(event) {
-        let key = this.keyMap[event.code || event.which];
-        if (key) {
-            this.pressed[key] = false;
-            //  Key specific event
-            this.emit('keyup-' + key, event);
-        }
-        //  Global keyup event
-        this.emit('keyup', event);
-    }
-    isDown(key) {
-        return !!this.pressed[key];
-    }
-}
-
-class Fish extends Sprite {
-    constructor(scene, x, y, texture, frame) {
-        super(scene, x, y, texture, frame);
-        this.animFrame = 0;
-        this.animSpeed = 100;
-        this.nextFrame = 100;
-    }
-    update(delta) {
-        super.update(delta);
-        this.nextFrame -= delta * 1000;
-        if (this.nextFrame < 0) {
-            this.nextFrame = this.animSpeed;
-            this.animFrame++;
-            if (this.animFrame > 5) {
-                this.animFrame = 0;
-            }
-            this.setFrame('fish characters_000000' + this.animFrame);
-        }
-    }
-}
-class Demo extends Scene$1 {
+class Demo extends Scene {
     constructor(game) {
         super(game);
-        //  Or we can't debug it with Spector!
-        // this.game.renderer.optimizeRedraw = false;
-        const text = document.getElementById('cacheStats');
-        this.game.on('render', (dirty, cached) => {
-            const cacheUtilisation = (cached / (cached + dirty)) * 100;
-            text['value'] = 'Cached: ' + cacheUtilisation + '% - Dirty: ' + dirty + ' / ' + cached;
-        });
-    }
-    preload() {
-        this.load.setPath('../assets/');
-        this.load.atlas('assets', 'bubbles.png', 'bubbles.json');
-        this.load.image('background', 'bubbles-background.png');
     }
     create() {
-        const bg = new Sprite(this, 0, 0, 'background').setOrigin(0, 0);
-        const header = new Sprite(this, 384, 8, 'assets', 'Header-Ui').setOrigin(0.5, 0);
-        this.world.addChild(bg, header);
-        //  Bubbles
-        let rowMax = 10;
-        let startX = 64;
-        let starty = 128;
-        let frame = 1;
-        for (let y = 0; y < 6; y++) {
-            for (let x = 0; x < rowMax; x++) {
-                frame = 1 + Math.floor(Math.random() * 8);
-                let bubble = new Sprite(this, startX + (x * 70), starty + (y * 62), 'assets', 'bubbles-0' + frame).setScale(0.40);
-                this.world.addChild(bubble);
-            }
-            rowMax--;
-            startX += 35;
-        }
-        //  Fish cannon
-        const fish = new Fish(this, 384 + 160, 900, 'assets', 'fish characters_0000000');
-        const nextBubble = new Sprite(this, 384 + 160, 930, 'assets', 'bubbles-01').setScale(0.40);
-        const cannon = new Sprite(this, 384, 1000, 'assets', 'cannon_0000000').setOrigin(0.5, 1);
-        this.world.addChild(fish, nextBubble, cannon);
-        this.keyboard = new Keyboard();
-        this.cannon = cannon;
+        this.textures.addColor('red', '#ff0000', 128, 128);
+        // this.textures.addGrid('grid', '#ff0000', '#00ff00', 128, 128, 4, 8);
+        this.textures.addGrid('stripes', '#ff0000', '#00ff00', 256, 256, 8, 1);
+        this.sprite = new Sprite(this, 400, 300, 'stripes');
+        this.world.addChild(this.sprite);
     }
-    update(delta) {
-        if (this.keyboard.isDown('left') && this.cannon.rotation >= -1) {
-            this.cannon.rotation -= 4 * delta;
-        }
-        else if (this.keyboard.isDown('right') && this.cannon.rotation <= 1) {
-            this.cannon.rotation += 4 * delta;
-        }
+    update() {
+        this.sprite.rotation += 0.01;
     }
 }
-function demo13 () {
+function demo14 () {
     let game = new Game({
-        width: 768,
-        height: 1024,
+        width: 800,
+        height: 600,
+        backgroundColor: 0x000033,
         parent: 'gameParent',
         scene: Demo
     });
@@ -1894,7 +1790,8 @@ function demo13 () {
 // demo10();
 // demo11();
 // demo12();
-demo13();
+// demo13();
+demo14();
 //  Next steps:
 //  * Camera alpha
 //  * Camera background color

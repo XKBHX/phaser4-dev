@@ -11,6 +11,7 @@ import demo10 from './demo10'; // Sprite Buffer
 import demo11 from './demo11'; // Keyboard
 import demo12 from './demo12'; // Texture Atlas Loader (array + hash + tp3 + trimmed)
 import demo13 from './demo13'; // Cache test
+import demo14 from './demo14'; // TextureManager.addColor
 
 // demo6();
 // demo7();
@@ -19,7 +20,8 @@ import demo13 from './demo13'; // Cache test
 // demo10();
 // demo11();
 // demo12();
-demo13();
+// demo13();
+demo14();
 
 //  Next steps:
 
