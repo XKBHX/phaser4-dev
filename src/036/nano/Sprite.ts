@@ -44,10 +44,19 @@ export default class Sprite extends DisplayObjectContainer
             this.texture = this.scene.textures.get(key);
         }
 
-        return this.setFrame(frame);
+        if (!this.texture)
+        {
+            console.warn('Invalid Texture key: ' + key);
+        }
+        else
+        {
+            this.setFrame(frame);
+        }
+
+        return this;
     }
 
-    setFrame (key?: string | number)
+    setFrame (key?: string | number | Frame)
     {
         const frame: Frame = this.texture.get(key);
 
