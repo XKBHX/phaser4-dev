@@ -8,7 +8,7 @@ export default class Texture
     width: number;
     height: number;
 
-    image: HTMLImageElement;
+    image: TexImageSource;
 
     renderer: WebGLRenderer;
     glTexture: WebGLTexture;
@@ -19,18 +19,18 @@ export default class Texture
 
     frames: Map<string | number, Frame>;
 
-    constructor (key: string, image: HTMLImageElement)
+    constructor (key: string, image: TexImageSource)
     {
         this.key = key;
 
         this.image = image;
 
+        this.width = image.width;
+        this.height = image.height;
+
         this.frames = new Map();
 
-        this.width = this.image.width;
-        this.height = this.image.height;
-
-        this.add('__BASE', 0, 0, this.width, this.height);
+        this.add('__BASE', 0, 0, image.width, image.height);
     }
 
     add (key: string | number, x: number, y: number, width: number, height: number): Frame
