@@ -80,4 +80,53 @@ export default class TextureManager
         return texture;
     }
 
+    addColor (key: string, color: string, width: number = 32, height: number = 32): Texture
+    {
+        return this.addGrid(key, color, color, width, height, 0, 0);
+    }
+
+    addGrid (key: string, color1: string, color2: string, width: number = 32, height: number = 32, cols: number = 2, rows: number = 2): Texture
+    {
+        let texture = null;
+
+        if (!this.textures.has(key))
+        {
+            const ctx = this.createCanvas(width, height);
+
+            const colWidth = width / cols;
+            const rowHeight = height / rows;
+
+            ctx.fillStyle = color1;
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.fillStyle = color2;
+
+            for (let y: number = 0; y < rows; y++)
+            {
+                for (let x: number = (y % 2); x < cols; x += 2)
+                {
+                    ctx.fillRect(x * colWidth, y * rowHeight, colWidth, rowHeight);
+                }
+            }
+
+            texture = new Texture(key, ctx.canvas);
+
+            texture.glTexture = this.game.renderer.createGLTexture(texture.image);
+
+            this.textures.set(key, texture);
+        }
+
+        return texture;
+    }
+
+    createCanvas (width: number, height: number): CanvasRenderingContext2D
+    {
+        const canvas = document.createElement('canvas');
+
+        canvas.width = width;
+        canvas.height = height;
+
+        return canvas.getContext('2d');
+    }
+
 }
