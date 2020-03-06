@@ -1,4 +1,3 @@
-import Texture from './Texture';
 import Frame from './Frame';
 import Scene from './Scene';
 import Sprite from './Sprite';
@@ -8,19 +7,21 @@ export default class AnimatedSprite extends Sprite
     type: string = 'AnimatedSprite';
 
     anims: Map<string, Frame[]>;
+    animData: { currentAnim: string; currentFrames: Frame[]; frameIndex: number; animSpeed: number; nextFrameTime: number; repeatCount: number; isPlaying: boolean; yoyo: boolean; playingForward: boolean; };
 
-    currentAnim: string;
-    currentFrames: Frame[];
-    frameIndex: number = 0;
-    animSpeed: number = 0;
-    nextFrame: number = 0;
-    isPlaying: boolean = false;
+    //  More features:
+    //  repeat delay
+    //  anim sequence (a set of anims to play back to back - might require an array of animData objects though?)
+
+    //  more functions: 'playReverse', 'restart', add parameter to 'stop' to let it stop when it finishes one more loop
 
     constructor (scene: Scene, x: number, y: number, texture: string, frame?: string | number)
     {
         super(scene, x, y, texture, frame);
 
         this.anims = new Map();
+
+        this.animData = { currentAnim: '', currentFrames: [], frameIndex: 0, animSpeed: 0, nextFrameTime: 0, repeatCount: 0, isPlaying: false, yoyo: false, playingForward: true };
     }
 
     addAnimation (key: string, frames: string[] | number[])
@@ -64,12 +65,14 @@ export default class AnimatedSprite extends Sprite
         return this;
     }
 
-    //  If animation already playing, call this does nothing (use restart to restart one)
-    play (key: string, speed: number = 24, repeat: number = 0, startFrame: number = 0, yoyo: boolean = false)
+    //  If animation already playing, calling this does nothing (use restart to restart one)
+    play (key: string, speed: number = 24, repeat: number = 0, yoyo: boolean = false, startFrame: number = 0)
     {
-        if (this.isPlaying)
+        const data = this.animData;
+
+        if (data.isPlaying)
         {
-            if (this.currentAnim !== key)
+            if (data.currentAnim !== key)
             {
                 this.stop();
             }
@@ -82,17 +85,20 @@ export default class AnimatedSprite extends Sprite
 
         if (this.anims.has(key))
         {
-            this.currentFrames = this.anims.get(key);
+            data.currentFrames = this.anims.get(key);
 
-            this.currentAnim = key;
+            data.currentAnim = key;
 
-            this.frameIndex = startFrame;
+            data.frameIndex = startFrame;
 
-            this.animSpeed = 1000 / speed;
+            data.animSpeed = 1000 / speed;
 
-            this.nextFrame = this.animSpeed;
+            data.nextFrameTime = data.animSpeed;
 
-            this.isPlaying = true;
+            data.isPlaying = true;
+            data.playingForward = true;
+            data.yoyo = yoyo;
+            data.repeatCount = repeat;
         }
 
         return this;
@@ -100,34 +106,118 @@ export default class AnimatedSprite extends Sprite
 
     stop ()
     {
-        this.isPlaying = false;
+        const data = this.animData;
+
+        data.isPlaying = false;
+        data.currentAnim = '';
 
         //  emit event?
+    }
+
+    nextFrame ()
+    {
+        const data = this.animData;
+
+        data.frameIndex++;
+
+        //  There are no more frames, do we yoyo or repeat or end?
+        if (data.frameIndex === data.currentFrames.length)
+        {
+            if (data.yoyo)
+            {
+                data.frameIndex--;
+                data.playingForward = false;
+            }
+            else if (data.repeatCount === -1 || data.repeatCount > 0)
+            {
+                data.frameIndex = 0;
+
+                if (data.repeatCount !== -1)
+                {
+                    data.repeatCount--;
+                }
+            }
+            else
+            {
+                return this.stop();
+            }
+        }
+
+        this.setFrame(data.currentFrames[data.frameIndex]);
+
+        data.nextFrameTime += data.animSpeed;
+    }
+
+    prevFrame ()
+    {
+        const data = this.animData;
+
+        data.frameIndex--;
+
+        //  There are no more frames, do we repeat or end?
+        if (data.frameIndex === -1)
+        {
+            if (data.repeatCount === -1 || data.repeatCount > 0)
+            {
+                data.frameIndex = 0;
+                data.playingForward = true;
+
+                if (data.repeatCount !== -1)
+                {
+                    data.repeatCount--;
+                }
+            }
+            else
+            {
+                return this.stop();
+            }
+        }
+
+        this.setFrame(data.currentFrames[data.frameIndex]);
+
+        data.nextFrameTime += data.animSpeed;
     }
 
     update (delta: number)
     {
         super.update(delta);
 
-        if (!this.isPlaying)
+        const data = this.animData;
+
+        if (!data.isPlaying)
         {
             return;
         }
 
-        this.nextFrame -= delta * 1000;
+        data.nextFrameTime -= delta * 1000;
 
-        if (this.nextFrame <= 0)
+        //  It's time for a new frame
+        if (data.nextFrameTime <= 0)
         {
-            this.frameIndex++;
-
-            if (this.frameIndex === this.currentFrames.length)
+            if (data.playingForward)
             {
-                this.frameIndex = 0;
+                this.nextFrame();
             }
-
-            this.setFrame(this.currentFrames[this.frameIndex]);
-
-            this.nextFrame += this.animSpeed;
+            else
+            {
+                this.prevFrame();
+            }
         }
     }
+
+    get isPlaying (): boolean
+    {
+        return this.animData.isPlaying;
+    }
+
+    get isPlayingForward (): boolean
+    {
+        return (this.animData.isPlaying && this.animData.playingForward);
+    }
+
+    get currentAnimation (): string
+    {
+        return this.animData.currentAnim;
+    }
+
 }

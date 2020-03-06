@@ -1772,14 +1772,15 @@ class Sprite extends DisplayObjectContainer {
 }
 
 class AnimatedSprite extends Sprite {
+    //  More features:
+    //  repeat delay
+    //  anim sequence (a set of anims to play back to back - might require an array of animData objects though?)
+    //  more functions: 'playReverse', 'restart', add parameter to 'stop' to let it stop when it finishes one more loop
     constructor(scene, x, y, texture, frame) {
         super(scene, x, y, texture, frame);
         this.type = 'AnimatedSprite';
-        this.frameIndex = 0;
-        this.animSpeed = 0;
-        this.nextFrame = 0;
-        this.isPlaying = false;
         this.anims = new Map();
+        this.animData = { currentAnim: '', currentFrames: [], frameIndex: 0, animSpeed: 0, nextFrameTime: 0, repeatCount: 0, isPlaying: false, yoyo: false, playingForward: true };
     }
     addAnimation(key, frames) {
         if (!this.anims.has(key)) {
@@ -1805,10 +1806,11 @@ class AnimatedSprite extends Sprite {
         this.anims.clear();
         return this;
     }
-    //  If animation already playing, call this does nothing (use restart to restart one)
-    play(key, speed = 24, repeat = 0, startFrame = 0, yoyo = false) {
-        if (this.isPlaying) {
-            if (this.currentAnim !== key) {
+    //  If animation already playing, calling this does nothing (use restart to restart one)
+    play(key, speed = 24, repeat = 0, yoyo = false, startFrame = 0) {
+        const data = this.animData;
+        if (data.isPlaying) {
+            if (data.currentAnim !== key) {
                 this.stop();
             }
             else {
@@ -1817,33 +1819,90 @@ class AnimatedSprite extends Sprite {
             }
         }
         if (this.anims.has(key)) {
-            this.currentFrames = this.anims.get(key);
-            this.currentAnim = key;
-            this.frameIndex = startFrame;
-            this.animSpeed = 1000 / speed;
-            this.nextFrame = this.animSpeed;
-            this.isPlaying = true;
+            data.currentFrames = this.anims.get(key);
+            data.currentAnim = key;
+            data.frameIndex = startFrame;
+            data.animSpeed = 1000 / speed;
+            data.nextFrameTime = data.animSpeed;
+            data.isPlaying = true;
+            data.playingForward = true;
+            data.yoyo = yoyo;
+            data.repeatCount = repeat;
         }
         return this;
     }
     stop() {
-        this.isPlaying = false;
+        const data = this.animData;
+        data.isPlaying = false;
+        data.currentAnim = '';
         //  emit event?
+    }
+    nextFrame() {
+        const data = this.animData;
+        data.frameIndex++;
+        //  There are no more frames, do we yoyo or repeat or end?
+        if (data.frameIndex === data.currentFrames.length) {
+            if (data.yoyo) {
+                data.frameIndex--;
+                data.playingForward = false;
+            }
+            else if (data.repeatCount === -1 || data.repeatCount > 0) {
+                data.frameIndex = 0;
+                if (data.repeatCount !== -1) {
+                    data.repeatCount--;
+                }
+            }
+            else {
+                return this.stop();
+            }
+        }
+        this.setFrame(data.currentFrames[data.frameIndex]);
+        data.nextFrameTime += data.animSpeed;
+    }
+    prevFrame() {
+        const data = this.animData;
+        data.frameIndex--;
+        //  There are no more frames, do we repeat or end?
+        if (data.frameIndex === -1) {
+            if (data.repeatCount === -1 || data.repeatCount > 0) {
+                data.frameIndex = 0;
+                data.playingForward = true;
+                if (data.repeatCount !== -1) {
+                    data.repeatCount--;
+                }
+            }
+            else {
+                return this.stop();
+            }
+        }
+        this.setFrame(data.currentFrames[data.frameIndex]);
+        data.nextFrameTime += data.animSpeed;
     }
     update(delta) {
         super.update(delta);
-        if (!this.isPlaying) {
+        const data = this.animData;
+        if (!data.isPlaying) {
             return;
         }
-        this.nextFrame -= delta * 1000;
-        if (this.nextFrame <= 0) {
-            this.frameIndex++;
-            if (this.frameIndex === this.currentFrames.length) {
-                this.frameIndex = 0;
+        data.nextFrameTime -= delta * 1000;
+        //  It's time for a new frame
+        if (data.nextFrameTime <= 0) {
+            if (data.playingForward) {
+                this.nextFrame();
             }
-            this.setFrame(this.currentFrames[this.frameIndex]);
-            this.nextFrame += this.animSpeed;
+            else {
+                this.prevFrame();
+            }
         }
+    }
+    get isPlaying() {
+        return this.animData.isPlaying;
+    }
+    get isPlayingForward() {
+        return (this.animData.isPlaying && this.animData.playingForward);
+    }
+    get currentAnimation() {
+        return this.animData.currentAnim;
     }
 }
 
@@ -2022,9 +2081,12 @@ class Demo extends Scene$1 {
     create() {
         this.world.addChild(new Sprite$1(this, 400, 300, 'background'));
         const chicken = new AnimatedSprite(this, 400, 400, 'chicken', '__orange_chicken_idle_000');
+        chicken.addAnimationFromAtlas('die', '__orange_chicken_die_', 0, 4, 3);
         chicken.addAnimationFromAtlas('idle', '__orange_chicken_idle_', 0, 19, 3);
         chicken.addAnimationFromAtlas('peck', '__orange_chicken_peck_', 0, 9, 3);
-        chicken.play('idle', 14);
+        chicken.play('idle', 14, -1);
+        // chicken.play('die', 10);
+        // chicken.play('die', 4, 1, 0, true);
         this.world.addChild(chicken);
     }
 }
