@@ -90,4 +90,21 @@ export default class Texture
         return output;
     }
 
+    getFramesInRange (prefix: string, start: number, end: number, zeroPad: number = 0, suffix: string = ''): Frame[]
+    {
+        const frameKeys = [];
+
+        const diff: number = (start < end) ? 1 : -1;
+
+        //  Adjust because we use i !== end in the for loop
+        end += diff;
+
+        for (let i: number = start; i !== end; i += diff)
+        {
+            frameKeys.push(prefix + i.toString().padStart(zeroPad, '0') + suffix);
+        }
+
+        return this.getFrames(frameKeys);
+    }
+
 }

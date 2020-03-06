@@ -156,7 +156,7 @@ export default class DisplayObjectContainer extends DisplayObject
         }
     }
 
-    update (dt: number)
+    update (dt: number, now: number)
     {
         if (this.dirty)
         {
@@ -167,7 +167,7 @@ export default class DisplayObjectContainer extends DisplayObject
 
         for (let i = 0; i < children.length; i++)
         {
-            children[i].update(dt);
+            children[i].update(dt, now);
         }
     }
 

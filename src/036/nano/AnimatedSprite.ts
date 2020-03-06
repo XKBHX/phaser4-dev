@@ -1,19 +1,15 @@
 import Frame from './Frame';
 import Scene from './Scene';
 import Sprite from './Sprite';
+import IAnimationData from './IAnimationData';
+import IAnimationPlayConfig from './IAnimationPlayConfig';
 
 export default class AnimatedSprite extends Sprite
 {
     type: string = 'AnimatedSprite';
 
     anims: Map<string, Frame[]>;
-    animData: { currentAnim: string; currentFrames: Frame[]; frameIndex: number; animSpeed: number; nextFrameTime: number; repeatCount: number; isPlaying: boolean; yoyo: boolean; playingForward: boolean; };
-
-    //  More features:
-    //  repeat delay
-    //  anim sequence (a set of anims to play back to back - might require an array of animData objects though?)
-
-    //  more functions: 'playReverse', 'restart', add parameter to 'stop' to let it stop when it finishes one more loop
+    animData: IAnimationData;
 
     constructor (scene: Scene, x: number, y: number, texture: string, frame?: string | number)
     {
@@ -21,7 +17,24 @@ export default class AnimatedSprite extends Sprite
 
         this.anims = new Map();
 
-        this.animData = { currentAnim: '', currentFrames: [], frameIndex: 0, animSpeed: 0, nextFrameTime: 0, repeatCount: 0, isPlaying: false, yoyo: false, playingForward: true };
+        //  Holds all the data for the current animation only
+        this.animData = {
+            currentAnim: '',
+            currentFrames: [],
+            frameIndex: 0,
+            animSpeed: 0,
+            nextFrameTime: 0,
+            repeatCount: 0,
+            isPlaying: false,
+            yoyo: false,
+            pendingStart: false,
+            playingForward: true,
+            delay: 0,
+            repeatDelay: 0,
+            onStart: null,
+            onRepeat: null,
+            onComplete: null
+        };
     }
 
     addAnimation (key: string, frames: string[] | number[])
@@ -36,19 +49,12 @@ export default class AnimatedSprite extends Sprite
 
     addAnimationFromAtlas (key: string, prefix: string, start: number, end: number, zeroPad: number = 0, suffix: string = '')
     {
-        const frameKeys = [];
-
-        const diff: number = (start < end) ? 1 : -1;
-
-        //  Adjust because we use i !== end in the for loop
-        end += diff;
-
-        for (let i: number = start; i !== end; i += diff)
+        if (!this.anims.has(key))
         {
-            frameKeys.push(prefix + i.toString().padStart(zeroPad, '0') + suffix);
+            this.anims.set(key, this.texture.getFramesInRange(prefix, start, end, zeroPad, suffix));
         }
 
-        return this.addAnimation(key, frameKeys);
+        return this;
     }
 
     removeAnimation (key: string)
@@ -66,8 +72,21 @@ export default class AnimatedSprite extends Sprite
     }
 
     //  If animation already playing, calling this does nothing (use restart to restart one)
-    play (key: string, speed: number = 24, repeat: number = 0, yoyo: boolean = false, startFrame: number = 0)
+    play (key: string, config: IAnimationPlayConfig = {})
     {
+        const {
+            speed = 24,
+            repeat = 0,
+            yoyo = false,
+            startFrame = 0,
+            delay = 0,
+            repeatDelay = 0,
+            onStart = null,
+            onRepeat = null,
+            onComplete = null,
+            forceRestart = false
+        } = config;
+
         const data = this.animData;
 
         if (data.isPlaying)
@@ -76,7 +95,7 @@ export default class AnimatedSprite extends Sprite
             {
                 this.stop();
             }
-            else
+            else if (!forceRestart)
             {
                 //  This animation is already playing? Just return then.
                 return this;
@@ -86,19 +105,34 @@ export default class AnimatedSprite extends Sprite
         if (this.anims.has(key))
         {
             data.currentFrames = this.anims.get(key);
-
             data.currentAnim = key;
-
             data.frameIndex = startFrame;
-
             data.animSpeed = 1000 / speed;
-
-            data.nextFrameTime = data.animSpeed;
-
+            data.nextFrameTime = data.animSpeed + delay;
             data.isPlaying = true;
             data.playingForward = true;
             data.yoyo = yoyo;
             data.repeatCount = repeat;
+            data.delay = delay;
+            data.repeatDelay = repeatDelay;
+            data.onStart = onStart;
+            data.onRepeat = onRepeat;
+            data.onComplete = onComplete;
+
+            //  If there is no start delay, we set the first frame immediately
+            if (delay === 0)
+            {
+                this.setFrame(data.currentFrames[data.frameIndex]);
+
+                if (onStart)
+                {
+                    onStart(this, key);
+                }
+            }
+            else
+            {
+                data.pendingStart = true;
+            }
         }
 
         return this;
@@ -111,7 +145,10 @@ export default class AnimatedSprite extends Sprite
         data.isPlaying = false;
         data.currentAnim = '';
 
-        //  emit event?
+        if (data.onComplete)
+        {
+            data.onComplete(this, data.currentAnim);
+        }
     }
 
     nextFrame ()
@@ -136,9 +173,18 @@ export default class AnimatedSprite extends Sprite
                 {
                     data.repeatCount--;
                 }
+
+                if (data.onRepeat)
+                {
+                    data.onRepeat(this, data.currentAnim);
+                }
+
+                data.nextFrameTime += data.repeatDelay;
             }
             else
             {
+                data.frameIndex--;
+
                 return this.stop();
             }
         }
@@ -166,9 +212,18 @@ export default class AnimatedSprite extends Sprite
                 {
                     data.repeatCount--;
                 }
+
+                if (data.onRepeat)
+                {
+                    data.onRepeat(this, data.currentAnim);
+                }
+
+                data.nextFrameTime += data.repeatDelay;
             }
             else
             {
+                data.frameIndex = 0;
+
                 return this.stop();
             }
         }
@@ -178,9 +233,9 @@ export default class AnimatedSprite extends Sprite
         data.nextFrameTime += data.animSpeed;
     }
 
-    update (delta: number)
+    update (delta: number, now: number)
     {
-        super.update(delta);
+        super.update(delta, now);
 
         const data = this.animData;
 
@@ -190,11 +245,25 @@ export default class AnimatedSprite extends Sprite
         }
 
         data.nextFrameTime -= delta * 1000;
+        
+        //  Clamp to zero, otherwise a huge delta could cause animation playback issues
+        data.nextFrameTime = Math.max(data.nextFrameTime, 0);
 
         //  It's time for a new frame
-        if (data.nextFrameTime <= 0)
+        if (data.nextFrameTime === 0)
         {
-            if (data.playingForward)
+            //  Is this the start of our animation?
+            if (data.pendingStart)
+            {
+                if (data.onStart)
+                {
+                    data.onStart(this, data.currentAnim);
+                }
+
+                data.pendingStart = false;
+                data.nextFrameTime = data.animSpeed;
+            }
+            else if (data.playingForward)
             {
                 this.nextFrame();
             }

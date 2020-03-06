@@ -59,6 +59,8 @@ export default class Game extends EventEmitter
     {
         this.isPaused = false;
 
+        this.lastTick = Date.now();
+
         this.emit('resume');
     }
 
@@ -96,8 +98,8 @@ export default class Game extends EventEmitter
 
         });
 
-        // window.addEventListener('blur', () => this.pause());
-        // window.addEventListener('focus', () => this.resume());
+        window.addEventListener('blur', () => this.pause());
+        window.addEventListener('focus', () => this.resume());
 
         const scene = this.scene;
 
@@ -215,9 +217,9 @@ export default class Game extends EventEmitter
 
         this.dirtyFrame = 0;
 
-        this.emit('step', dt);
+        this.emit('step', dt, now);
 
-        this.scene.world.update(dt);
+        this.scene.world.update(dt, now);
 
         this.scene.update(dt, now);
 

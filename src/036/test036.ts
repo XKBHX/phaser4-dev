@@ -13,6 +13,9 @@ import demo12 from './demo12'; // Texture Atlas Loader (array + hash + tp3 + tri
 import demo13 from './demo13'; // Cache test
 import demo14 from './demo14'; // TextureManager.addColor
 import demo15 from './demo15'; // Animated Sprite via Texture Atlas
+import demo16 from './demo16'; // Animated Sprite - start delay
+import demo17 from './demo17'; // Animated Sprite - repeat delay
+import demo18 from './demo18'; // Animated Sprite - onComplete callback
 
 // demo6();
 // demo7();
@@ -23,7 +26,10 @@ import demo15 from './demo15'; // Animated Sprite via Texture Atlas
 // demo12();
 // demo13();
 // demo14();
-demo15();
+// demo15();
+// demo16();
+// demo17();
+demo18();
 
 //  Next steps:
 

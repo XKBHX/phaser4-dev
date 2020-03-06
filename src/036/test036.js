@@ -1093,13 +1093,13 @@ class DisplayObjectContainer extends DisplayObject {
             throw new Error('Range Error. Values out of bounds');
         }
     }
-    update(dt) {
+    update(dt, now) {
         if (this.dirty) {
             this.scene.game.dirtyFrame++;
         }
         const children = this.children;
         for (let i = 0; i < children.length; i++) {
-            children[i].update(dt);
+            children[i].update(dt, now);
         }
     }
     updateTransform() {
@@ -1215,6 +1215,16 @@ class Texture {
             output.push(this.get(key));
         });
         return output;
+    }
+    getFramesInRange(prefix, start, end, zeroPad = 0, suffix = '') {
+        const frameKeys = [];
+        const diff = (start < end) ? 1 : -1;
+        //  Adjust because we use i !== end in the for loop
+        end += diff;
+        for (let i = start; i !== end; i += diff) {
+            frameKeys.push(prefix + i.toString().padStart(zeroPad, '0') + suffix);
+        }
+        return this.getFrames(frameKeys);
     }
 }
 
@@ -1521,6 +1531,7 @@ class Game extends EventEmitter {
     }
     resume() {
         this.isPaused = false;
+        this.lastTick = Date.now();
         this.emit('resume');
     }
     boot(width, height, backgroundColor, parent) {
@@ -1543,8 +1554,8 @@ class Game extends EventEmitter {
                 this.resume();
             }
         });
-        // window.addEventListener('blur', () => this.pause());
-        // window.addEventListener('focus', () => this.resume());
+        window.addEventListener('blur', () => this.pause());
+        window.addEventListener('focus', () => this.resume());
         const scene = this.scene;
         if (scene instanceof Scene) {
             this.scene = this.createSceneFromInstance(scene);
@@ -1612,8 +1623,8 @@ class Game extends EventEmitter {
             return;
         }
         this.dirtyFrame = 0;
-        this.emit('step', dt);
-        this.scene.world.update(dt);
+        this.emit('step', dt, now);
+        this.scene.world.update(dt, now);
         this.scene.update(dt, now);
         this.renderer.render(this.scene.world, this.dirtyFrame);
         this.emit('render', this.renderer.dirtySprites, this.renderer.cachedSprites);
@@ -1772,15 +1783,28 @@ class Sprite extends DisplayObjectContainer {
 }
 
 class AnimatedSprite extends Sprite {
-    //  More features:
-    //  repeat delay
-    //  anim sequence (a set of anims to play back to back - might require an array of animData objects though?)
-    //  more functions: 'playReverse', 'restart', add parameter to 'stop' to let it stop when it finishes one more loop
     constructor(scene, x, y, texture, frame) {
         super(scene, x, y, texture, frame);
         this.type = 'AnimatedSprite';
         this.anims = new Map();
-        this.animData = { currentAnim: '', currentFrames: [], frameIndex: 0, animSpeed: 0, nextFrameTime: 0, repeatCount: 0, isPlaying: false, yoyo: false, playingForward: true };
+        //  Holds all the data for the current animation only
+        this.animData = {
+            currentAnim: '',
+            currentFrames: [],
+            frameIndex: 0,
+            animSpeed: 0,
+            nextFrameTime: 0,
+            repeatCount: 0,
+            isPlaying: false,
+            yoyo: false,
+            pendingStart: false,
+            playingForward: true,
+            delay: 0,
+            repeatDelay: 0,
+            onStart: null,
+            onRepeat: null,
+            onComplete: null
+        };
     }
     addAnimation(key, frames) {
         if (!this.anims.has(key)) {
@@ -1789,14 +1813,10 @@ class AnimatedSprite extends Sprite {
         return this;
     }
     addAnimationFromAtlas(key, prefix, start, end, zeroPad = 0, suffix = '') {
-        const frameKeys = [];
-        const diff = (start < end) ? 1 : -1;
-        //  Adjust because we use i !== end in the for loop
-        end += diff;
-        for (let i = start; i !== end; i += diff) {
-            frameKeys.push(prefix + i.toString().padStart(zeroPad, '0') + suffix);
+        if (!this.anims.has(key)) {
+            this.anims.set(key, this.texture.getFramesInRange(prefix, start, end, zeroPad, suffix));
         }
-        return this.addAnimation(key, frameKeys);
+        return this;
     }
     removeAnimation(key) {
         this.anims.delete(key);
@@ -1807,13 +1827,14 @@ class AnimatedSprite extends Sprite {
         return this;
     }
     //  If animation already playing, calling this does nothing (use restart to restart one)
-    play(key, speed = 24, repeat = 0, yoyo = false, startFrame = 0) {
+    play(key, config = {}) {
+        const { speed = 24, repeat = 0, yoyo = false, startFrame = 0, delay = 0, repeatDelay = 0, onStart = null, onRepeat = null, onComplete = null, forceRestart = false } = config;
         const data = this.animData;
         if (data.isPlaying) {
             if (data.currentAnim !== key) {
                 this.stop();
             }
-            else {
+            else if (!forceRestart) {
                 //  This animation is already playing? Just return then.
                 return this;
             }
@@ -1823,11 +1844,26 @@ class AnimatedSprite extends Sprite {
             data.currentAnim = key;
             data.frameIndex = startFrame;
             data.animSpeed = 1000 / speed;
-            data.nextFrameTime = data.animSpeed;
+            data.nextFrameTime = data.animSpeed + delay;
             data.isPlaying = true;
             data.playingForward = true;
             data.yoyo = yoyo;
             data.repeatCount = repeat;
+            data.delay = delay;
+            data.repeatDelay = repeatDelay;
+            data.onStart = onStart;
+            data.onRepeat = onRepeat;
+            data.onComplete = onComplete;
+            //  If there is no start delay, we set the first frame immediately
+            if (delay === 0) {
+                this.setFrame(data.currentFrames[data.frameIndex]);
+                if (onStart) {
+                    onStart(this, key);
+                }
+            }
+            else {
+                data.pendingStart = true;
+            }
         }
         return this;
     }
@@ -1835,7 +1871,9 @@ class AnimatedSprite extends Sprite {
         const data = this.animData;
         data.isPlaying = false;
         data.currentAnim = '';
-        //  emit event?
+        if (data.onComplete) {
+            data.onComplete(this, data.currentAnim);
+        }
     }
     nextFrame() {
         const data = this.animData;
@@ -1851,8 +1889,13 @@ class AnimatedSprite extends Sprite {
                 if (data.repeatCount !== -1) {
                     data.repeatCount--;
                 }
+                if (data.onRepeat) {
+                    data.onRepeat(this, data.currentAnim);
+                }
+                data.nextFrameTime += data.repeatDelay;
             }
             else {
+                data.frameIndex--;
                 return this.stop();
             }
         }
@@ -1870,24 +1913,39 @@ class AnimatedSprite extends Sprite {
                 if (data.repeatCount !== -1) {
                     data.repeatCount--;
                 }
+                if (data.onRepeat) {
+                    data.onRepeat(this, data.currentAnim);
+                }
+                data.nextFrameTime += data.repeatDelay;
             }
             else {
+                data.frameIndex = 0;
                 return this.stop();
             }
         }
         this.setFrame(data.currentFrames[data.frameIndex]);
         data.nextFrameTime += data.animSpeed;
     }
-    update(delta) {
-        super.update(delta);
+    update(delta, now) {
+        super.update(delta, now);
         const data = this.animData;
         if (!data.isPlaying) {
             return;
         }
         data.nextFrameTime -= delta * 1000;
+        //  Clamp to zero, otherwise a huge delta could cause animation playback issues
+        data.nextFrameTime = Math.max(data.nextFrameTime, 0);
         //  It's time for a new frame
-        if (data.nextFrameTime <= 0) {
-            if (data.playingForward) {
+        if (data.nextFrameTime === 0) {
+            //  Is this the start of our animation?
+            if (data.pendingStart) {
+                if (data.onStart) {
+                    data.onStart(this, data.currentAnim);
+                }
+                data.pendingStart = false;
+                data.nextFrameTime = data.animSpeed;
+            }
+            else if (data.playingForward) {
                 this.nextFrame();
             }
             else {
@@ -2080,17 +2138,25 @@ class Demo extends Scene$1 {
     }
     create() {
         this.world.addChild(new Sprite$1(this, 400, 300, 'background'));
-        const chicken = new AnimatedSprite(this, 400, 400, 'chicken', '__orange_chicken_idle_000');
+        // const chicken = new AnimatedSprite(this, 400, 400, 'chicken', '__orange_chicken_idle_000');
+        const chicken = new AnimatedSprite(this, 400, 400, 'chicken', '__orange_chicken_peck_000');
+        chicken.addAnimationFromAtlas('lay', '__orange_chicken_lay_egg_', 0, 9, 3);
         chicken.addAnimationFromAtlas('die', '__orange_chicken_die_', 0, 4, 3);
         chicken.addAnimationFromAtlas('idle', '__orange_chicken_idle_', 0, 19, 3);
         chicken.addAnimationFromAtlas('peck', '__orange_chicken_peck_', 0, 9, 3);
-        chicken.play('idle', 14, -1);
-        // chicken.play('die', 10);
-        // chicken.play('die', 4, 1, 0, true);
+        chicken.play('peck', { delay: 4000, speed: 1 });
+        // chicken.play('idle', { repeat: 3, onComplete: () => {
+        //     chicken.play('peck');
+        // }});
         this.world.addChild(chicken);
+        this.chicken = chicken;
+    }
+    update() {
+        const text = document.getElementById('cacheStats');
+        text['value'] = this.chicken.animData.frameIndex + ' : ' + this.chicken.frame.key;
     }
 }
-function demo15 () {
+function demo18 () {
     let game = new Game({
         width: 800,
         height: 600,
@@ -2112,7 +2178,10 @@ function demo15 () {
 // demo12();
 // demo13();
 // demo14();
-demo15();
+// demo15();
+// demo16();
+// demo17();
+demo18();
 //  Next steps:
 //  * Base64 Loader Test
 //  * Camera alpha
