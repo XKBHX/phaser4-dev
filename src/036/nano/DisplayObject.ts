@@ -13,8 +13,8 @@ export default class DisplayObject
 
     parent: DisplayObjectContainer;
 
-    width: number;
-    height: number;
+    width: number = 0;
+    height: number = 0;
 
     protected _position: Vec2 = new Vec2();
     protected _scale: Vec2 = new Vec2(1, 1);
@@ -80,6 +80,28 @@ export default class DisplayObject
         wt.ty = tx * pt.b + ty * pt.d + pt.ty;
 
         return this;
+    }
+
+    localToGlobal (x: number, y: number, outPoint: Vec2 = new Vec2()): Vec2
+    {
+        const { a, b, c, d, tx, ty } = this.worldTransform;
+
+        outPoint.x = (a * x) + (c * y) + tx;
+        outPoint.y = (b * x) + (d * y) + ty;
+
+        return outPoint;
+    }
+
+    globalToLocal (x: number, y: number, outPoint: Vec2 = new Vec2()): Vec2
+    {
+        const { a, b, c, d, tx, ty } = this.worldTransform;
+
+        const id: number = 1 / ((a * d) + (c * -b));
+
+        outPoint.x = (d * id * x) + (-c * id * y) + (((ty * c) - (tx * d)) * id);
+        outPoint.y = (a * id * y) + (-b * id * x) + (((-ty * a) + (tx * b)) * id);
+
+        return outPoint;
     }
 
     willRender (): boolean
@@ -255,9 +277,24 @@ export default class DisplayObject
         }
     }
 
-    get skewY (): number
+    get originX (): number
     {
-        return this._skew.y;
+        return this._origin.x;
+    }
+
+    set originX (value: number)
+    {
+        this._origin.x = value;
+    }
+
+    get originY (): number
+    {
+        return this._origin.y;
+    }
+
+    set originY (value: number)
+    {
+        this._origin.y = value;
     }
 
     get alpha (): number

@@ -844,6 +844,8 @@ class DisplayObject {
         this.visible = true;
         this.renderable = true;
         this.hasTexture = false;
+        this.width = 0;
+        this.height = 0;
         this._position = new Vec2();
         this._scale = new Vec2(1, 1);
         this._skew = new Vec2();
@@ -884,6 +886,19 @@ class DisplayObject {
         wt.tx = tx * pt.a + ty * pt.c + pt.tx;
         wt.ty = tx * pt.b + ty * pt.d + pt.ty;
         return this;
+    }
+    localToGlobal(x, y, outPoint = new Vec2()) {
+        const { a, b, c, d, tx, ty } = this.worldTransform;
+        outPoint.x = (a * x) + (c * y) + tx;
+        outPoint.y = (b * x) + (d * y) + ty;
+        return outPoint;
+    }
+    globalToLocal(x, y, outPoint = new Vec2()) {
+        const { a, b, c, d, tx, ty } = this.worldTransform;
+        const id = 1 / ((a * d) + (c * -b));
+        outPoint.x = (d * id * x) + (-c * id * y) + (((ty * c) - (tx * d)) * id);
+        outPoint.y = (a * id * y) + (-b * id * x) + (((-ty * a) + (tx * b)) * id);
+        return outPoint;
     }
     willRender() {
         return (this.visible && this.renderable && this._alpha > 0);
@@ -988,8 +1003,17 @@ class DisplayObject {
             this.updateCache();
         }
     }
-    get skewY() {
-        return this._skew.y;
+    get originX() {
+        return this._origin.x;
+    }
+    set originX(value) {
+        this._origin.x = value;
+    }
+    get originY() {
+        return this._origin.y;
+    }
+    set originY(value) {
+        this._origin.y = value;
     }
     get alpha() {
         return this._alpha;
@@ -1007,6 +1031,15 @@ class DisplayObjectContainer extends DisplayObject {
         super(scene, x, y);
         this.type = 'DisplayObjectContainer';
         this.children = [];
+        this.inputEnabled = false;
+        this.inputEnabledChildren = true;
+        this.updateTransform();
+    }
+    setInteractive(hitArea) {
+        this.inputEnabled = true;
+        this.inputHitArea = hitArea;
+        this.inputEnabledChildren = true;
+        return this;
     }
     addChild(...child) {
         child.forEach((entity) => {
@@ -1021,6 +1054,7 @@ class DisplayObjectContainer extends DisplayObject {
             }
             child.parent = this;
             this.children.splice(index, 0, child);
+            child.updateTransform();
         }
         return child;
     }
@@ -1069,6 +1103,7 @@ class DisplayObjectContainer extends DisplayObject {
         const child = this.getChildAt(index);
         if (child) {
             child.parent = undefined;
+            child.updateTransform();
             this.children.splice(index, 1);
         }
         return child;
@@ -1083,6 +1118,7 @@ class DisplayObjectContainer extends DisplayObject {
             const removed = children.splice(beginIndex, range);
             removed.forEach((child) => {
                 child.parent = undefined;
+                child.updateTransform();
             });
             return removed;
         }
@@ -1782,188 +1818,6 @@ class Sprite extends DisplayObjectContainer {
     }
 }
 
-class AnimatedSprite extends Sprite {
-    constructor(scene, x, y, texture, frame) {
-        super(scene, x, y, texture, frame);
-        this.type = 'AnimatedSprite';
-        this.anims = new Map();
-        //  Holds all the data for the current animation only
-        this.animData = {
-            currentAnim: '',
-            currentFrames: [],
-            frameIndex: 0,
-            animSpeed: 0,
-            nextFrameTime: 0,
-            repeatCount: 0,
-            isPlaying: false,
-            yoyo: false,
-            pendingStart: false,
-            playingForward: true,
-            delay: 0,
-            repeatDelay: 0,
-            onStart: null,
-            onRepeat: null,
-            onComplete: null
-        };
-    }
-    addAnimation(key, frames) {
-        if (!this.anims.has(key)) {
-            this.anims.set(key, this.texture.getFrames(frames));
-        }
-        return this;
-    }
-    addAnimationFromAtlas(key, prefix, start, end, zeroPad = 0, suffix = '') {
-        if (!this.anims.has(key)) {
-            this.anims.set(key, this.texture.getFramesInRange(prefix, start, end, zeroPad, suffix));
-        }
-        return this;
-    }
-    removeAnimation(key) {
-        this.anims.delete(key);
-        return this;
-    }
-    clearAnimations() {
-        this.anims.clear();
-        return this;
-    }
-    //  If animation already playing, calling this does nothing (use restart to restart one)
-    play(key, config = {}) {
-        const { speed = 24, repeat = 0, yoyo = false, startFrame = 0, delay = 0, repeatDelay = 0, onStart = null, onRepeat = null, onComplete = null, forceRestart = false } = config;
-        const data = this.animData;
-        if (data.isPlaying) {
-            if (data.currentAnim !== key) {
-                this.stop();
-            }
-            else if (!forceRestart) {
-                //  This animation is already playing? Just return then.
-                return this;
-            }
-        }
-        if (this.anims.has(key)) {
-            data.currentFrames = this.anims.get(key);
-            data.currentAnim = key;
-            data.frameIndex = startFrame;
-            data.animSpeed = 1000 / speed;
-            data.nextFrameTime = data.animSpeed + delay;
-            data.isPlaying = true;
-            data.playingForward = true;
-            data.yoyo = yoyo;
-            data.repeatCount = repeat;
-            data.delay = delay;
-            data.repeatDelay = repeatDelay;
-            data.onStart = onStart;
-            data.onRepeat = onRepeat;
-            data.onComplete = onComplete;
-            //  If there is no start delay, we set the first frame immediately
-            if (delay === 0) {
-                this.setFrame(data.currentFrames[data.frameIndex]);
-                if (onStart) {
-                    onStart(this, key);
-                }
-            }
-            else {
-                data.pendingStart = true;
-            }
-        }
-        return this;
-    }
-    stop() {
-        const data = this.animData;
-        data.isPlaying = false;
-        data.currentAnim = '';
-        if (data.onComplete) {
-            data.onComplete(this, data.currentAnim);
-        }
-    }
-    nextFrame() {
-        const data = this.animData;
-        data.frameIndex++;
-        //  There are no more frames, do we yoyo or repeat or end?
-        if (data.frameIndex === data.currentFrames.length) {
-            if (data.yoyo) {
-                data.frameIndex--;
-                data.playingForward = false;
-            }
-            else if (data.repeatCount === -1 || data.repeatCount > 0) {
-                data.frameIndex = 0;
-                if (data.repeatCount !== -1) {
-                    data.repeatCount--;
-                }
-                if (data.onRepeat) {
-                    data.onRepeat(this, data.currentAnim);
-                }
-                data.nextFrameTime += data.repeatDelay;
-            }
-            else {
-                data.frameIndex--;
-                return this.stop();
-            }
-        }
-        this.setFrame(data.currentFrames[data.frameIndex]);
-        data.nextFrameTime += data.animSpeed;
-    }
-    prevFrame() {
-        const data = this.animData;
-        data.frameIndex--;
-        //  There are no more frames, do we repeat or end?
-        if (data.frameIndex === -1) {
-            if (data.repeatCount === -1 || data.repeatCount > 0) {
-                data.frameIndex = 0;
-                data.playingForward = true;
-                if (data.repeatCount !== -1) {
-                    data.repeatCount--;
-                }
-                if (data.onRepeat) {
-                    data.onRepeat(this, data.currentAnim);
-                }
-                data.nextFrameTime += data.repeatDelay;
-            }
-            else {
-                data.frameIndex = 0;
-                return this.stop();
-            }
-        }
-        this.setFrame(data.currentFrames[data.frameIndex]);
-        data.nextFrameTime += data.animSpeed;
-    }
-    update(delta, now) {
-        super.update(delta, now);
-        const data = this.animData;
-        if (!data.isPlaying) {
-            return;
-        }
-        data.nextFrameTime -= delta * 1000;
-        //  Clamp to zero, otherwise a huge delta could cause animation playback issues
-        data.nextFrameTime = Math.max(data.nextFrameTime, 0);
-        //  It's time for a new frame
-        if (data.nextFrameTime === 0) {
-            //  Is this the start of our animation?
-            if (data.pendingStart) {
-                if (data.onStart) {
-                    data.onStart(this, data.currentAnim);
-                }
-                data.pendingStart = false;
-                data.nextFrameTime = data.animSpeed;
-            }
-            else if (data.playingForward) {
-                this.nextFrame();
-            }
-            else {
-                this.prevFrame();
-            }
-        }
-    }
-    get isPlaying() {
-        return this.animData.isPlaying;
-    }
-    get isPlayingForward() {
-        return (this.animData.isPlaying && this.animData.playingForward);
-    }
-    get currentAnimation() {
-        return this.animData.currentAnim;
-    }
-}
-
 class Scene$1 {
     constructor(game) {
         this.game = game;
@@ -1981,148 +1835,79 @@ class Scene$1 {
     }
 }
 
-class Sprite$1 extends DisplayObjectContainer {
-    constructor(scene, x, y, texture, frame) {
-        super(scene, x, y);
-        this.type = 'Sprite';
-        this._tint = 0xffffff;
-        this._prevTextureID = -1;
-        this.vertexData = new Float32Array(24).fill(0);
-        this.vertexTint = new Uint32Array(4).fill(0xffffff);
-        this.vertexAlpha = new Float32Array(4).fill(1);
-        this.vertexColor = new Uint32Array(4).fill(4294967295);
-        this.setTexture(texture, frame);
-        this.updateTransform();
+class Mouse extends EventEmitter {
+    constructor(target) {
+        super();
+        this.primaryDown = false;
+        this.auxDown = false;
+        this.secondaryDown = false;
+        this.resolution = 1;
+        this.mousedownHandler = (event) => this.onMouseDown(event);
+        this.mouseupHandler = (event) => this.onMouseUp(event);
+        this.mousemoveHandler = (event) => this.onMouseMove(event);
+        this.blurHandler = () => this.onBlur();
+        target.addEventListener('mousedown', this.mousedownHandler);
+        target.addEventListener('mouseup', this.mouseupHandler);
+        window.addEventListener('blur', this.blurHandler);
+        window.addEventListener('mousemove', this.mousemoveHandler);
+        this.localPoint = new Vec2();
+        this.transPoint = new Vec2();
+        this.target = target;
     }
-    setTexture(key, frame) {
-        if (key instanceof Texture) {
-            this.texture = key;
+    onBlur() {
+    }
+    onMouseDown(event) {
+        this.positionToPoint(event);
+        this.primaryDown = (event.button === 0);
+        this.auxDown = (event.button === 1);
+        this.secondaryDown = (event.button === 2);
+        this.emit('pointerdown', this.localPoint.x, this.localPoint.y, event.button, event);
+    }
+    onMouseUp(event) {
+        this.positionToPoint(event);
+        this.primaryDown = !(event.button === 0);
+        this.auxDown = !(event.button === 1);
+        this.secondaryDown = !(event.button === 2);
+        this.emit('pointerup', this.localPoint.x, this.localPoint.y, event.button, event);
+    }
+    onMouseMove(event) {
+        this.positionToPoint(event);
+        this.emit('pointermove', this.localPoint.x, this.localPoint.y, event);
+    }
+    positionToPoint(event) {
+        const local = this.localPoint;
+        //  if the event has offsetX/Y we can use that directly, as it gives us a lot better
+        //  result, taking into account things like css transforms
+        if (typeof event.offsetX === 'number') {
+            local.set(event.offsetX, event.offsetY);
         }
         else {
-            this.texture = this.scene.textures.get(key);
+            const rect = this.target.getBoundingClientRect();
+            const width = this.target.hasAttribute('width') ? this.target['width'] : 0;
+            const height = this.target.hasAttribute('height') ? this.target['height'] : 0;
+            const multiplier = 1 / this.resolution;
+            local.x = ((event.clientX - rect.left) * (width / rect.width)) * multiplier;
+            local.y = ((event.clientY - rect.top) * (height / rect.height)) * multiplier;
         }
-        if (!this.texture) {
-            console.warn('Invalid Texture key: ' + key);
+        return local;
+    }
+    hitTest(sprite) {
+        if (!sprite.visible || !sprite.inputEnabled) {
+            return false;
+        }
+        sprite.globalToLocal(this.localPoint.x, this.localPoint.y, this.transPoint);
+        const px = this.transPoint.x;
+        const py = this.transPoint.y;
+        if (sprite.inputHitArea) {
+            return sprite.inputHitArea.contains(px, py);
         }
         else {
-            this.setFrame(frame);
+            const left = -(sprite.width * sprite.originX);
+            const right = left + sprite.width;
+            const top = -(sprite.height * sprite.originY);
+            const bottom = top + sprite.height;
+            return (px >= left && px <= right && py >= top && py <= bottom);
         }
-        return this;
-    }
-    setFrame(key) {
-        const frame = this.texture.get(key);
-        this.frame = frame;
-        this.setSize(frame.sourceSizeWidth, frame.sourceSizeHeight);
-        if (frame.pivot) {
-            this.setOrigin(frame.pivot.x, frame.pivot.y);
-        }
-        const data = this.vertexData;
-        //  This rarely changes, so we'll set it here, rather than every frame:
-        data[2] = frame.u0;
-        data[3] = frame.v0;
-        data[8] = frame.u0;
-        data[9] = frame.v1;
-        data[14] = frame.u1;
-        data[15] = frame.v1;
-        data[20] = frame.u1;
-        data[21] = frame.v0;
-        this.dirty = true;
-        this.hasTexture = true;
-        return this;
-    }
-    packColors() {
-        const alpha = this.vertexAlpha;
-        const tint = this.vertexTint;
-        const color = this.vertexColor;
-        //  In lots of cases, this *never* changes, so cache it here:
-        color[0] = PackColor(tint[0], alpha[0]);
-        color[1] = PackColor(tint[1], alpha[1]);
-        color[2] = PackColor(tint[2], alpha[2]);
-        color[3] = PackColor(tint[3], alpha[3]);
-        this.dirty = true;
-        return this;
-    }
-    setAlpha(topLeft = 1, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
-        const alpha = this.vertexAlpha;
-        alpha[0] = topLeft;
-        alpha[1] = topRight;
-        alpha[2] = bottomLeft;
-        alpha[3] = bottomRight;
-        return this.packColors();
-    }
-    setTint(topLeft = 0xffffff, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
-        const tint = this.vertexTint;
-        tint[0] = topLeft;
-        tint[1] = topRight;
-        tint[2] = bottomLeft;
-        tint[3] = bottomRight;
-        return this.packColors();
-    }
-    updateVertices(F32, U32, offset) {
-        const data = this.vertexData;
-        //  Skip all of this if not dirty
-        if (this.dirty) {
-            const frame = this.frame;
-            const origin = this._origin;
-            let w0;
-            let w1;
-            let h0;
-            let h1;
-            const { a, b, c, d, tx, ty } = this.worldTransform;
-            if (frame.trimmed) {
-                w1 = frame.spriteSourceSizeX - (origin.x * frame.sourceSizeWidth);
-                w0 = w1 + frame.spriteSourceSizeWidth;
-                h1 = frame.spriteSourceSizeY - (origin.y * frame.sourceSizeHeight);
-                h0 = h1 + frame.spriteSourceSizeHeight;
-            }
-            else {
-                w1 = -origin.x * frame.sourceSizeWidth;
-                w0 = w1 + frame.sourceSizeWidth;
-                h1 = -origin.y * frame.sourceSizeHeight;
-                h0 = h1 + frame.sourceSizeHeight;
-            }
-            //  top left
-            data[0] = (w1 * a) + (h1 * c) + tx;
-            data[1] = (w1 * b) + (h1 * d) + ty;
-            //  bottom left
-            data[6] = (w1 * a) + (h0 * c) + tx;
-            data[7] = (w1 * b) + (h0 * d) + ty;
-            //  bottom right
-            data[12] = (w0 * a) + (h0 * c) + tx;
-            data[13] = (w0 * b) + (h0 * d) + ty;
-            //  top right
-            data[18] = (w0 * a) + (h1 * c) + tx;
-            data[19] = (w0 * b) + (h1 * d) + ty;
-            this.dirty = false;
-        }
-        const textureIndex = this.texture.glIndex;
-        //  Do we have a different texture ID?
-        if (textureIndex !== this._prevTextureID) {
-            this._prevTextureID = textureIndex;
-            data[4] = textureIndex;
-            data[10] = textureIndex;
-            data[16] = textureIndex;
-            data[22] = textureIndex;
-        }
-        //  Copy the data to the array buffer
-        F32.set(data, offset);
-        const color = this.vertexColor;
-        //  Copy the vertex colors to the Uint32 view (as the data copy above overwrites them)
-        U32[offset + 5] = color[0];
-        U32[offset + 11] = color[2];
-        U32[offset + 17] = color[3];
-        U32[offset + 23] = color[1];
-    }
-    set alpha(value) {
-        this._alpha = value;
-        this.setAlpha(value);
-    }
-    get tint() {
-        return this._tint;
-    }
-    set tint(value) {
-        this._tint = value;
-        this.setTint(value);
     }
 }
 
@@ -2133,30 +1918,37 @@ class Demo extends Scene$1 {
     }
     preload() {
         this.load.setPath('../assets/');
-        this.load.image('background', 'farm-background.png');
-        this.load.atlas('chicken', 'chicken.png', 'chicken.json');
+        this.load.image('big', '512x512.png');
+        this.load.image('box', '128x128.png');
     }
     create() {
-        this.world.addChild(new Sprite$1(this, 400, 300, 'background'));
-        // const chicken = new AnimatedSprite(this, 400, 400, 'chicken', '__orange_chicken_idle_000');
-        const chicken = new AnimatedSprite(this, 400, 400, 'chicken', '__orange_chicken_peck_000');
-        chicken.addAnimationFromAtlas('lay', '__orange_chicken_lay_egg_', 0, 9, 3);
-        chicken.addAnimationFromAtlas('die', '__orange_chicken_die_', 0, 4, 3);
-        chicken.addAnimationFromAtlas('idle', '__orange_chicken_idle_', 0, 19, 3);
-        chicken.addAnimationFromAtlas('peck', '__orange_chicken_peck_', 0, 9, 3);
-        chicken.play('peck', { delay: 4000, speed: 1 });
-        // chicken.play('idle', { repeat: 3, onComplete: () => {
-        //     chicken.play('peck');
-        // }});
-        this.world.addChild(chicken);
-        this.chicken = chicken;
-    }
-    update() {
-        const text = document.getElementById('cacheStats');
-        text['value'] = this.chicken.animData.frameIndex + ' : ' + this.chicken.frame.key;
+        const mouse = new Mouse(this.game.renderer.canvas);
+        // const parent = new DisplayObjectContainer(this, 400, 300);
+        // const biggie = new Sprite(this, 400, 300, 'big');
+        // const box = new Sprite(this, -100, -50, 'box');
+        const box = new Sprite(this, 400, 300, 'box');
+        // box.setInteractive(new Rectangle(0, 0, 128, 128));
+        box.setInteractive();
+        // biggie.addChild(box);
+        // const box = new Sprite(this, 400, 300, 'box');
+        // biggie.setRotation(0.2);
+        // box.setRotation(0.2);
+        // box.setScale(2);
+        // box.setScale(4.1, 0.6);
+        // biggie.setSkew(0.5, 0);
+        // this.world.addChild(biggie);
+        this.world.addChild(box);
+        mouse.on('pointerdown', (x, y) => {
+            if (mouse.hitTest(box)) {
+                console.log('hit!');
+            }
+            else {
+                console.log('miss!');
+            }
+        });
     }
 }
-function demo18 () {
+function demo20 () {
     let game = new Game({
         width: 800,
         height: 600,
@@ -2181,7 +1973,9 @@ function demo18 () {
 // demo15();
 // demo16();
 // demo17();
-demo18();
+// demo18();
+// demo19();
+demo20();
 //  Next steps:
 //  * Base64 Loader Test
 //  * Camera alpha

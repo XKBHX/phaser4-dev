@@ -16,6 +16,8 @@ import demo15 from './demo15'; // Animated Sprite via Texture Atlas
 import demo16 from './demo16'; // Animated Sprite - start delay
 import demo17 from './demo17'; // Animated Sprite - repeat delay
 import demo18 from './demo18'; // Animated Sprite - onComplete callback
+import demo19 from './demo19'; // Mouse Input
+import demo20 from './demo20'; // Mouse Input - Hit Test
 
 // demo6();
 // demo7();
@@ -29,7 +31,9 @@ import demo18 from './demo18'; // Animated Sprite - onComplete callback
 // demo15();
 // demo16();
 // demo17();
-demo18();
+// demo18();
+// demo19();
+demo20();
 
 //  Next steps:
 

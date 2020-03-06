@@ -1,6 +1,7 @@
 import DisplayObject from './DisplayObject';
 import { Container } from './Container';
 import Scene from './Scene';
+import IInteractiveArea from './IInteractiveArea';
 
 export default class DisplayObjectContainer extends DisplayObject
 {
@@ -8,9 +9,24 @@ export default class DisplayObjectContainer extends DisplayObject
 
     children: Container[] = [];
 
+    inputEnabled: boolean = false;
+    inputEnabledChildren: boolean = true;
+    inputHitArea: IInteractiveArea;
+
     constructor (scene: Scene, x: number = 0, y: number = 0)
     {
         super(scene, x, y);
+
+        this.updateTransform();
+    }
+
+    setInteractive (hitArea?: IInteractiveArea)
+    {
+        this.inputEnabled = true;
+        this.inputHitArea = hitArea;
+        this.inputEnabledChildren = true;
+
+        return this;
     }
 
     addChild (...child: Container[])
@@ -36,6 +52,8 @@ export default class DisplayObjectContainer extends DisplayObject
             child.parent = this;
     
             this.children.splice(index, 0, child);
+
+            child.updateTransform();
         }
 
         return child;
@@ -116,6 +134,8 @@ export default class DisplayObjectContainer extends DisplayObject
         if (child)
         {
             child.parent = undefined;
+
+            child.updateTransform();
     
             this.children.splice(index, 1);
         }
@@ -141,6 +161,8 @@ export default class DisplayObjectContainer extends DisplayObject
             removed.forEach((child) => {
 
                 child.parent = undefined;
+
+                child.updateTransform();
 
             });
     
