@@ -5,6 +5,7 @@ import Sprite from './Sprite';
 import GlobalToLocal from './GlobalToLocal';
 import IMatrix2d from './IMatrix2d';
 import AppendMatrix2d from './AppendMatrix2d';
+import DisplayObjectContainer from './DisplayObjectContainer';
 
 export default class Mouse extends EventEmitter
 {
@@ -21,6 +22,7 @@ export default class Mouse extends EventEmitter
     private blurHandler: { (): void; (this: Window, ev: FocusEvent): any; };
 
     public localPoint: Vec2;
+    public hitPoint: Vec2;
     private transPoint: Vec2;
 
     constructor (target: HTMLElement)
@@ -34,10 +36,12 @@ export default class Mouse extends EventEmitter
 
         target.addEventListener('mousedown', this.mousedownHandler);
         target.addEventListener('mouseup', this.mouseupHandler);
+        window.addEventListener('mouseup', this.mouseupHandler);
         window.addEventListener('blur', this.blurHandler);
         window.addEventListener('mousemove', this.mousemoveHandler);
 
         this.localPoint = new Vec2();
+        this.hitPoint = new Vec2();
         this.transPoint = new Vec2();
 
         this.target = target;
@@ -101,33 +105,155 @@ export default class Mouse extends EventEmitter
         return local;
     }
 
-    hitTest (sprite: Sprite)
+    getInteractiveChildren (parent: DisplayObjectContainer, results: DisplayObjectContainer[])
     {
-        if (!sprite.visible || !sprite.inputEnabled)
+        const children = parent.children;
+
+        for (let i = 0; i < children.length; i++)
         {
-            return false;
+            let child = children[i];
+
+            if (child.visible && child.inputEnabled)
+            {
+                results.push(child as DisplayObjectContainer);
+            }
+
+            if (child.inputEnabledChildren && child.size > 0)
+            {
+                this.getInteractiveChildren(child as DisplayObjectContainer, results);
+            }
         }
+    }
 
-        const mat = AppendMatrix2d(sprite.scene.camera.worldTransform, sprite.worldTransform);
-
-        GlobalToLocal(mat, this.localPoint.x, this.localPoint.y, this.transPoint);
-
-        const px = this.transPoint.x;
-        const py = this.transPoint.y;
-
-        if (sprite.inputHitArea)
+    checkHitArea (entity: DisplayObjectContainer, px: number, py: number): boolean
+    {
+        if (entity.inputHitArea)
         {
-            return sprite.inputHitArea.contains(px, py);
+            if (entity.inputHitArea.contains(px, py))
+            {
+                return true;
+            }
         }
         else
         {
-            const left: number = -(sprite.width * sprite.originX);
-            const right: number = left + sprite.width;
-            const top: number = -(sprite.height * sprite.originY);
-            const bottom: number = top + sprite.height;
+            const left: number = -(entity.width * entity.originX);
+            const right: number = left + entity.width;
+            const top: number = -(entity.height * entity.originY);
+            const bottom: number = top + entity.height;
     
             return (px >= left && px <= right && py >= top && py <= bottom);
         }
+
+        return false;
+    }
+
+    hitTest (...entities: DisplayObjectContainer[]): boolean
+    {
+        const localX = this.localPoint.x;
+        const localY = this.localPoint.y;
+        const point = this.transPoint;
+
+        for (let i: number = 0; i < entities.length; i++)
+        {
+            let entity = entities[i];
+
+            let mat = AppendMatrix2d(entity.scene.camera.worldTransform, entity.worldTransform);
+
+            GlobalToLocal(mat, localX, localY, point);
+
+            if (this.checkHitArea(entity, point.x, point.y))
+            {
+                this.hitPoint.set(point.x, point.y);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    hitTestChildren (container: DisplayObjectContainer, topOnly: boolean = true): DisplayObjectContainer[]
+    {
+        const output = [];
+
+        if (!container.visible)
+        {
+            return output;
+        }
+
+        //  Build a list of potential input candidates
+        const candidates: DisplayObjectContainer[] = [];
+
+        if (container.inputEnabled)
+        {
+            candidates.push(container);
+        }
+
+        if (container.inputEnabledChildren && container.size > 0)
+        {
+            this.getInteractiveChildren(container, candidates);
+        }
+
+        // const camera = container.scene.camera;
+
+        // const localX = this.localPoint.x;
+        // const localY = this.localPoint.y;
+        // const point = this.transPoint;
+
+        for (let i: number = candidates.length - 1; i >= 0; i--)
+        {
+            let entity = candidates[i];
+
+            if (this.hitTest(entity))
+            {
+                output.push(entity);
+
+                if (topOnly)
+                {
+                    break;
+                }
+            }
+        }
+
+        return output;
+
+            /*
+            let mat = AppendMatrix2d(camera.worldTransform, entity.worldTransform);
+
+            GlobalToLocal(mat, localX, localY, point);
+
+            let px = point.x;
+            let py = point.y;
+        
+            if (entity.inputHitArea)
+            {
+                if (entity.inputHitArea.contains(px, py))
+                {
+                    output.push(entity);
+
+                    if (topOnly)
+                    {
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                const left: number = -(entity.width * entity.originX);
+                const right: number = left + entity.width;
+                const top: number = -(entity.height * entity.originY);
+                const bottom: number = top + entity.height;
+        
+                if (px >= left && px <= right && py >= top && py <= bottom)
+                {
+                    output.push(entity);
+
+                    if (topOnly)
+                    {
+                        break;
+                    }
+                }
+            }
+            */
     }
 
 }
