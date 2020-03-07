@@ -221,8 +221,6 @@ export default class Game extends EventEmitter
 
         this.scene.world.update(dt, now);
 
-        this.scene.camera.update(dt, now);
-
         this.scene.update(dt, now);
 
         this.renderer.render(this.scene, this.dirtyFrame);

@@ -62,8 +62,4 @@ export default class Camera extends DisplayObject
 
         return this;
     }
-
-    update (delta: number, now: number)
-    {
-    }
 }
