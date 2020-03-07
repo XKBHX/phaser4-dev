@@ -22,6 +22,9 @@ export default class SpriteBuffer
     children: Container[] = [];
     texture: Texture = null;
 
+    inputEnabled: boolean = false;
+    inputEnabledChildren: boolean = false;
+
     /**
      * The Array Buffer.
      *
