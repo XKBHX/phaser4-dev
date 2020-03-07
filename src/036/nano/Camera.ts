@@ -21,50 +21,49 @@ export default class Camera extends DisplayObject
         this.setSize(this.renderer.width, this.renderer.height);
     }
 
-    update ()
+    updateTransform ()
     {
-        if (this.dirty)
-        {
-            //  sync wt to mt
-            const mat = this.matrix;
-            const { a, b, c, d, tx, ty } = this.worldTransform;
+        this.dirty = true;
 
-            const viewportW = this.renderer.width * this.originX;
-            const viewportH = this.renderer.height * this.originY;
+        const lt = this.localTransform;
+        const wt = this.worldTransform;
 
-            mat[0] = a;
-            mat[1] = b;
-            mat[4] = c;
-            mat[5] = d;
+        lt.tx = this.x;
+        lt.ty = this.y;
 
-            //  combinates viewport translation + scrollX/Y
+        const mat = this.matrix;
+        const { a, b, c, d, tx, ty } = lt;
 
-            mat[12] = (a * -viewportW) + (c * -viewportH) + (viewportW + tx);
-            mat[13] = (b * -viewportW) + (d * -viewportH) + (viewportH + ty);
+        const viewportW = this.renderer.width * this.originX;
+        const viewportH = this.renderer.height * this.originY;
 
-            // mat[12] = viewportW + tx; // combines translation to center of viewport + scrollX
-            // mat[13] = viewportH + ty; // combines translation to center of viewport + scrollY
-            // this.translate(-viewportW, -viewportH);
-            // console.log(mat);
+        mat[0] = a;
+        mat[1] = b;
+        mat[4] = c;
+        mat[5] = d;
 
-            this.dirty = false;
-        }
+        //  combinates viewport translation + scrollX/Y
+
+        mat[12] = (a * -viewportW) + (c * -viewportH) + (viewportW + tx);
+        mat[13] = (b * -viewportW) + (d * -viewportH) + (viewportH + ty);
+
+        //  Store in worldTransform
+        wt.a = a;
+        wt.b = b;
+        wt.c = c;
+        wt.d = d;
+        wt.tx = mat[12];
+        wt.ty = mat[13];
+
+        // mat[12] = viewportW + tx; // combines translation to center of viewport + scrollX
+        // mat[13] = viewportH + ty; // combines translation to center of viewport + scrollY
+        // this.translate(-viewportW, -viewportH);
+        // console.log(mat);
+
+        return this;
     }
 
-    /*
-    translate (x: number, y: number)
+    update (delta: number, now: number)
     {
-        const matrix = this.matrix;
-
-        const m00 = matrix[0];
-        const m01 = matrix[1];
-        const m10 = matrix[4];
-        const m11 = matrix[5];
-        const m30 = matrix[12];
-        const m31 = matrix[13];
-
-        matrix[12] = m00 * x + m10 * y + m30;
-        matrix[13] = m01 * x + m11 * y + m31;
     }
-    */
 }
