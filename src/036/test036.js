@@ -1605,6 +1605,24 @@ class Game extends EventEmitter {
     }
 }
 
+class Scene$1 {
+    constructor(game) {
+        this.game = game;
+        this.load = game.loader;
+        this.textures = game.textures;
+        this.world = new DisplayObjectContainer(this, 0, 0);
+        this.camera = new Camera(this, 0, 0);
+    }
+    init() {
+    }
+    preload() {
+    }
+    create() {
+    }
+    update(delta, time) {
+    }
+}
+
 function PackColor (rgb, alpha) {
     let ua = ((alpha * 255) | 0) & 0xFF;
     return ((ua << 24) | rgb) >>> 0;
@@ -1755,260 +1773,220 @@ class Sprite extends DisplayObjectContainer {
     }
 }
 
-class Scene$1 {
-    constructor(game) {
-        this.game = game;
-        this.load = game.loader;
-        this.textures = game.textures;
-        this.world = new DisplayObjectContainer(this, 0, 0);
-        this.camera = new Camera(this, 0, 0);
+class AnimatedSprite extends Sprite {
+    constructor(scene, x, y, texture, frame) {
+        super(scene, x, y, texture, frame);
+        this.type = 'AnimatedSprite';
+        this.anims = new Map();
+        //  Holds all the data for the current animation only
+        this.animData = {
+            currentAnim: '',
+            currentFrames: [],
+            frameIndex: 0,
+            animSpeed: 0,
+            nextFrameTime: 0,
+            repeatCount: 0,
+            isPlaying: false,
+            yoyo: false,
+            pendingStart: false,
+            playingForward: true,
+            delay: 0,
+            repeatDelay: 0,
+            onStart: null,
+            onRepeat: null,
+            onComplete: null
+        };
     }
-    init() {
-    }
-    preload() {
-    }
-    create() {
-    }
-    update(delta, time) {
-    }
-}
-
-function AppendMatrix2d(mat1, mat2) {
-    const a1 = mat1.a;
-    const b1 = mat1.b;
-    const c1 = mat1.c;
-    const d1 = mat1.d;
-    const a = (mat2.a * a1) + (mat2.b * c1);
-    const b = (mat2.a * b1) + (mat2.b * d1);
-    const c = (mat2.c * a1) + (mat2.d * c1);
-    const d = (mat2.c * b1) + (mat2.d * d1);
-    const tx = (mat2.tx * a1) + (mat2.ty * c1) + mat1.tx;
-    const ty = (mat2.tx * b1) + (mat2.ty * d1) + mat1.ty;
-    return { a, b, c, d, tx, ty };
-}
-
-class Mouse extends EventEmitter {
-    constructor(target) {
-        super();
-        this.primaryDown = false;
-        this.auxDown = false;
-        this.secondaryDown = false;
-        this.resolution = 1;
-        this.mousedownHandler = (event) => this.onMouseDown(event);
-        this.mouseupHandler = (event) => this.onMouseUp(event);
-        this.mousemoveHandler = (event) => this.onMouseMove(event);
-        this.blurHandler = () => this.onBlur();
-        target.addEventListener('mousedown', this.mousedownHandler);
-        target.addEventListener('mouseup', this.mouseupHandler);
-        window.addEventListener('mouseup', this.mouseupHandler);
-        window.addEventListener('blur', this.blurHandler);
-        window.addEventListener('mousemove', this.mousemoveHandler);
-        this.localPoint = new Vec2();
-        this.hitPoint = new Vec2();
-        this.transPoint = new Vec2();
-        this.target = target;
-    }
-    onBlur() {
-    }
-    onMouseDown(event) {
-        this.positionToPoint(event);
-        this.primaryDown = (event.button === 0);
-        this.auxDown = (event.button === 1);
-        this.secondaryDown = (event.button === 2);
-        this.emit('pointerdown', this.localPoint.x, this.localPoint.y, event.button, event);
-    }
-    onMouseUp(event) {
-        this.positionToPoint(event);
-        this.primaryDown = !(event.button === 0);
-        this.auxDown = !(event.button === 1);
-        this.secondaryDown = !(event.button === 2);
-        this.emit('pointerup', this.localPoint.x, this.localPoint.y, event.button, event);
-    }
-    onMouseMove(event) {
-        this.positionToPoint(event);
-        this.emit('pointermove', this.localPoint.x, this.localPoint.y, event);
-    }
-    positionToPoint(event) {
-        const local = this.localPoint;
-        //  if the event has offsetX/Y we can use that directly, as it gives us a lot better
-        //  result, taking into account things like css transforms
-        if (typeof event.offsetX === 'number') {
-            local.set(event.offsetX, event.offsetY);
+    addAnimation(key, frames) {
+        if (!this.anims.has(key)) {
+            this.anims.set(key, this.texture.getFrames(frames));
         }
-        else {
-            const rect = this.target.getBoundingClientRect();
-            const width = this.target.hasAttribute('width') ? this.target['width'] : 0;
-            const height = this.target.hasAttribute('height') ? this.target['height'] : 0;
-            const multiplier = 1 / this.resolution;
-            local.x = ((event.clientX - rect.left) * (width / rect.width)) * multiplier;
-            local.y = ((event.clientY - rect.top) * (height / rect.height)) * multiplier;
-        }
-        return local;
-    }
-    getInteractiveChildren(parent, results) {
-        const children = parent.children;
-        for (let i = 0; i < children.length; i++) {
-            let child = children[i];
-            if (child.visible && child.inputEnabled) {
-                results.push(child);
-            }
-            if (child.inputEnabledChildren && child.size > 0) {
-                this.getInteractiveChildren(child, results);
-            }
-        }
-    }
-    checkHitArea(entity, px, py) {
-        if (entity.inputHitArea) {
-            if (entity.inputHitArea.contains(px, py)) {
-                return true;
-            }
-        }
-        else {
-            const left = -(entity.width * entity.originX);
-            const right = left + entity.width;
-            const top = -(entity.height * entity.originY);
-            const bottom = top + entity.height;
-            return (px >= left && px <= right && py >= top && py <= bottom);
-        }
-        return false;
-    }
-    hitTest(...entities) {
-        const localX = this.localPoint.x;
-        const localY = this.localPoint.y;
-        const point = this.transPoint;
-        for (let i = 0; i < entities.length; i++) {
-            let entity = entities[i];
-            let mat = AppendMatrix2d(entity.scene.camera.worldTransform, entity.worldTransform);
-            GlobalToLocal(mat, localX, localY, point);
-            if (this.checkHitArea(entity, point.x, point.y)) {
-                this.hitPoint.set(point.x, point.y);
-                return true;
-            }
-        }
-        return false;
-    }
-    hitTestChildren(container, topOnly = true) {
-        const output = [];
-        if (!container.visible) {
-            return output;
-        }
-        //  Build a list of potential input candidates
-        const candidates = [];
-        if (container.inputEnabled) {
-            candidates.push(container);
-        }
-        if (container.inputEnabledChildren && container.size > 0) {
-            this.getInteractiveChildren(container, candidates);
-        }
-        // const camera = container.scene.camera;
-        // const localX = this.localPoint.x;
-        // const localY = this.localPoint.y;
-        // const point = this.transPoint;
-        for (let i = candidates.length - 1; i >= 0; i--) {
-            let entity = candidates[i];
-            if (this.hitTest(entity)) {
-                output.push(entity);
-                if (topOnly) {
-                    break;
-                }
-            }
-        }
-        return output;
-        /*
-        let mat = AppendMatrix2d(camera.worldTransform, entity.worldTransform);
-
-        GlobalToLocal(mat, localX, localY, point);
-
-        let px = point.x;
-        let py = point.y;
-    
-        if (entity.inputHitArea)
-        {
-            if (entity.inputHitArea.contains(px, py))
-            {
-                output.push(entity);
-
-                if (topOnly)
-                {
-                    break;
-                }
-            }
-        }
-        else
-        {
-            const left: number = -(entity.width * entity.originX);
-            const right: number = left + entity.width;
-            const top: number = -(entity.height * entity.originY);
-            const bottom: number = top + entity.height;
-    
-            if (px >= left && px <= right && py >= top && py <= bottom)
-            {
-                output.push(entity);
-
-                if (topOnly)
-                {
-                    break;
-                }
-            }
-        }
-        */
-    }
-}
-
-class Circle {
-    constructor(x = 0, y = 0, radius = 0) {
-        this.set(x, y, radius);
-    }
-    set(x = 0, y = 0, radius = 0) {
-        this.x = x;
-        this.y = y;
-        this.radius = radius;
         return this;
     }
-    contains(px, py) {
-        const { x, y, radius } = this;
-        var dx = (x - px) * (x - px);
-        var dy = (y - py) * (y - py);
-        return (dx + dy) <= (radius * radius);
+    addAnimationFromAtlas(key, prefix, start, end, zeroPad = 0, suffix = '') {
+        if (!this.anims.has(key)) {
+            this.anims.set(key, this.texture.getFramesInRange(prefix, start, end, zeroPad, suffix));
+        }
+        return this;
     }
-    get diameter() {
-        return this.radius * 2;
+    removeAnimation(key) {
+        this.anims.delete(key);
+        return this;
     }
-    set diameter(value) {
-        this.radius = value * 0.5;
+    clearAnimations() {
+        this.anims.clear();
+        return this;
+    }
+    //  If animation already playing, calling this does nothing (use restart to restart one)
+    play(key, config = {}) {
+        const { speed = 24, repeat = 0, yoyo = false, startFrame = 0, delay = 0, repeatDelay = 0, onStart = null, onRepeat = null, onComplete = null, forceRestart = false } = config;
+        const data = this.animData;
+        if (data.isPlaying) {
+            if (data.currentAnim !== key) {
+                this.stop();
+            }
+            else if (!forceRestart) {
+                //  This animation is already playing? Just return then.
+                return this;
+            }
+        }
+        if (this.anims.has(key)) {
+            data.currentFrames = this.anims.get(key);
+            data.currentAnim = key;
+            data.frameIndex = startFrame;
+            data.animSpeed = 1000 / speed;
+            data.nextFrameTime = data.animSpeed + delay;
+            data.isPlaying = true;
+            data.playingForward = true;
+            data.yoyo = yoyo;
+            data.repeatCount = repeat;
+            data.delay = delay;
+            data.repeatDelay = repeatDelay;
+            data.onStart = onStart;
+            data.onRepeat = onRepeat;
+            data.onComplete = onComplete;
+            //  If there is no start delay, we set the first frame immediately
+            if (delay === 0) {
+                this.setFrame(data.currentFrames[data.frameIndex]);
+                if (onStart) {
+                    onStart(this, key);
+                }
+            }
+            else {
+                data.pendingStart = true;
+            }
+        }
+        return this;
+    }
+    stop() {
+        const data = this.animData;
+        data.isPlaying = false;
+        data.currentAnim = '';
+        if (data.onComplete) {
+            data.onComplete(this, data.currentAnim);
+        }
+    }
+    nextFrame() {
+        const data = this.animData;
+        data.frameIndex++;
+        //  There are no more frames, do we yoyo or repeat or end?
+        if (data.frameIndex === data.currentFrames.length) {
+            if (data.yoyo) {
+                data.frameIndex--;
+                data.playingForward = false;
+            }
+            else if (data.repeatCount === -1 || data.repeatCount > 0) {
+                data.frameIndex = 0;
+                if (data.repeatCount !== -1) {
+                    data.repeatCount--;
+                }
+                if (data.onRepeat) {
+                    data.onRepeat(this, data.currentAnim);
+                }
+                data.nextFrameTime += data.repeatDelay;
+            }
+            else {
+                data.frameIndex--;
+                return this.stop();
+            }
+        }
+        this.setFrame(data.currentFrames[data.frameIndex]);
+        data.nextFrameTime += data.animSpeed;
+    }
+    prevFrame() {
+        const data = this.animData;
+        data.frameIndex--;
+        //  There are no more frames, do we repeat or end?
+        if (data.frameIndex === -1) {
+            if (data.repeatCount === -1 || data.repeatCount > 0) {
+                data.frameIndex = 0;
+                data.playingForward = true;
+                if (data.repeatCount !== -1) {
+                    data.repeatCount--;
+                }
+                if (data.onRepeat) {
+                    data.onRepeat(this, data.currentAnim);
+                }
+                data.nextFrameTime += data.repeatDelay;
+            }
+            else {
+                data.frameIndex = 0;
+                return this.stop();
+            }
+        }
+        this.setFrame(data.currentFrames[data.frameIndex]);
+        data.nextFrameTime += data.animSpeed;
+    }
+    update(delta, now) {
+        super.update(delta, now);
+        const data = this.animData;
+        if (!data.isPlaying) {
+            return;
+        }
+        data.nextFrameTime -= delta * 1000;
+        //  Clamp to zero, otherwise a huge delta could cause animation playback issues
+        data.nextFrameTime = Math.max(data.nextFrameTime, 0);
+        //  It's time for a new frame
+        if (data.nextFrameTime === 0) {
+            //  Is this the start of our animation?
+            if (data.pendingStart) {
+                if (data.onStart) {
+                    data.onStart(this, data.currentAnim);
+                }
+                data.pendingStart = false;
+                data.nextFrameTime = data.animSpeed;
+            }
+            else if (data.playingForward) {
+                this.nextFrame();
+            }
+            else {
+                this.prevFrame();
+            }
+        }
+    }
+    get isPlaying() {
+        return this.animData.isPlaying;
+    }
+    get isPlayingForward() {
+        return (this.animData.isPlaying && this.animData.playingForward);
+    }
+    get currentAnimation() {
+        return this.animData.currentAnim;
     }
 }
 
 class Demo extends Scene$1 {
     constructor(game) {
         super(game);
-        this.isDragging = false;
+        const text = document.getElementById('cacheStats');
+        this.game.on('render', (dirty, cached) => {
+            const cacheUtilisation = (cached / (cached + dirty)) * 100;
+            text['value'] = 'Cached: ' + cacheUtilisation + '% - Dirty: ' + dirty + ' / ' + cached;
+        });
     }
     preload() {
         this.load.setPath('../assets/');
-        this.load.image('bubble', 'bubble256.png');
+        this.load.atlas('items', 'cartoon-items.png', 'cartoon-items.json');
+    }
+    createItem(key, x, y) {
+        const item = new AnimatedSprite(this, x, y, 'items', key + '-1');
+        this.world.addChild(item);
+        item.addAnimationFromAtlas(key, key + '-', 1, 8);
+        item.play(key, { speed: 10, repeat: -1 });
     }
     create() {
-        const mouse = new Mouse(this.game.renderer.canvas);
-        this.sprite1 = new Sprite(this, 400, 300, 'bubble');
-        this.sprite1.setInteractive(new Circle(0, 0, 128));
-        this.world.addChild(this.sprite1);
-        mouse.on('pointerup', () => {
-            this.isDragging = false;
-        });
-        mouse.on('pointerdown', () => {
-            if (mouse.hitTest(this.sprite1)) {
-                this.isDragging = true;
-            }
-        });
-        mouse.on('pointermove', (x, y) => {
-            if (this.isDragging) {
-                this.sprite1.setPosition(x, y);
-            }
-        });
+        this.createItem('coin-silver', 200, 150);
+        this.createItem('cup', 400, 150);
+        this.createItem('gem', 600, 150);
+        this.createItem('heart', 200, 300);
+        this.createItem('lightning', 400, 300);
+        this.createItem('meat', 600, 300);
+        this.createItem('medkit', 200, 450);
+        this.createItem('pouch', 400, 450);
+        this.createItem('star', 600, 450);
     }
 }
-function demo25 () {
+function demo26 () {
     let game = new Game({
         width: 800,
         height: 600,
@@ -2040,8 +2018,10 @@ function demo25 () {
 // demo22();
 // demo23();
 // demo24();
-demo25();
+// demo25();
+demo26();
 //  Next steps:
+//  * Camera moving needs to dirty the renderer
 //  * Base64 Loader Test
 //  * Load json / csv / xml on their own
 //  * Camera tint + alpha (as shader uniform)

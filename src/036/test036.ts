@@ -23,6 +23,7 @@ import demo22 from './demo22'; // Mouse Input - Hit Test container children
 import demo23 from './demo23'; // Mouse Input - Hit Test local point
 import demo24 from './demo24'; // Mouse Input - Drag Sprite
 import demo25 from './demo25'; // Mouse Input - Circle hit area
+import demo26 from './demo26'; // Rotating items
 
 // demo6();
 // demo7();
@@ -43,10 +44,12 @@ import demo25 from './demo25'; // Mouse Input - Circle hit area
 // demo22();
 // demo23();
 // demo24();
-demo25();
+// demo25();
+demo26();
 
 //  Next steps:
 
+//  * Camera moving needs to dirty the renderer
 //  * Base64 Loader Test
 //  * Load json / csv / xml on their own
 //  * Camera tint + alpha (as shader uniform)
