@@ -1,6 +1,7 @@
 import Game from 'nano/Game';
 import Sprite from 'nano/Sprite';
 import Scene from 'nano/Scene';
+import Mouse from 'nano/Mouse';
 
 class Demo extends Scene
 {
@@ -13,20 +14,34 @@ class Demo extends Scene
 
     preload ()
     {
-        this.load.image('grid', '../assets/uv-grid-diag.png');
+        this.load.image('grid', '../assets/512x512.png');
+        this.load.image('box', '../assets/128x128.png');
     }
 
     create ()
     {
+        const mouse = new Mouse(this.game.renderer.canvas);
+
         this.world.addChild(new Sprite(this, 400, 300, 'grid'));
+        this.world.addChild(new Sprite(this, 0, 0, 'box').setOrigin(0));
+        this.world.addChild(new Sprite(this, 800, 600, 'box').setOrigin(1, 1));
+        this.world.addChild(new Sprite(this, 0, 600, 'box').setOrigin(0, 1));
+        this.world.addChild(new Sprite(this, 800, 0, 'box').setOrigin(1, 0));
+
+        mouse.on('pointerdown', (x: number, y: number) => {
+
+            // this.camera.rotation += 0.1;
+            this.camera.alpha -= 0.1;
+
+        });
     }
 
     update ()
     {
-        this.game.renderer.camera.x = Math.sin(this.cx) * 2;
-        this.game.renderer.camera.y = Math.cos(this.cx) * 2;
+        this.camera.x = Math.sin(this.cx) * 200;
+        this.camera.y = Math.cos(this.cx) * 100;
 
-        this.cx += 0.01;
+        this.cx += 0.04;
     }
 }
 
