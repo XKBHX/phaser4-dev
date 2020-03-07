@@ -1,8 +1,8 @@
-// import demo1 from './demo1'; // test single sprite
-// import demo2 from './demo2'; // test multiple images with multiple sprites
-// import demo3 from './demo3'; // test sprite sheet loader and display
-// import demo4 from './demo4'; // sprite tint + alpha back in the shader
-// import demo5 from './demo5'; // test skew
+import demo1 from './demo1'; // test single sprite
+import demo2 from './demo2'; // test multiple images with multiple sprites
+import demo3 from './demo3'; // test sprite sheet loader and display
+import demo4 from './demo4'; // sprite tint + alpha back in the shader
+import demo5 from './demo5'; // test skew
 import demo6 from './demo6'; // test container children
 import demo7 from './demo7'; // Camera class (position, scale, rotation)
 import demo8 from './demo8'; // Event Emitter
@@ -18,6 +18,11 @@ import demo17 from './demo17'; // Animated Sprite - repeat delay
 import demo18 from './demo18'; // Animated Sprite - onComplete callback
 import demo19 from './demo19'; // Mouse Input
 import demo20 from './demo20'; // Mouse Input - Hit Test
+import demo21 from './demo21'; // Mouse Input - Hit Test with a translated Camera
+import demo22 from './demo22'; // Mouse Input - Hit Test container children
+import demo23 from './demo23'; // Mouse Input - Hit Test local point
+import demo24 from './demo24'; // Mouse Input - Drag Sprite
+import demo25 from './demo25'; // Mouse Input - Circle hit area
 
 // demo6();
 // demo7();
@@ -33,26 +38,27 @@ import demo20 from './demo20'; // Mouse Input - Hit Test
 // demo17();
 // demo18();
 // demo19();
-demo20();
+// demo20();
+// demo21();
+// demo22();
+// demo23();
+// demo24();
+demo25();
 
 //  Next steps:
 
 //  * Base64 Loader Test
-//  * Camera alpha
-//  * Camera background color
-//  * Camera stencil?
-//  * Camera bounds / cull
-//  * Camera ignore | ignore except
-//  * Camera scroll factor (?)
-//  * Cache world values?
+//  * Load json / csv / xml on their own
+//  * Camera tint + alpha (as shader uniform)
+//  * Camera background color (instead of renderer bgc)
 //  * Multi Texture re-use old texture IDs when count > max supported
 //  * Single Texture shader
 //  * Tile Layer
-//  * Input point translation
 //  * Instead of a Quad class, try a class that can have any number of vertices in it (ala Rope), or any vertex moved
 
 //  Done:
 
+//  X Input point translation
 //  X Static Batch shader (Sprite Buffer)
 //  X Texture Atlas Loader
 //  X Don't defer updateTransform - do immediately

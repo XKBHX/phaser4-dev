@@ -215,13 +215,13 @@ class MultiTextureQuadShader {
             textureLocation: uTextureLocation
         };
     }
-    bind() {
+    bind(camera) {
         const gl = this.gl;
         const renderer = this.renderer;
         const uniforms = this.uniforms;
         gl.useProgram(this.program);
         gl.uniformMatrix4fv(uniforms.projectionMatrix, false, renderer.projectionMatrix);
-        gl.uniformMatrix4fv(uniforms.cameraMatrix, false, renderer.camera.matrix);
+        gl.uniformMatrix4fv(uniforms.cameraMatrix, false, camera.matrix);
         gl.uniform1iv(uniforms.textureLocation, renderer.textureIndex);
         this.bindBuffers(this.indexBuffer, this.vertexBuffer);
     }
@@ -274,116 +274,6 @@ class MultiTextureQuadShader {
     }
 }
 
-class Camera {
-    constructor(renderer, width, height) {
-        this._x = 0;
-        this._y = 0;
-        this._rotation = 0;
-        this._scaleX = 1;
-        this._scaleY = 1;
-        if (!width) {
-            width = renderer.width;
-        }
-        if (!height) {
-            height = renderer.height;
-        }
-        this.renderer = renderer;
-        this.matrix = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
-        this.width = width;
-        this.height = height;
-    }
-    translate(x, y, z = 0) {
-        const matrix = this.matrix;
-        const m00 = matrix[0];
-        const m01 = matrix[1];
-        const m02 = matrix[2];
-        const m03 = matrix[3];
-        const m10 = matrix[4];
-        const m11 = matrix[5];
-        const m12 = matrix[6];
-        const m13 = matrix[7];
-        const m20 = matrix[8];
-        const m21 = matrix[9];
-        const m22 = matrix[10];
-        const m23 = matrix[11];
-        const m30 = matrix[12];
-        const m31 = matrix[13];
-        const m32 = matrix[14];
-        const m33 = matrix[15];
-        matrix[12] = m00 * x + m10 * y + m20 * z + m30;
-        matrix[13] = m01 * x + m11 * y + m21 * z + m31;
-        matrix[14] = m02 * x + m12 * y + m22 * z + m32;
-        matrix[15] = m03 * x + m13 * y + m23 * z + m33;
-    }
-    scale(scaleX, scaleY) {
-        const matrix = this.matrix;
-        matrix[0] *= scaleX;
-        matrix[1] *= scaleX;
-        matrix[2] *= scaleX;
-        matrix[3] *= scaleX;
-        matrix[4] *= scaleY;
-        matrix[5] *= scaleY;
-        matrix[6] *= scaleY;
-        matrix[7] *= scaleY;
-    }
-    rotate(angle) {
-        const s = Math.sin(angle);
-        const c = Math.cos(angle);
-        const matrix = this.matrix;
-        const m00 = matrix[0];
-        const m01 = matrix[1];
-        const m02 = matrix[2];
-        const m03 = matrix[3];
-        const m10 = matrix[4];
-        const m11 = matrix[5];
-        const m12 = matrix[6];
-        const m13 = matrix[7];
-        matrix[0] = m00 * c + m10 * s;
-        matrix[1] = m01 * c + m11 * s;
-        matrix[2] = m02 * c + m12 * s;
-        matrix[3] = m03 * c + m13 * s;
-        matrix[4] = m10 * c - m00 * s;
-        matrix[5] = m11 * c - m01 * s;
-        matrix[6] = m12 * c - m02 * s;
-        matrix[7] = m13 * c - m03 * s;
-    }
-    set x(value) {
-        this._x = value;
-        this.translate(value, this._y);
-    }
-    get x() {
-        return this._x;
-    }
-    set y(value) {
-        this._y = value;
-        this.translate(this._x, value);
-    }
-    get y() {
-        return this._y;
-    }
-    set rotation(value) {
-        this._rotation = value;
-        this.rotate(value);
-    }
-    get rotation() {
-        return this._rotation;
-    }
-    set scaleX(value) {
-        this._scaleX = value;
-        this.scale(value, this._scaleY);
-    }
-    get scaleX() {
-        return this._scaleX;
-    }
-    set scaleY(value) {
-        this._scaleY = value;
-        this.scale(this._scaleX, value);
-    }
-    get scaleY() {
-        return this._scaleY;
-    }
-}
-
 class WebGLRenderer {
     constructor(width, height, resolution = 1) {
         this.contextOptions = {
@@ -410,7 +300,6 @@ class WebGLRenderer {
         this.canvas = canvas;
         this.initContext();
         this.shader = new MultiTextureQuadShader(this);
-        this.camera = new Camera(this);
     }
     initContext() {
         const gl = this.canvas.getContext('webgl', this.contextOptions);
@@ -505,7 +394,7 @@ class WebGLRenderer {
         }
         return glTexture;
     }
-    render(world, dirtyFrame) {
+    render(scene, dirtyFrame) {
         if (this.contextLost) {
             return;
         }
@@ -529,8 +418,8 @@ class WebGLRenderer {
             gl.clear(gl.COLOR_BUFFER_BIT);
         }
         this.spriteCount = 0;
-        shader.bind();
-        this.renderChildren(world);
+        shader.bind(scene.camera);
+        this.renderChildren(scene.world);
         shader.flush();
     }
     renderChildren(container) {
@@ -838,6 +727,21 @@ class Vec2 {
     }
 }
 
+function LocalToGlobal(transform, x, y, outPoint = new Vec2()) {
+    const { a, b, c, d, tx, ty } = transform;
+    outPoint.x = (a * x) + (c * y) + tx;
+    outPoint.y = (b * x) + (d * y) + ty;
+    return outPoint;
+}
+
+function GlobalToLocal(transform, x, y, outPoint = new Vec2()) {
+    const { a, b, c, d, tx, ty } = transform;
+    const id = 1 / ((a * d) + (c * -b));
+    outPoint.x = (d * id * x) + (-c * id * y) + (((ty * c) - (tx * d)) * id);
+    outPoint.y = (a * id * y) + (-b * id * x) + (((-ty * a) + (tx * b)) * id);
+    return outPoint;
+}
+
 class DisplayObject {
     constructor(scene, x = 0, y = 0) {
         this.dirty = true;
@@ -888,17 +792,10 @@ class DisplayObject {
         return this;
     }
     localToGlobal(x, y, outPoint = new Vec2()) {
-        const { a, b, c, d, tx, ty } = this.worldTransform;
-        outPoint.x = (a * x) + (c * y) + tx;
-        outPoint.y = (b * x) + (d * y) + ty;
-        return outPoint;
+        return LocalToGlobal(this.worldTransform, x, y, outPoint);
     }
     globalToLocal(x, y, outPoint = new Vec2()) {
-        const { a, b, c, d, tx, ty } = this.worldTransform;
-        const id = 1 / ((a * d) + (c * -b));
-        outPoint.x = (d * id * x) + (-c * id * y) + (((ty * c) - (tx * d)) * id);
-        outPoint.y = (a * id * y) + (-b * id * x) + (((-ty * a) + (tx * b)) * id);
-        return outPoint;
+        return GlobalToLocal(this.worldTransform, x, y, outPoint);
     }
     willRender() {
         return (this.visible && this.renderable && this._alpha > 0);
@@ -1151,12 +1048,52 @@ class DisplayObjectContainer extends DisplayObject {
     }
 }
 
+class Camera extends DisplayObject {
+    constructor(scene, x = 0, y = 0) {
+        super(scene, x, y);
+        this.renderer = scene.game.renderer;
+        this.matrix = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+        this.setSize(this.renderer.width, this.renderer.height);
+    }
+    updateTransform() {
+        this.dirty = true;
+        const lt = this.localTransform;
+        const wt = this.worldTransform;
+        lt.tx = this.x;
+        lt.ty = this.y;
+        const mat = this.matrix;
+        const { a, b, c, d, tx, ty } = lt;
+        const viewportW = this.renderer.width * this.originX;
+        const viewportH = this.renderer.height * this.originY;
+        mat[0] = a;
+        mat[1] = b;
+        mat[4] = c;
+        mat[5] = d;
+        //  combinates viewport translation + scrollX/Y
+        mat[12] = (a * -viewportW) + (c * -viewportH) + (viewportW + tx);
+        mat[13] = (b * -viewportW) + (d * -viewportH) + (viewportH + ty);
+        //  Store in worldTransform
+        wt.a = a;
+        wt.b = b;
+        wt.c = c;
+        wt.d = d;
+        wt.tx = mat[12];
+        wt.ty = mat[13];
+        // mat[12] = viewportW + tx; // combines translation to center of viewport + scrollX
+        // mat[13] = viewportH + ty; // combines translation to center of viewport + scrollY
+        // this.translate(-viewportW, -viewportH);
+        // console.log(mat);
+        return this;
+    }
+}
+
 class Scene {
     constructor(game) {
         this.game = game;
         this.load = game.loader;
         this.textures = game.textures;
         this.world = new DisplayObjectContainer(this, 0, 0);
+        this.camera = new Camera(this, 0, 0);
     }
     init() {
     }
@@ -1654,7 +1591,7 @@ class Game extends EventEmitter {
         //  The frame always advances by 1 each step (even when paused)
         this.frame++;
         if (this.isPaused) {
-            this.renderer.render(this.scene.world, 0);
+            this.renderer.render(this.scene, 0);
             requestAnimationFrame(() => this.step());
             return;
         }
@@ -1662,7 +1599,7 @@ class Game extends EventEmitter {
         this.emit('step', dt, now);
         this.scene.world.update(dt, now);
         this.scene.update(dt, now);
-        this.renderer.render(this.scene.world, this.dirtyFrame);
+        this.renderer.render(this.scene, this.dirtyFrame);
         this.emit('render', this.renderer.dirtySprites, this.renderer.cachedSprites);
         requestAnimationFrame(() => this.step());
     }
@@ -1824,6 +1761,7 @@ class Scene$1 {
         this.load = game.loader;
         this.textures = game.textures;
         this.world = new DisplayObjectContainer(this, 0, 0);
+        this.camera = new Camera(this, 0, 0);
     }
     init() {
     }
@@ -1833,6 +1771,20 @@ class Scene$1 {
     }
     update(delta, time) {
     }
+}
+
+function AppendMatrix2d(mat1, mat2) {
+    const a1 = mat1.a;
+    const b1 = mat1.b;
+    const c1 = mat1.c;
+    const d1 = mat1.d;
+    const a = (mat2.a * a1) + (mat2.b * c1);
+    const b = (mat2.a * b1) + (mat2.b * d1);
+    const c = (mat2.c * a1) + (mat2.d * c1);
+    const d = (mat2.c * b1) + (mat2.d * d1);
+    const tx = (mat2.tx * a1) + (mat2.ty * c1) + mat1.tx;
+    const ty = (mat2.tx * b1) + (mat2.ty * d1) + mat1.ty;
+    return { a, b, c, d, tx, ty };
 }
 
 class Mouse extends EventEmitter {
@@ -1848,9 +1800,11 @@ class Mouse extends EventEmitter {
         this.blurHandler = () => this.onBlur();
         target.addEventListener('mousedown', this.mousedownHandler);
         target.addEventListener('mouseup', this.mouseupHandler);
+        window.addEventListener('mouseup', this.mouseupHandler);
         window.addEventListener('blur', this.blurHandler);
         window.addEventListener('mousemove', this.mousemoveHandler);
         this.localPoint = new Vec2();
+        this.hitPoint = new Vec2();
         this.transPoint = new Vec2();
         this.target = target;
     }
@@ -1891,64 +1845,170 @@ class Mouse extends EventEmitter {
         }
         return local;
     }
-    hitTest(sprite) {
-        if (!sprite.visible || !sprite.inputEnabled) {
-            return false;
+    getInteractiveChildren(parent, results) {
+        const children = parent.children;
+        for (let i = 0; i < children.length; i++) {
+            let child = children[i];
+            if (child.visible && child.inputEnabled) {
+                results.push(child);
+            }
+            if (child.inputEnabledChildren && child.size > 0) {
+                this.getInteractiveChildren(child, results);
+            }
         }
-        sprite.globalToLocal(this.localPoint.x, this.localPoint.y, this.transPoint);
-        const px = this.transPoint.x;
-        const py = this.transPoint.y;
-        if (sprite.inputHitArea) {
-            return sprite.inputHitArea.contains(px, py);
+    }
+    checkHitArea(entity, px, py) {
+        if (entity.inputHitArea) {
+            if (entity.inputHitArea.contains(px, py)) {
+                return true;
+            }
         }
         else {
-            const left = -(sprite.width * sprite.originX);
-            const right = left + sprite.width;
-            const top = -(sprite.height * sprite.originY);
-            const bottom = top + sprite.height;
+            const left = -(entity.width * entity.originX);
+            const right = left + entity.width;
+            const top = -(entity.height * entity.originY);
+            const bottom = top + entity.height;
             return (px >= left && px <= right && py >= top && py <= bottom);
         }
+        return false;
+    }
+    hitTest(...entities) {
+        const localX = this.localPoint.x;
+        const localY = this.localPoint.y;
+        const point = this.transPoint;
+        for (let i = 0; i < entities.length; i++) {
+            let entity = entities[i];
+            let mat = AppendMatrix2d(entity.scene.camera.worldTransform, entity.worldTransform);
+            GlobalToLocal(mat, localX, localY, point);
+            if (this.checkHitArea(entity, point.x, point.y)) {
+                this.hitPoint.set(point.x, point.y);
+                return true;
+            }
+        }
+        return false;
+    }
+    hitTestChildren(container, topOnly = true) {
+        const output = [];
+        if (!container.visible) {
+            return output;
+        }
+        //  Build a list of potential input candidates
+        const candidates = [];
+        if (container.inputEnabled) {
+            candidates.push(container);
+        }
+        if (container.inputEnabledChildren && container.size > 0) {
+            this.getInteractiveChildren(container, candidates);
+        }
+        // const camera = container.scene.camera;
+        // const localX = this.localPoint.x;
+        // const localY = this.localPoint.y;
+        // const point = this.transPoint;
+        for (let i = candidates.length - 1; i >= 0; i--) {
+            let entity = candidates[i];
+            if (this.hitTest(entity)) {
+                output.push(entity);
+                if (topOnly) {
+                    break;
+                }
+            }
+        }
+        return output;
+        /*
+        let mat = AppendMatrix2d(camera.worldTransform, entity.worldTransform);
+
+        GlobalToLocal(mat, localX, localY, point);
+
+        let px = point.x;
+        let py = point.y;
+    
+        if (entity.inputHitArea)
+        {
+            if (entity.inputHitArea.contains(px, py))
+            {
+                output.push(entity);
+
+                if (topOnly)
+                {
+                    break;
+                }
+            }
+        }
+        else
+        {
+            const left: number = -(entity.width * entity.originX);
+            const right: number = left + entity.width;
+            const top: number = -(entity.height * entity.originY);
+            const bottom: number = top + entity.height;
+    
+            if (px >= left && px <= right && py >= top && py <= bottom)
+            {
+                output.push(entity);
+
+                if (topOnly)
+                {
+                    break;
+                }
+            }
+        }
+        */
+    }
+}
+
+class Circle {
+    constructor(x = 0, y = 0, radius = 0) {
+        this.set(x, y, radius);
+    }
+    set(x = 0, y = 0, radius = 0) {
+        this.x = x;
+        this.y = y;
+        this.radius = radius;
+        return this;
+    }
+    contains(px, py) {
+        const { x, y, radius } = this;
+        var dx = (x - px) * (x - px);
+        var dy = (y - py) * (y - py);
+        return (dx + dy) <= (radius * radius);
+    }
+    get diameter() {
+        return this.radius * 2;
+    }
+    set diameter(value) {
+        this.radius = value * 0.5;
     }
 }
 
 class Demo extends Scene$1 {
     constructor(game) {
         super(game);
-        this.game.renderer.optimizeRedraw = false;
+        this.isDragging = false;
     }
     preload() {
         this.load.setPath('../assets/');
-        this.load.image('big', '512x512.png');
-        this.load.image('box', '128x128.png');
+        this.load.image('bubble', 'bubble256.png');
     }
     create() {
         const mouse = new Mouse(this.game.renderer.canvas);
-        // const parent = new DisplayObjectContainer(this, 400, 300);
-        // const biggie = new Sprite(this, 400, 300, 'big');
-        // const box = new Sprite(this, -100, -50, 'box');
-        const box = new Sprite(this, 400, 300, 'box');
-        // box.setInteractive(new Rectangle(0, 0, 128, 128));
-        box.setInteractive();
-        // biggie.addChild(box);
-        // const box = new Sprite(this, 400, 300, 'box');
-        // biggie.setRotation(0.2);
-        // box.setRotation(0.2);
-        // box.setScale(2);
-        // box.setScale(4.1, 0.6);
-        // biggie.setSkew(0.5, 0);
-        // this.world.addChild(biggie);
-        this.world.addChild(box);
-        mouse.on('pointerdown', (x, y) => {
-            if (mouse.hitTest(box)) {
-                console.log('hit!');
+        this.sprite1 = new Sprite(this, 400, 300, 'bubble');
+        this.sprite1.setInteractive(new Circle(0, 0, 128));
+        this.world.addChild(this.sprite1);
+        mouse.on('pointerup', () => {
+            this.isDragging = false;
+        });
+        mouse.on('pointerdown', () => {
+            if (mouse.hitTest(this.sprite1)) {
+                this.isDragging = true;
             }
-            else {
-                console.log('miss!');
+        });
+        mouse.on('pointermove', (x, y) => {
+            if (this.isDragging) {
+                this.sprite1.setPosition(x, y);
             }
         });
     }
 }
-function demo20 () {
+function demo25 () {
     let game = new Game({
         width: 800,
         height: 600,
@@ -1975,22 +2035,23 @@ function demo20 () {
 // demo17();
 // demo18();
 // demo19();
-demo20();
+// demo20();
+// demo21();
+// demo22();
+// demo23();
+// demo24();
+demo25();
 //  Next steps:
 //  * Base64 Loader Test
-//  * Camera alpha
-//  * Camera background color
-//  * Camera stencil?
-//  * Camera bounds / cull
-//  * Camera ignore | ignore except
-//  * Camera scroll factor (?)
-//  * Cache world values?
+//  * Load json / csv / xml on their own
+//  * Camera tint + alpha (as shader uniform)
+//  * Camera background color (instead of renderer bgc)
 //  * Multi Texture re-use old texture IDs when count > max supported
 //  * Single Texture shader
 //  * Tile Layer
-//  * Input point translation
 //  * Instead of a Quad class, try a class that can have any number of vertices in it (ala Rope), or any vertex moved
 //  Done:
+//  X Input point translation
 //  X Static Batch shader (Sprite Buffer)
 //  X Texture Atlas Loader
 //  X Don't defer updateTransform - do immediately

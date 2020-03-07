@@ -5,47 +5,45 @@ import Mouse from 'nano/Mouse';
 
 class Demo extends Scene
 {
+    grid: Sprite;
+
     constructor (game: Game)
     {
         super(game);
-
-        this.game.renderer.optimizeRedraw = false;
     }
 
     preload ()
     {
         this.load.setPath('../assets/');
-        this.load.image('big', '512x512.png');
-        this.load.image('box', '128x128.png');
+        this.load.image('grid', 'checker.png');
+        this.load.image('dot', 'orb-red.png');
     }
 
     create ()
     {
         const mouse = new Mouse(this.game.renderer.canvas);
 
-        const box = new Sprite(this, 400, 300, 'box');
+        const grid = new Sprite(this, 400, 300, 'grid');
 
-        box.setScale(2, 3);
+        grid.setInteractive();
 
-        box.setInteractive();
+        this.world.addChild(grid);
 
-        this.world.addChild(box);
+        this.grid = grid;
 
-        this.camera.setPosition(-128, 0);
-        this.camera.setRotation(0.3);
+        mouse.on('pointerdown', () => {
 
-        mouse.on('pointerdown', (x: number, y: number) => {
-
-            if (mouse.hitTest(box))
+            if (mouse.hitTest(grid))
             {
-                console.log('hit!');
-            }
-            else
-            {
-                console.log('miss!');
+                grid.addChild(new Sprite(this, mouse.hitPoint.x, mouse.hitPoint.y, 'dot'));
             }
 
         });
+    }
+
+    update (delta: number)
+    {
+        this.grid.rotation += 0.2 * delta;
     }
 }
 

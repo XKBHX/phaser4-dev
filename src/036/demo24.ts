@@ -5,44 +5,51 @@ import Mouse from 'nano/Mouse';
 
 class Demo extends Scene
 {
+    sprite1: Sprite;
+
+    isDragging: boolean = false;
+
     constructor (game: Game)
     {
         super(game);
-
-        this.game.renderer.optimizeRedraw = false;
     }
 
     preload ()
     {
         this.load.setPath('../assets/');
-        this.load.image('big', '512x512.png');
-        this.load.image('box', '128x128.png');
+        this.load.image('brain', 'brain.png');
     }
 
     create ()
     {
         const mouse = new Mouse(this.game.renderer.canvas);
 
-        const box = new Sprite(this, 400, 300, 'box');
+        this.sprite1 = new Sprite(this, 400, 300, 'brain');
 
-        box.setScale(2, 3);
+        this.sprite1.setInteractive();
 
-        box.setInteractive();
+        this.world.addChild(this.sprite1);
 
-        this.world.addChild(box);
+        mouse.on('pointerup', () => {
 
-        this.camera.setPosition(-128, 0);
-        this.camera.setRotation(0.3);
+            this.isDragging = false;
 
-        mouse.on('pointerdown', (x: number, y: number) => {
+        });
 
-            if (mouse.hitTest(box))
+        mouse.on('pointerdown', () => {
+
+            if (mouse.hitTest(this.sprite1))
             {
-                console.log('hit!');
+                this.isDragging = true;
             }
-            else
+
+        });
+
+        mouse.on('pointermove', (x: number, y: number) => {
+
+            if (this.isDragging)
             {
-                console.log('miss!');
+                this.sprite1.setPosition(x, y);
             }
 
         });
