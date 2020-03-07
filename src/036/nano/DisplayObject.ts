@@ -1,6 +1,9 @@
 import Vec2 from './Vec2';
 import DisplayObjectContainer from './DisplayObjectContainer';
 import Scene from './Scene';
+import IMatrix2d from './IMatrix2d';
+import LocalToGlobal from './LocalToGlobal';
+import GlobalToLocal from './GlobalToLocal';
 
 export default class DisplayObject
 {
@@ -24,8 +27,8 @@ export default class DisplayObject
 
     protected _alpha: number = 1;
 
-    protected localTransform: { a: number; b: number; c: number; d: number; tx: number; ty: number; };
-    protected worldTransform: { a: number; b: number; c: number; d: number; tx: number; ty: number; };
+    localTransform: IMatrix2d;
+    worldTransform: IMatrix2d;
 
     constructor (scene: Scene, x: number = 0, y: number = 0)
     {
@@ -84,24 +87,12 @@ export default class DisplayObject
 
     localToGlobal (x: number, y: number, outPoint: Vec2 = new Vec2()): Vec2
     {
-        const { a, b, c, d, tx, ty } = this.worldTransform;
-
-        outPoint.x = (a * x) + (c * y) + tx;
-        outPoint.y = (b * x) + (d * y) + ty;
-
-        return outPoint;
+        return LocalToGlobal(this.worldTransform, x, y, outPoint);
     }
 
     globalToLocal (x: number, y: number, outPoint: Vec2 = new Vec2()): Vec2
     {
-        const { a, b, c, d, tx, ty } = this.worldTransform;
-
-        const id: number = 1 / ((a * d) + (c * -b));
-
-        outPoint.x = (d * id * x) + (-c * id * y) + (((ty * c) - (tx * d)) * id);
-        outPoint.y = (a * id * y) + (-b * id * x) + (((-ty * a) + (tx * b)) * id);
-
-        return outPoint;
+        return GlobalToLocal(this.worldTransform, x, y, outPoint);
     }
 
     willRender (): boolean
