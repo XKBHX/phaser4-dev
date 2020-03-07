@@ -2,6 +2,9 @@ import EventEmitter from './EventEmitter';
 import Vec2 from './Vec2';
 import { Container } from './Container';
 import Sprite from './Sprite';
+import GlobalToLocal from './GlobalToLocal';
+import IMatrix2d from './IMatrix2d';
+import AppendMatrix2d from './AppendMatrix2d';
 
 export default class Mouse extends EventEmitter
 {
@@ -105,7 +108,9 @@ export default class Mouse extends EventEmitter
             return false;
         }
 
-        sprite.globalToLocal(this.localPoint.x, this.localPoint.y, this.transPoint);
+        const mat = AppendMatrix2d(sprite.scene.camera.worldTransform, sprite.worldTransform);
+
+        GlobalToLocal(mat, this.localPoint.x, this.localPoint.y, this.transPoint);
 
         const px = this.transPoint.x;
         const py = this.transPoint.y;
