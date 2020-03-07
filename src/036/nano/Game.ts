@@ -208,7 +208,7 @@ export default class Game extends EventEmitter
     
         if (this.isPaused)
         {
-            this.renderer.render(this.scene.world, 0);
+            this.renderer.render(this.scene, 0);
 
             requestAnimationFrame(() => this.step());
 
@@ -221,9 +221,11 @@ export default class Game extends EventEmitter
 
         this.scene.world.update(dt, now);
 
+        this.scene.camera.update();
+
         this.scene.update(dt, now);
 
-        this.renderer.render(this.scene.world, this.dirtyFrame);
+        this.renderer.render(this.scene, this.dirtyFrame);
 
         this.emit('render', this.renderer.dirtySprites, this.renderer.cachedSprites);
 

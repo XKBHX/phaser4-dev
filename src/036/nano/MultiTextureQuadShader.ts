@@ -2,6 +2,7 @@ import WebGLRenderer from './WebGLRenderer';
 import Sprite from './Sprite';
 import ISpriteMultiShader from './ISpriteMultiShader';
 import SpriteBuffer from './SpriteBuffer';
+import Camera from './Camera';
 
 const shaderSource = {
 
@@ -342,7 +343,7 @@ export default class MultiTextureQuadShader
         };
     }
 
-    bind ()
+    bind (camera: Camera)
     {
         const gl = this.gl;
         const renderer = this.renderer;
@@ -351,7 +352,7 @@ export default class MultiTextureQuadShader
         gl.useProgram(this.program);
 
         gl.uniformMatrix4fv(uniforms.projectionMatrix, false, renderer.projectionMatrix);
-        gl.uniformMatrix4fv(uniforms.cameraMatrix, false, renderer.camera.matrix);
+        gl.uniformMatrix4fv(uniforms.cameraMatrix, false, camera.matrix);
         gl.uniform1iv(uniforms.textureLocation, renderer.textureIndex);
 
         this.bindBuffers(this.indexBuffer, this.vertexBuffer);

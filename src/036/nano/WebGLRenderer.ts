@@ -6,6 +6,7 @@ import Sprite from './Sprite';
 import { Container } from './Container';
 import Camera from './Camera';
 import SpriteBuffer from './SpriteBuffer';
+import Scene from './Scene';
 
 export default class WebGLRenderer
 {
@@ -27,8 +28,6 @@ export default class WebGLRenderer
     width: number;
     height: number;
     resolution: number;
-    
-    camera: Camera;
     
     projectionMatrix: Float32Array;
     textureIndex: number[];
@@ -65,7 +64,6 @@ export default class WebGLRenderer
         this.initContext();
 
         this.shader = new MultiTextureQuadShader(this);
-        this.camera = new Camera(this);
     }
 
     initContext ()
@@ -220,7 +218,7 @@ export default class WebGLRenderer
         return glTexture;
     }
 
-    render (world: DisplayObjectContainer, dirtyFrame: number)
+    render (scene: Scene, dirtyFrame: number)
     {
         if (this.contextLost)
         {
@@ -261,9 +259,9 @@ export default class WebGLRenderer
 
         this.spriteCount = 0;
 
-        shader.bind();
+        shader.bind(scene.camera);
 
-        this.renderChildren(world);
+        this.renderChildren(scene.world);
 
         shader.flush();
     }
