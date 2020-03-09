@@ -23,29 +23,17 @@ import demo22 from './demo22'; // Mouse Input - Hit Test container children
 import demo23 from './demo23'; // Mouse Input - Hit Test local point
 import demo24 from './demo24'; // Mouse Input - Drag Sprite
 import demo25 from './demo25'; // Mouse Input - Circle hit area
-import demo26 from './demo26'; // Rotating items
+import demo26 from './demo26'; // Mouse Input - Ellipse hit area
+import demo27 from './demo27'; // Mouse Input - Rectangle hit area
+import demo28 from './demo28'; // Mouse Input - Polygon hit area
+import demo29 from './demo29'; // Rotating items
 
-// demo6();
-// demo7();
-// demo8();
-// demo9();
-// demo10();
-// demo11();
-// demo12();
 // demo13();
-// demo14();
-// demo15();
-// demo16();
-// demo17();
-// demo18();
-// demo19();
-// demo20();
-// demo21();
-// demo22();
-// demo23();
-// demo24();
 // demo25();
-demo26();
+// demo26();
+// demo27();
+// demo28();
+demo29();
 
 //  Next steps:
 

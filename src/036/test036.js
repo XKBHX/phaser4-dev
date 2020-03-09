@@ -432,40 +432,43 @@ class WebGLRenderer {
         const children = container.children;
         for (let i = 0; i < children.length; i++) {
             let entity = children[i];
-            if (entity.willRender()) {
-                if (entity.hasTexture) {
-                    let texture = entity.texture;
-                    if (texture.glIndexCounter < startActiveTexture) {
-                        texture.glIndexCounter = startActiveTexture;
-                        if (currentActiveTexture < maxTextures) {
-                            //  Make this texture active
-                            activeTextures[currentActiveTexture] = texture;
-                            texture.glIndex = currentActiveTexture;
-                            gl.activeTexture(gl.TEXTURE0 + currentActiveTexture);
-                            gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
-                            currentActiveTexture++;
-                            this.currentActiveTexture = currentActiveTexture;
-                        }
-                    }
-                    if (entity.dirty) {
-                        this.dirtySprites++;
-                    }
-                    else {
-                        this.cachedSprites++;
-                    }
-                    shader.batchSprite(entity);
-                }
-                if (entity.type === 'SpriteBuffer') {
-                    if (shader.batchSpriteBuffer(entity)) {
-                        //  Reset active textures
-                        this.currentActiveTexture = 0;
-                        this.startActiveTexture++;
+            if (!entity.willRender()) {
+                entity.dirty = false;
+                continue;
+            }
+            if (entity.hasTexture) {
+                let texture = entity.texture;
+                if (texture.glIndexCounter < startActiveTexture) {
+                    texture.glIndexCounter = startActiveTexture;
+                    if (currentActiveTexture < maxTextures) {
+                        //  Make this texture active
+                        activeTextures[currentActiveTexture] = texture;
+                        texture.glIndex = currentActiveTexture;
+                        gl.activeTexture(gl.TEXTURE0 + currentActiveTexture);
+                        gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
+                        currentActiveTexture++;
+                        this.currentActiveTexture = currentActiveTexture;
                     }
                 }
-                else if (entity.size) {
-                    // Render the children, if it has any
-                    this.renderChildren(entity);
+                shader.batchSprite(entity);
+            }
+            if (entity.dirty) {
+                this.dirtySprites++;
+                entity.dirty = false;
+            }
+            else {
+                this.cachedSprites++;
+            }
+            if (entity.type === 'SpriteBuffer') {
+                if (shader.batchSpriteBuffer(entity)) {
+                    //  Reset active textures
+                    this.currentActiveTexture = 0;
+                    this.startActiveTexture++;
                 }
+            }
+            else if (entity.size) {
+                // Render the children, if it has any
+                this.renderChildren(entity);
             }
         }
     }
@@ -1590,17 +1593,29 @@ class Game extends EventEmitter {
         this.lastTick = now;
         //  The frame always advances by 1 each step (even when paused)
         this.frame++;
-        if (this.isPaused) {
-            this.renderer.render(this.scene, 0);
-            requestAnimationFrame(() => this.step());
-            return;
-        }
         this.dirtyFrame = 0;
         this.emit('step', dt, now);
-        this.scene.world.update(dt, now);
-        this.scene.update(dt, now);
+        if (!this.isPaused) {
+            this.scene.world.update(dt, now);
+            this.scene.update(dt, now);
+        }
         this.renderer.render(this.scene, this.dirtyFrame);
-        this.emit('render', this.renderer.dirtySprites, this.renderer.cachedSprites);
+        /*
+        if (this.frame < 320)
+        {
+            if (this.dirtyFrame === 0)
+            {
+                console.log(this.frame, 'clean');
+            }
+            else
+            {
+                console.log(this.frame, 'dirty', this.dirtyFrame, this.renderer.dirtySprites, this.renderer.cachedSprites);
+            }
+        }
+        */
+        this.emit('render');
+        //  Because it doesn't get reset by the render loop
+        this.scene.world.dirty = false;
         requestAnimationFrame(() => this.step());
     }
 }
@@ -1658,6 +1673,9 @@ class Sprite extends DisplayObjectContainer {
     }
     setFrame(key) {
         const frame = this.texture.get(key);
+        if (frame === this.frame) {
+            return this;
+        }
         this.frame = frame;
         this.setSize(frame.sourceSizeWidth, frame.sourceSizeHeight);
         if (frame.pivot) {
@@ -1740,7 +1758,6 @@ class Sprite extends DisplayObjectContainer {
             //  top right
             data[18] = (w0 * a) + (h1 * c) + tx;
             data[19] = (w0 * b) + (h1 * d) + ty;
-            this.dirty = false;
         }
         const textureIndex = this.texture.glIndex;
         //  Do we have a different texture ID?
@@ -1955,14 +1972,143 @@ class AnimatedSprite extends Sprite {
     }
 }
 
+class StatsPanel {
+    constructor(name, fg, bg, width) {
+        this.percentage = false;
+        this.min = Number.POSITIVE_INFINITY;
+        this.max = 0;
+        this.pr = 1;
+        const pr = Math.round(window.devicePixelRatio || 1);
+        const canvas = document.createElement('canvas');
+        canvas.id = name;
+        canvas.width = width;
+        canvas.height = 48 * pr;
+        canvas.style.cssText = `width: ${width}px; height: 48px; display: inline`;
+        this.width = pr * width;
+        this.height = pr * 48;
+        this.textX = pr * 3;
+        this.textY = pr * 2;
+        this.graphX = pr * 3;
+        this.graphY = pr * 15;
+        this.graphWidth = pr * (width - 6);
+        this.graphHeight = pr * 30;
+        const context = canvas.getContext('2d');
+        context.font = 'bold ' + (12 * this.pr) + 'px Consolas, Courier, typewriter';
+        context.textBaseline = 'top';
+        context.fillStyle = bg;
+        context.fillRect(0, 0, this.width, this.height);
+        context.fillStyle = fg;
+        context.fillText(name, this.textX, this.textY);
+        context.fillRect(this.graphX, this.graphY, this.graphWidth, this.graphHeight);
+        context.fillStyle = bg;
+        context.globalAlpha = 0.9;
+        context.fillRect(this.graphX, this.graphY, this.graphWidth, this.graphHeight);
+        this.bg = bg;
+        this.fg = fg;
+        this.name = name;
+        this.canvas = canvas;
+        this.context = context;
+    }
+    update(value, maxValue) {
+        this.min = Math.min(this.min, value);
+        this.max = Math.max(this.max, value);
+        const context = this.context;
+        const pr = this.pr;
+        const bg = this.bg;
+        context.fillStyle = bg;
+        context.globalAlpha = 1;
+        context.fillRect(0, 0, this.width, this.graphY);
+        context.fillStyle = this.fg;
+        let displayValue = Math.round(value).toString();
+        if (this.percentage) {
+            displayValue = displayValue.padStart(3, ' ');
+            context.fillText(this.name + ' ' + displayValue + '%', this.textX, this.textY);
+        }
+        else {
+            context.fillText(displayValue + ' ' + this.name + ' (' + Math.round(this.min) + '-' + Math.round(this.max) + ')', this.textX, this.textY);
+        }
+        const graphX = this.graphX;
+        const graphY = this.graphY;
+        const graphWidth = this.graphWidth;
+        const graphHeight = this.graphHeight;
+        context.drawImage(this.canvas, graphX + pr, graphY, graphWidth - pr, graphHeight, graphX, graphY, graphWidth - pr, graphHeight);
+        context.fillRect(graphX + graphWidth - pr, graphY, pr, graphHeight);
+        context.fillStyle = bg;
+        context.globalAlpha = 0.9;
+        context.fillRect(graphX + graphWidth - pr, graphY, pr, Math.round((1 - (value / maxValue)) * graphHeight));
+    }
+}
+class Stats {
+    constructor(game) {
+        this.width = 0;
+        this.beginTime = 0;
+        this.prevTime = 0;
+        this.prevTime500 = 0;
+        this.frames = 0;
+        this.totalDirtyRenders = 0;
+        this.totalCachedRenders = 0;
+        this.game = game;
+        this.renderer = game.renderer;
+        this.parent = document.createElement('div');
+        const bounds = game.renderer.canvas.getBoundingClientRect();
+        this.width = bounds.width;
+        this.parent.style.cssText = `position: fixed; top: ${bounds.bottom}px; left: 0; cursor: pointer; opacity: 1.0; z-index: 10000`;
+        this.fpsPanel = new StatsPanel('FPS', '#0ff', '#002', this.width / 3);
+        this.renderPanel = new StatsPanel('Cached Frames', '#0f0', '#020', this.width / 3);
+        this.cachePanel = new StatsPanel('Cached Sprites', '#f08', '#201', this.width / 3);
+        this.renderPanel.percentage = true;
+        this.cachePanel.percentage = true;
+        this.parent.appendChild(this.fpsPanel.canvas);
+        this.parent.appendChild(this.renderPanel.canvas);
+        this.parent.appendChild(this.cachePanel.canvas);
+        AddToDOM(this.parent);
+        game.on('step', () => {
+            this.begin();
+        });
+        game.on('render', () => {
+            this.end();
+        });
+    }
+    begin() {
+        this.beginTime = performance.now();
+    }
+    end() {
+        this.frames++;
+        const time = performance.now();
+        if (this.game.dirtyFrame === 0) {
+            this.totalCachedRenders++;
+            this.cachePanel.update(100, 100);
+        }
+        else {
+            this.totalDirtyRenders++;
+            const cached = this.renderer.cachedSprites;
+            const dirty = this.renderer.dirtySprites;
+            this.cachePanel.update((cached / (cached + dirty)) * 100, 100);
+        }
+        if (time >= this.prevTime500 + 500) {
+            const cacheUse = this.totalCachedRenders / (this.totalCachedRenders + this.totalDirtyRenders);
+            this.renderPanel.update(cacheUse * 100, 100);
+            this.prevTime500 = time;
+            this.totalDirtyRenders = 0;
+            this.totalCachedRenders = 0;
+        }
+        if (time >= this.prevTime + 1000) {
+            this.fpsPanel.update((this.frames * 1000) / (time - this.prevTime), 100);
+            // const cacheUse: number = this.totalCachedRenders / (this.totalCachedRenders + this.totalDirtyRenders);
+            // this.renderPanel.update(cacheUse * 100, 100);
+            this.prevTime = time;
+            this.frames = 0;
+            // this.totalDirtyRenders = 0;
+            // this.totalCachedRenders = 0;
+        }
+        return time;
+    }
+}
+
 class Demo extends Scene$1 {
     constructor(game) {
         super(game);
-        const text = document.getElementById('cacheStats');
-        this.game.on('render', (dirty, cached) => {
-            const cacheUtilisation = (cached / (cached + dirty)) * 100;
-            text['value'] = 'Cached: ' + cacheUtilisation + '% - Dirty: ' + dirty + ' / ' + cached;
-        });
+        new Stats(game);
     }
     preload() {
         this.load.setPath('../assets/');
@@ -1986,7 +2132,7 @@ class Demo extends Scene$1 {
         this.createItem('star', 600, 450);
     }
 }
-function demo26 () {
+function demo29 () {
     let game = new Game({
         width: 800,
         height: 600,
@@ -1999,27 +2145,12 @@ function demo26 () {
     });
 }
 
-// demo6();
-// demo7();
-// demo8();
-// demo9();
-// demo10();
-// demo11();
-// demo12();
 // demo13();
-// demo14();
-// demo15();
-// demo16();
-// demo17();
-// demo18();
-// demo19();
-// demo20();
-// demo21();
-// demo22();
-// demo23();
-// demo24();
 // demo25();
-demo26();
+// demo26();
+// demo27();
+// demo28();
+demo29();
 //  Next steps:
 //  * Camera moving needs to dirty the renderer
 //  * Base64 Loader Test

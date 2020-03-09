@@ -60,6 +60,11 @@ export default class Sprite extends DisplayObjectContainer
     {
         const frame: Frame = this.texture.get(key);
 
+        if (frame === this.frame)
+        {
+            return this;
+        }
+
         this.frame = frame;
 
         this.setSize(frame.sourceSizeWidth, frame.sourceSizeHeight);
@@ -182,8 +187,6 @@ export default class Sprite extends DisplayObjectContainer
             //  top right
             data[18] = (w0 * a) + (h1 * c) + tx;
             data[19] = (w0 * b) + (h1 * d) + ty;
-
-            this.dirty = false;
         }
 
         const textureIndex = this.texture.glIndex;

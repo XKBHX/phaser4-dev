@@ -2,7 +2,7 @@ import Game from 'nano/Game';
 import Sprite from 'nano/Sprite';
 import Scene from 'nano/Scene';
 import Mouse from 'nano/Mouse';
-import Ellipse from 'nano/Ellipse';
+import Rectangle from 'nano/Rectangle';
 
 class Demo extends Scene
 {
@@ -25,7 +25,7 @@ class Demo extends Scene
 
         const sprite1 = new Sprite(this, 400, 300, 'rocket');
 
-        sprite1.setInteractive(new Ellipse(0, 0, 310, 80));
+        // sprite1.setInteractive(new Ellipse(0, 0, 310, 80));
 
         sprite1.setAlpha(0.7);
 

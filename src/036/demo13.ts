@@ -1,40 +1,9 @@
 import Game from 'nano/Game';
 import Sprite from 'nano/Sprite';
+import AnimatedSprite from 'nano/AnimatedSprite';
 import Scene from 'nano/Scene';
 import Keyboard from 'nano/Keyboard';
-
-class Fish extends Sprite
-{
-    animFrame: number = 0;
-    animSpeed: number = 100;
-    nextFrame: number = 100;
-
-    constructor (scene: Scene, x: number, y: number, texture: string, frame: string)
-    {
-        super(scene, x, y, texture, frame);
-    }
-
-    update (delta: number)
-    {
-        super.update(delta);
-
-        this.nextFrame -= delta * 1000;
-
-        if (this.nextFrame < 0)
-        {
-            this.nextFrame = this.animSpeed;
-
-            this.animFrame++;
-
-            if (this.animFrame > 5)
-            {
-                this.animFrame = 0;
-            }
-
-            this.setFrame('fish characters_000000' + this.animFrame);
-        }
-    }
-}
+import Stats from 'nano/Stats';
 
 class Demo extends Scene
 {
@@ -45,18 +14,10 @@ class Demo extends Scene
     {
         super(game);
 
+        new Stats(game);
+
         //  Or we can't debug it with Spector!
         // this.game.renderer.optimizeRedraw = false;
-
-        const text = document.getElementById('cacheStats');
-
-        this.game.on('render', (dirty: number, cached: number) => {
-
-            const cacheUtilisation = (cached / (cached + dirty)) * 100;
-
-            text['value'] = 'Cached: ' + cacheUtilisation + '% - Dirty: ' + dirty + ' / ' + cached;
-
-        });
     }
 
     preload ()
@@ -95,7 +56,13 @@ class Demo extends Scene
         }
 
         //  Fish cannon
-        const fish = new Fish(this, 384 + 160, 900, 'assets', 'fish characters_0000000');
+
+        const fish = new AnimatedSprite(this, 384 + 160, 900, 'assets', 'fish characters_0000000');
+
+        fish.addAnimationFromAtlas('wiggle', 'fish characters_000000', 0, 5);
+
+        fish.play('wiggle', { speed: 12, repeat: -1 })
+
         const nextBubble = new Sprite(this, 384 + 160, 930, 'assets', 'bubbles-01').setScale(0.40);
         const cannon = new Sprite(this, 384, 1000, 'assets', 'cannon_0000000').setOrigin(0.5, 1);
 

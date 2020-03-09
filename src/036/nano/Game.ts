@@ -206,26 +206,37 @@ export default class Game extends EventEmitter
         //  The frame always advances by 1 each step (even when paused)
         this.frame++;
     
-        if (this.isPaused)
-        {
-            this.renderer.render(this.scene, 0);
-
-            requestAnimationFrame(() => this.step());
-
-            return;
-        }
-
         this.dirtyFrame = 0;
 
         this.emit('step', dt, now);
 
-        this.scene.world.update(dt, now);
+        if (!this.isPaused)
+        {
+            this.scene.world.update(dt, now);
 
-        this.scene.update(dt, now);
+            this.scene.update(dt, now);
+        }
 
         this.renderer.render(this.scene, this.dirtyFrame);
 
-        this.emit('render', this.renderer.dirtySprites, this.renderer.cachedSprites);
+        /*
+        if (this.frame < 320)
+        {
+            if (this.dirtyFrame === 0)
+            {
+                console.log(this.frame, 'clean');
+            }
+            else
+            {
+                console.log(this.frame, 'dirty', this.dirtyFrame, this.renderer.dirtySprites, this.renderer.cachedSprites);
+            }
+        }
+        */
+
+        this.emit('render');
+
+        //  Because it doesn't get reset by the render loop
+        this.scene.world.dirty = false;
 
         requestAnimationFrame(() => this.step());
     }

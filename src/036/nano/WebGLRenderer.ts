@@ -283,65 +283,69 @@ export default class WebGLRenderer
         {
             let entity = children[i];
 
-            if (entity.willRender())
+            if (!entity.willRender())
             {
-                if (entity.hasTexture)
+                entity.dirty = false;
+
+                continue;
+            }
+
+            if (entity.hasTexture)
+            {
+                let texture = (entity as Sprite).texture;
+
+                if (texture.glIndexCounter < startActiveTexture)
                 {
-                    let texture = (entity as Sprite).texture;
-
-                    if (texture.glIndexCounter < startActiveTexture)
+                    texture.glIndexCounter = startActiveTexture;
+    
+                    if (currentActiveTexture < maxTextures)
                     {
-                        texture.glIndexCounter = startActiveTexture;
-        
-                        if (currentActiveTexture < maxTextures)
-                        {
-                            //  Make this texture active
-                            activeTextures[currentActiveTexture] = texture;
-        
-                            texture.glIndex = currentActiveTexture;
-        
-                            gl.activeTexture(gl.TEXTURE0 + currentActiveTexture);
-                            gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
-        
-                            currentActiveTexture++;
+                        //  Make this texture active
+                        activeTextures[currentActiveTexture] = texture;
+    
+                        texture.glIndex = currentActiveTexture;
+    
+                        gl.activeTexture(gl.TEXTURE0 + currentActiveTexture);
+                        gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
+    
+                        currentActiveTexture++;
 
-                            this.currentActiveTexture = currentActiveTexture;
-                        }
-                        else
-                        {
-                            //  We've run out, flush + recycle the oldest one
-                            //  TODO
-                        }
-                    }
-
-                    if (entity.dirty)
-                    {
-                        this.dirtySprites++;
+                        this.currentActiveTexture = currentActiveTexture;
                     }
                     else
                     {
-                        this.cachedSprites++;
-                    }
-
-                    shader.batchSprite(entity as Sprite);
-                }
-
-                if (entity.type === 'SpriteBuffer')
-                {
-                    if (shader.batchSpriteBuffer(entity as SpriteBuffer))
-                    {
-                        //  Reset active textures
-                        this.currentActiveTexture = 0;
-                        this.startActiveTexture++;
+                        //  We've run out, flush + recycle the oldest one
+                        //  TODO
                     }
                 }
-                else if (entity.size)
+                shader.batchSprite(entity as Sprite);
+            }
+
+            if (entity.dirty)
+            {
+                this.dirtySprites++;
+
+                entity.dirty = false;
+            }
+            else
+            {
+                this.cachedSprites++;
+            }
+
+            if (entity.type === 'SpriteBuffer')
+            {
+                if (shader.batchSpriteBuffer(entity as SpriteBuffer))
                 {
-                    // Render the children, if it has any
-                    this.renderChildren(entity);
+                    //  Reset active textures
+                    this.currentActiveTexture = 0;
+                    this.startActiveTexture++;
                 }
+            }
+            else if (entity.size)
+            {
+                // Render the children, if it has any
+                this.renderChildren(entity);
             }
         }
     }
-
 }
