@@ -227,12 +227,7 @@ export default class Game extends EventEmitter
 
         this.renderer.render(this.scene, this.dirtyFrame);
 
-        this.emit('render');
-
-        // if (this.frame < 200)
-        // {
-        //     console.log(this.frame, this.totalFrame, this.dirtyFrame);
-        // }
+        this.emit('render', dt, now);
 
         requestAnimationFrame(() => this.step());
     }

@@ -3,6 +3,138 @@ import AddToDOM from './AddToDOM';
 import WebGLRenderer from './WebGLRenderer';
 import StatsGraph from './StatsGraph';
 import StatsTree from './StatsTree';
+import StatsGraphChartJS from './StatsGraphChartJS';
+
+const uPlotCSS = `
+.uplot,
+.uplot *,
+.uplot *::before,
+.uplot *::after {
+	box-sizing: border-box;
+}
+
+.uplot {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+	line-height: 1.5;
+	width: max-content;
+}
+
+.uplot .title {
+	text-align: center;
+	font-size: 18px;
+	font-weight: bold;
+}
+
+.uplot .wrap {
+	position: relative;
+	user-select: none;
+}
+
+.uplot .over,
+.uplot .under {
+	position: absolute;
+	overflow: hidden;
+}
+
+.uplot canvas {
+	display: block;
+	position: relative;
+	width: 100%;
+	height: 100%;
+}
+
+.uplot .legend {
+	font-size: 14px;
+	margin: auto;
+	text-align: center;
+}
+
+.uplot .legend.inline {
+	display: block;
+}
+
+.uplot .legend.inline * {
+	display: inline-block;
+}
+
+.uplot .legend.inline tr {
+	margin-right: 16px;
+}
+
+.uplot .legend th {
+	font-weight: 600;
+}
+
+.uplot .legend th > * {
+	vertical-align: middle;
+	display: inline-block;
+}
+
+.uplot .legend .ident {
+	width: 1em;
+	height: 1em;
+	margin-right: 4px;
+	border: 2px solid transparent;
+}
+
+.uplot .legend.inline th::after {
+	content: ":";
+	vertical-align: middle;
+}
+
+.uplot .legend .series > * {
+	padding: 4px;
+}
+
+.uplot .legend .series th {
+	cursor: pointer;
+}
+
+.uplot .legend .off > * {
+	opacity: 0.3;
+}
+
+.uplot .select {
+	background: rgba(0,0,0,0.07);
+	position: absolute;
+	pointer-events: none;
+}
+
+.uplot .select.off {
+	display: none;
+}
+
+.uplot .cursor-x,
+.uplot .cursor-y {
+	position: absolute;
+	left: 0;
+	top: 0;
+	pointer-events: none;
+	will-change: transform;
+	z-index: 100;
+}
+
+.uplot .cursor-x {
+	height: 100%;
+	border-right: 1px dashed #607D8B;
+}
+
+.uplot .cursor-y {
+	width: 100%;
+	border-bottom: 1px dashed #607D8B;
+}
+
+.uplot .cursor-pt {
+	position: absolute;
+	top: 0;
+	left: 0;
+	border-radius: 50%;
+	filter: brightness(85%);
+	pointer-events: none;
+	will-change: transform;
+	z-index: 100;
+}
+`;
 
 export default class Stats
 {
@@ -19,7 +151,7 @@ export default class Stats
 
     buttons: HTMLDivElement;
 
-    fpsPanel: StatsGraph;
+    fpsPanel: StatsGraphChartJS;
     renderPanel: StatsGraph;
     cachePanel: StatsGraph;
     displayTreePanel: StatsTree;
@@ -59,7 +191,14 @@ export default class Stats
 
         this.width = bounds.width;
 
-        this.fpsPanel = new StatsGraph('FPS', '#0ff', '#002', this.width);
+        const style = document.createElement('style');
+
+        style.type = 'text/css';
+        style.innerHTML = uPlotCSS;
+
+        document.body.appendChild(style);
+
+        this.fpsPanel = new StatsGraphChartJS('FPS', '#0ff', '#002', this.width);
         this.renderPanel = new StatsGraph('Cached Frames', '#0f0', '#020', this.width);
         this.cachePanel = new StatsGraph('Cached Sprites', '#f08', '#201', this.width);
         this.displayTreePanel = new StatsTree(this);
@@ -71,8 +210,8 @@ export default class Stats
 
         div.appendChild(this.buttons);
         div.appendChild(this.fpsPanel.div);
-        div.appendChild(this.renderPanel.div);
-        div.appendChild(this.cachePanel.div);
+        // div.appendChild(this.renderPanel.div);
+        // div.appendChild(this.cachePanel.div);
 
         AddToDOM(div);
         AddToDOM(this.displayTreePanel.div);
@@ -83,8 +222,8 @@ export default class Stats
             this.begin();
         });
 
-        game.on('render', () => {
-            this.end();
+        game.on('render', (delta, now) => {
+            this.end(delta, now);
         });
     }
 
@@ -157,11 +296,11 @@ export default class Stats
         this.beginTime = performance.now();
     }
 
-    end (): number
+    end (delta: number, time: number): number
     {
         this.frames++;
 
-        const time = performance.now();
+        // const time = performance.now();
 
         if (this.game.dirtyFrame === 0)
         {
@@ -200,13 +339,19 @@ export default class Stats
             this.totalCachedRenders = 0;
         }
 
+        this.fpsPanel.update(delta * 1000, 100, time);
+
+        this.prevTime = time;
+
+        /*
         if (time >= this.prevTime + 1000)
         {
-            this.fpsPanel.update((this.frames * 1000) / (time - this.prevTime), 100);
+            this.fpsPanel.update((this.frames * 1000) / (time - this.prevTime), 100, now);
 
             this.prevTime = time;
             this.frames = 0;
         }
+        */
 
         return time;
     }
