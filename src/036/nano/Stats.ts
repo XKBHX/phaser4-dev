@@ -1,189 +1,8 @@
 import Game from './Game';
 import AddToDOM from './AddToDOM';
 import WebGLRenderer from './WebGLRenderer';
-
-class StatsPanel
-{
-    div: HTMLDivElement;
-    title: HTMLParagraphElement;
-
-    graph: HTMLCanvasElement;
-    graphContext: CanvasRenderingContext2D;
-
-    overlay: HTMLCanvasElement;
-    overlayContext: CanvasRenderingContext2D;
-
-    name: string;
-    percentage: boolean = false;
-    expanded: boolean = false;
-
-    min: number = Number.POSITIVE_INFINITY;
-    max: number = 0;
-
-    pr: number = 1;
-
-    bg: string;
-    fg: string;
-
-    constructor (name: string, fg: string, bg: string, width: number, shift: number = 0)
-    {
-        const pr = Math.round(window.devicePixelRatio || 1);
-
-        this.pr = pr;
-        
-        const div = document.createElement('div');
-
-        div.style.width = '40%';
-        div.style.height = '64px';
-        div.style.backgroundColor = '#222035';
-        div.style.overflow = 'hidden';
-        div.style.position = 'relative';
-        div.style.cursor = 'pointer';
-
-        const title = document.createElement('p');
-
-        title.style.padding = '0';
-        title.style.margin = '0';
-        title.style.color = fg;
-        title.style.fontWeight = 'bold';
-        title.style.fontFamily = "Consolas, 'Courier New', Courier, monospace";
-        title.style.fontSize = '12px';
-        title.innerText = name;
-
-        const graph = document.createElement('canvas');
-
-        graph.width = width * pr;
-        graph.height = 48 * pr;
-
-        graph.style.width = `${width}px`;
-        graph.style.height = '48px';
-        graph.style.position = 'absolute';
-        graph.style.top = '16px';
-        graph.style.right = '0';
-
-        const overlay = document.createElement('canvas');
-
-        overlay.width = width * pr;
-        overlay.height = 48 * pr;
-
-        overlay.style.width = `${width}px`;
-        overlay.style.height = '48px';
-        overlay.style.position = 'absolute';
-        overlay.style.top = '16px';
-
-        div.appendChild(title);
-        div.appendChild(graph);
-        div.appendChild(overlay);
-
-        this.bg = bg;
-        this.fg = fg;
-
-        this.div = div;
-        this.title = title;
-
-        this.name = name;
-
-        this.graph = graph;
-        this.graphContext = graph.getContext('2d');
-
-        this.overlay = overlay;
-        this.overlayContext = overlay.getContext('2d');
-
-        this.drawGrid();
-
-        div.addEventListener('click', () => {
-
-            if (this.expanded)
-            {
-                this.collapse();
-            }
-            else
-            {
-                this.expand();
-            }
-
-        });
-    }
-
-    collapse ()
-    {
-        this.div.style.width = '40%';
-
-        this.expanded = false;
-    }
-
-    expand ()
-    {
-        this.div.style.width = '100%';
-
-        this.expanded = true;
-    }
-
-    drawGrid ()
-    {
-        const overlay = this.overlay;
-        const overlayContext = this.overlayContext;
-
-        overlayContext.clearRect(0, 0, overlay.width, overlay.height);
-
-        overlayContext.strokeStyle = '#6a6a6a';
-        overlayContext.globalAlpha = 0.3;
-        overlayContext.lineWidth = this.pr;
-
-        for (let y: number = 0; y < overlay.height / 32; y++)
-        {
-            for (let x: number = 0; x < overlay.width / 64; x++)
-            {
-                overlayContext.strokeRect(x * 64, y * 32, 64, 32);
-            }
-        }
-    }
-
-    update (value: number, maxValue: number)
-    {
-        this.min = Math.min(this.min, value);
-        this.max = Math.max(this.max, value);
-
-        const pr = this.pr;
-
-        const graph = this.graph;
-        const graphContext = this.graphContext;
-
-        const pointX = graph.width - pr;
-        const pointY = (value / maxValue) * graph.height;
-
-        graphContext.drawImage(graph, pr, 0, pointX, graph.height, 0, 0, pointX, graph.height);
-
-        //  Clear what was at the right of the graph by filling with bg color
-        graphContext.fillStyle = '#222035';
-        graphContext.globalAlpha = 1;
-        graphContext.fillRect(pointX, 0, pr, graph.height);
-
-        //  Refresh
-        graphContext.fillStyle = this.fg;
-        graphContext.globalAlpha = 0.4;
-        graphContext.fillRect(pointX, graph.height - pointY, pr, pointY);
-
-        graphContext.globalAlpha = 1;
-        graphContext.fillRect(pointX, graph.height - pointY, pr, pr);
-
-        //  Title
-        const title = this.title;
-
-        let displayValue: string = Math.round(value).toString();
-
-        if (this.percentage)
-        {
-            displayValue = displayValue.padStart(3, ' ');
-
-            title.innerText = this.name + ' ' + displayValue + '%';
-        }
-        else
-        {
-            title.innerText = displayValue + ' ' + this.name + ' (' + Math.round(this.min) + '-' + Math.round(this.max) + ')';
-        }
-    }
-}
+import StatsGraph from './StatsGraph';
+import StatsTree from './StatsTree';
 
 export default class Stats
 {
@@ -199,9 +18,11 @@ export default class Stats
     frames: number = 0;
 
     buttons: HTMLDivElement;
-    fpsPanel: StatsPanel;
-    renderPanel: StatsPanel;
-    cachePanel: StatsPanel;
+
+    fpsPanel: StatsGraph;
+    renderPanel: StatsGraph;
+    cachePanel: StatsGraph;
+    displayTreePanel: StatsTree;
 
     totalDirtyRenders: number = 0;
     totalCachedRenders: number = 0;
@@ -238,9 +59,10 @@ export default class Stats
 
         this.width = bounds.width;
 
-        this.fpsPanel = new StatsPanel('FPS', '#0ff', '#002', this.width);
-        this.renderPanel = new StatsPanel('Cached Frames', '#0f0', '#020', this.width);
-        this.cachePanel = new StatsPanel('Cached Sprites', '#f08', '#201', this.width);
+        this.fpsPanel = new StatsGraph('FPS', '#0ff', '#002', this.width);
+        this.renderPanel = new StatsGraph('Cached Frames', '#0f0', '#020', this.width);
+        this.cachePanel = new StatsGraph('Cached Sprites', '#f08', '#201', this.width);
+        this.displayTreePanel = new StatsTree(this);
 
         this.renderPanel.percentage = true;
         this.cachePanel.percentage = true;
@@ -253,6 +75,7 @@ export default class Stats
         div.appendChild(this.cachePanel.div);
 
         AddToDOM(div);
+        AddToDOM(this.displayTreePanel.div);
 
         this.parent = div;
 
@@ -319,7 +142,14 @@ export default class Stats
 
     toggleDebugPanel ()
     {
-        
+        if (this.displayTreePanel.visible)
+        {
+            this.displayTreePanel.hide();
+        }
+        else
+        {
+            this.displayTreePanel.show();
+        }
     }
 
     begin ()
@@ -342,17 +172,21 @@ export default class Stats
             this.totalDirtyRenders++;
         }
 
-        if (time >= this.prevTime500 + 120)
+        //  Compute the new exponential moving average with an alpha of 0.25.
+        // this.actualFps = 0.25 * this.framesThisSecond + 0.75 * this.actualFps;
+
+        if (time >= this.prevTime500 + 500)
         {
-            if (this.game.dirtyFrame === 0)
+            const total = this.game.totalFrame;
+            const dirty = this.game.dirtyFrame;
+            const cached = total - dirty;
+
+            if (cached + dirty === 0)
             {
                 this.cachePanel.update(100, 100);
             }
             else
             {
-                const cached = this.renderer.cachedSprites;
-                const dirty = this.renderer.dirtySprites;
-    
                 this.cachePanel.update((cached / (cached + dirty)) * 100, 100);
             }
 

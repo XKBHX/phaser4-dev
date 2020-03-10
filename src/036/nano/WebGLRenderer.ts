@@ -36,10 +36,6 @@ export default class WebGLRenderer
     activeTextures: Texture[];
     currentActiveTexture: number;
     startActiveTexture: number;
-    spriteCount: number;
-
-    dirtySprites: number = 0;
-    cachedSprites: number = 0;
 
     clearBeforeRender: boolean = true;
     optimizeRedraw: boolean = true;
@@ -229,9 +225,6 @@ export default class WebGLRenderer
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-        this.dirtySprites = 0;
-        this.cachedSprites = 0;
-
         if (this.optimizeRedraw && dirtyFrame === 0)
         {
             return;
@@ -256,8 +249,6 @@ export default class WebGLRenderer
             gl.clearColor(cls[0], cls[1], cls[2], cls[3]);
             gl.clear(gl.COLOR_BUFFER_BIT);
         }
-
-        this.spriteCount = 0;
 
         shader.bind(scene.camera);
 
@@ -285,8 +276,6 @@ export default class WebGLRenderer
 
             if (!entity.willRender())
             {
-                entity.dirty = false;
-
                 continue;
             }
 
@@ -319,17 +308,6 @@ export default class WebGLRenderer
                     }
                 }
                 shader.batchSprite(entity as Sprite);
-            }
-
-            if (entity.dirty)
-            {
-                this.dirtySprites++;
-
-                entity.dirty = false;
-            }
-            else
-            {
-                this.cachedSprites++;
             }
 
             if (entity.type === 'SpriteBuffer')

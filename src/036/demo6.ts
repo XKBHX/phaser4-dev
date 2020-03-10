@@ -1,6 +1,7 @@
 import Game from 'nano/Game';
 import Sprite from 'nano/Sprite';
 import Scene from 'nano/Scene';
+import Stats from 'nano/Stats';
 
 class Box extends Sprite
 {
@@ -59,8 +60,10 @@ class Box extends Sprite
         }
     }
 
-    update ()
+    update (dt: number, now: number)
     {
+        super.update(dt, now);
+
         switch (this.direction)
         {
             case 0: {
@@ -110,22 +113,29 @@ class Demo extends Scene
 {
     container: Sprite;
 
+    logo1: Sprite;
+    logo2: Sprite;
+    logo3: Sprite;
+    logo4: Sprite;
+
     constructor (game: Game)
     {
         super(game);
+
+        new Stats(game, 'base');
     }
 
     preload ()
     {
-        this.load.image('512', '../assets/checker.png');
-        this.load.image('128', '../assets/lance-overdose-loader-eye.png');
+        this.load.image('checker', '../assets/checker.png');
         this.load.image('logo', '../assets/logo.png');
         this.load.image('brain', '../assets/brain.png');
+        this.load.image('clown', '../assets/clown.png');
     }
 
     create ()
     {
-        this.container = new Sprite(this, 400, 300, '512');
+        this.container = new Sprite(this, 400, 300, 'checker');
 
         const child1 = new Box(this, -256, -256, 'brain', null, 0);
         const child2 = new Box(this, 256, -256, 'brain', null, 1);
@@ -138,19 +148,29 @@ class Demo extends Scene
         const child7 = new Sprite(this, 0, 0, 'logo').setScale(0.9);
         const child8 = new Sprite(this, 0, 0, 'logo').setScale(1.0);
 
+        this.logo1 = child5;
+        this.logo2 = child6;
+        this.logo3 = child7;
+        this.logo4 = child8;
+
         this.container.addChild(child1, child2, child3, child4, child5, child6, child7, child8);
 
         this.world.addChild(this.container);
+
+        this.world.addChild(new Sprite(this, 100, 100, 'clown'));
+        this.world.addChild(new Sprite(this, 700, 100, 'clown'));
+        this.world.addChild(new Sprite(this, 100, 500, 'clown'));
+        this.world.addChild(new Sprite(this, 700, 500, 'clown'));
     }
 
     update ()
     {
         this.container.rotation += 0.005;
 
-        this.container.getChildAt(4).rotation += 0.037;
-        this.container.getChildAt(5).rotation += 0.038;
-        this.container.getChildAt(6).rotation += 0.039;
-        this.container.getChildAt(7).rotation += 0.040;
+        this.logo1.rotation += 0.0137;
+        this.logo2.rotation += 0.038;
+        this.logo3.rotation += 0.039;
+        this.logo4.rotation += 0.040;
     }
 }
 
@@ -162,9 +182,5 @@ export default function ()
         backgroundColor: 0x000066,
         parent: 'gameParent',
         scene: Demo
-    });
-
-    document.getElementById('toggle').addEventListener('click', () => {
-        game.isPaused = (game.isPaused) ? false: true;
     });
 }

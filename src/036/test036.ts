@@ -33,7 +33,8 @@ import demo29 from './demo29'; // Rotating items
 // demo26();
 // demo27();
 // demo28();
-demo29();
+// demo29();
+demo6();
 
 //  Next steps:
 

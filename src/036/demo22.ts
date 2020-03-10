@@ -2,6 +2,7 @@ import Game from 'nano/Game';
 import Sprite from 'nano/Sprite';
 import Scene from 'nano/Scene';
 import Mouse from 'nano/Mouse';
+import Stats from 'nano/Stats';
 
 class Demo extends Scene
 {
@@ -9,7 +10,7 @@ class Demo extends Scene
     {
         super(game);
 
-        this.game.renderer.optimizeRedraw = false;
+        new Stats(game, 'base');
     }
 
     preload ()
@@ -61,9 +62,5 @@ export default function ()
         backgroundColor: 0x000033,
         parent: 'gameParent',
         scene: Demo
-    });
-
-    document.getElementById('toggle').addEventListener('click', () => {
-        game.isPaused = (game.isPaused) ? false: true;
     });
 }

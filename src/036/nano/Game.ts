@@ -31,6 +31,9 @@ export default class Game extends EventEmitter
     //  How many Game Objects were made dirty this frame?
     dirtyFrame: number = 0;
 
+    //  How many Game Objects were processed this frame?
+    totalFrame: number = 0;
+
     constructor (config?: IGameConfig)
     {
         super();
@@ -207,36 +210,22 @@ export default class Game extends EventEmitter
         this.frame++;
     
         this.dirtyFrame = 0;
+        this.totalFrame = 0;
 
         this.emit('step', dt, now);
 
         if (!this.isPaused)
         {
-            this.scene.world.update(dt, now);
-
             this.scene.update(dt, now);
+            
+            this.scene.world.update(dt, now);
         }
+
+        this.emit('update', dt, now);
 
         this.renderer.render(this.scene, this.dirtyFrame);
 
-        /*
-        if (this.frame < 320)
-        {
-            if (this.dirtyFrame === 0)
-            {
-                console.log(this.frame, 'clean');
-            }
-            else
-            {
-                console.log(this.frame, 'dirty', this.dirtyFrame, this.renderer.dirtySprites, this.renderer.cachedSprites);
-            }
-        }
-        */
-
         this.emit('render');
-
-        //  Because it doesn't get reset by the render loop
-        this.scene.world.dirty = false;
 
         requestAnimationFrame(() => this.step());
     }

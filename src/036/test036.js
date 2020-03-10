@@ -285,8 +285,6 @@ class WebGLRenderer {
         };
         this.clearColor = [0, 0, 0, 1];
         this.maxTextures = 0;
-        this.dirtySprites = 0;
-        this.cachedSprites = 0;
         this.clearBeforeRender = true;
         this.optimizeRedraw = true;
         this.autoResize = true;
@@ -400,8 +398,6 @@ class WebGLRenderer {
         }
         const gl = this.gl;
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        this.dirtySprites = 0;
-        this.cachedSprites = 0;
         if (this.optimizeRedraw && dirtyFrame === 0) {
             return;
         }
@@ -417,7 +413,6 @@ class WebGLRenderer {
             gl.clearColor(cls[0], cls[1], cls[2], cls[3]);
             gl.clear(gl.COLOR_BUFFER_BIT);
         }
-        this.spriteCount = 0;
         shader.bind(scene.camera);
         this.renderChildren(scene.world);
         shader.flush();
@@ -433,7 +428,6 @@ class WebGLRenderer {
         for (let i = 0; i < children.length; i++) {
             let entity = children[i];
             if (!entity.willRender()) {
-                entity.dirty = false;
                 continue;
             }
             if (entity.hasTexture) {
@@ -451,13 +445,6 @@ class WebGLRenderer {
                     }
                 }
                 shader.batchSprite(entity);
-            }
-            if (entity.dirty) {
-                this.dirtySprites++;
-                entity.dirty = false;
-            }
-            else {
-                this.cachedSprites++;
             }
             if (entity.type === 'SpriteBuffer') {
                 if (shader.batchSpriteBuffer(entity)) {
@@ -748,6 +735,7 @@ function GlobalToLocal(transform, x, y, outPoint = new Vec2()) {
 class DisplayObject {
     constructor(scene, x = 0, y = 0) {
         this.dirty = true;
+        this.dirtyFrame = 0;
         this.visible = true;
         this.renderable = true;
         this.hasTexture = false;
@@ -769,7 +757,7 @@ class DisplayObject {
         return this;
     }
     updateTransform() {
-        this.dirty = true;
+        this.dirtyFrame = this.scene.game.frame;
         const parent = this.parent;
         const lt = this.localTransform;
         const wt = this.worldTransform;
@@ -806,7 +794,7 @@ class DisplayObject {
     setAlpha(alpha = 1) {
         if (alpha !== this._alpha) {
             this._alpha = alpha;
-            this.dirty = true;
+            this.dirtyFrame = this.scene.game.frame;
         }
         return this;
     }
@@ -921,7 +909,7 @@ class DisplayObject {
     set alpha(value) {
         if (value !== this._alpha) {
             this._alpha = value;
-            this.dirty = true;
+            this.dirtyFrame = this.scene.game.frame;
         }
     }
 }
@@ -1030,8 +1018,10 @@ class DisplayObjectContainer extends DisplayObject {
         }
     }
     update(dt, now) {
-        if (this.dirty) {
-            this.scene.game.dirtyFrame++;
+        const game = this.scene.game;
+        game.totalFrame++;
+        if (this.dirtyFrame === game.frame) {
+            game.dirtyFrame++;
         }
         const children = this.children;
         for (let i = 0; i < children.length; i++) {
@@ -1497,6 +1487,8 @@ class Game extends EventEmitter {
         this.frame = 0;
         //  How many Game Objects were made dirty this frame?
         this.dirtyFrame = 0;
+        //  How many Game Objects were processed this frame?
+        this.totalFrame = 0;
         const { width = 800, height = 600, backgroundColor = 0x00000, parent = document.body, scene = new Scene(this) } = config;
         this.scene = scene;
         DOMContentLoaded(() => this.boot(width, height, backgroundColor, parent));
@@ -1594,28 +1586,15 @@ class Game extends EventEmitter {
         //  The frame always advances by 1 each step (even when paused)
         this.frame++;
         this.dirtyFrame = 0;
+        this.totalFrame = 0;
         this.emit('step', dt, now);
         if (!this.isPaused) {
-            this.scene.world.update(dt, now);
             this.scene.update(dt, now);
+            this.scene.world.update(dt, now);
         }
+        this.emit('update', dt, now);
         this.renderer.render(this.scene, this.dirtyFrame);
-        /*
-        if (this.frame < 320)
-        {
-            if (this.dirtyFrame === 0)
-            {
-                console.log(this.frame, 'clean');
-            }
-            else
-            {
-                console.log(this.frame, 'dirty', this.dirtyFrame, this.renderer.dirtySprites, this.renderer.cachedSprites);
-            }
-        }
-        */
         this.emit('render');
-        //  Because it doesn't get reset by the render loop
-        this.scene.world.dirty = false;
         requestAnimationFrame(() => this.step());
     }
 }
@@ -1673,7 +1652,7 @@ class Sprite extends DisplayObjectContainer {
         data[15] = frame.v1;
         data[20] = frame.u1;
         data[21] = frame.v0;
-        this.dirty = true;
+        this.dirtyFrame = this.scene.game.frame;
         this.hasTexture = true;
         return this;
     }
@@ -1686,7 +1665,7 @@ class Sprite extends DisplayObjectContainer {
         color[1] = PackColor(tint[1], alpha[1]);
         color[2] = PackColor(tint[2], alpha[2]);
         color[3] = PackColor(tint[3], alpha[3]);
-        this.dirty = true;
+        this.dirtyFrame = this.scene.game.frame;
         return this;
     }
     setAlpha(topLeft = 1, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
@@ -1772,190 +1751,8 @@ class Sprite extends DisplayObjectContainer {
     }
 }
 
-class AnimatedSprite extends Sprite {
-    constructor(scene, x, y, texture, frame) {
-        super(scene, x, y, texture, frame);
-        this.type = 'AnimatedSprite';
-        this.anims = new Map();
-        //  Holds all the data for the current animation only
-        this.animData = {
-            currentAnim: '',
-            currentFrames: [],
-            frameIndex: 0,
-            animSpeed: 0,
-            nextFrameTime: 0,
-            repeatCount: 0,
-            isPlaying: false,
-            yoyo: false,
-            pendingStart: false,
-            playingForward: true,
-            delay: 0,
-            repeatDelay: 0,
-            onStart: null,
-            onRepeat: null,
-            onComplete: null
-        };
-    }
-    addAnimation(key, frames) {
-        if (!this.anims.has(key)) {
-            this.anims.set(key, this.texture.getFrames(frames));
-        }
-        return this;
-    }
-    addAnimationFromAtlas(key, prefix, start, end, zeroPad = 0, suffix = '') {
-        if (!this.anims.has(key)) {
-            this.anims.set(key, this.texture.getFramesInRange(prefix, start, end, zeroPad, suffix));
-        }
-        return this;
-    }
-    removeAnimation(key) {
-        this.anims.delete(key);
-        return this;
-    }
-    clearAnimations() {
-        this.anims.clear();
-        return this;
-    }
-    //  If animation already playing, calling this does nothing (use restart to restart one)
-    play(key, config = {}) {
-        const { speed = 24, repeat = 0, yoyo = false, startFrame = 0, delay = 0, repeatDelay = 0, onStart = null, onRepeat = null, onComplete = null, forceRestart = false } = config;
-        const data = this.animData;
-        if (data.isPlaying) {
-            if (data.currentAnim !== key) {
-                this.stop();
-            }
-            else if (!forceRestart) {
-                //  This animation is already playing? Just return then.
-                return this;
-            }
-        }
-        if (this.anims.has(key)) {
-            data.currentFrames = this.anims.get(key);
-            data.currentAnim = key;
-            data.frameIndex = startFrame;
-            data.animSpeed = 1000 / speed;
-            data.nextFrameTime = data.animSpeed + delay;
-            data.isPlaying = true;
-            data.playingForward = true;
-            data.yoyo = yoyo;
-            data.repeatCount = repeat;
-            data.delay = delay;
-            data.repeatDelay = repeatDelay;
-            data.onStart = onStart;
-            data.onRepeat = onRepeat;
-            data.onComplete = onComplete;
-            //  If there is no start delay, we set the first frame immediately
-            if (delay === 0) {
-                this.setFrame(data.currentFrames[data.frameIndex]);
-                if (onStart) {
-                    onStart(this, key);
-                }
-            }
-            else {
-                data.pendingStart = true;
-            }
-        }
-        return this;
-    }
-    stop() {
-        const data = this.animData;
-        data.isPlaying = false;
-        data.currentAnim = '';
-        if (data.onComplete) {
-            data.onComplete(this, data.currentAnim);
-        }
-    }
-    nextFrame() {
-        const data = this.animData;
-        data.frameIndex++;
-        //  There are no more frames, do we yoyo or repeat or end?
-        if (data.frameIndex === data.currentFrames.length) {
-            if (data.yoyo) {
-                data.frameIndex--;
-                data.playingForward = false;
-            }
-            else if (data.repeatCount === -1 || data.repeatCount > 0) {
-                data.frameIndex = 0;
-                if (data.repeatCount !== -1) {
-                    data.repeatCount--;
-                }
-                if (data.onRepeat) {
-                    data.onRepeat(this, data.currentAnim);
-                }
-                data.nextFrameTime += data.repeatDelay;
-            }
-            else {
-                data.frameIndex--;
-                return this.stop();
-            }
-        }
-        this.setFrame(data.currentFrames[data.frameIndex]);
-        data.nextFrameTime += data.animSpeed;
-    }
-    prevFrame() {
-        const data = this.animData;
-        data.frameIndex--;
-        //  There are no more frames, do we repeat or end?
-        if (data.frameIndex === -1) {
-            if (data.repeatCount === -1 || data.repeatCount > 0) {
-                data.frameIndex = 0;
-                data.playingForward = true;
-                if (data.repeatCount !== -1) {
-                    data.repeatCount--;
-                }
-                if (data.onRepeat) {
-                    data.onRepeat(this, data.currentAnim);
-                }
-                data.nextFrameTime += data.repeatDelay;
-            }
-            else {
-                data.frameIndex = 0;
-                return this.stop();
-            }
-        }
-        this.setFrame(data.currentFrames[data.frameIndex]);
-        data.nextFrameTime += data.animSpeed;
-    }
-    update(delta, now) {
-        super.update(delta, now);
-        const data = this.animData;
-        if (!data.isPlaying) {
-            return;
-        }
-        data.nextFrameTime -= delta * 1000;
-        //  Clamp to zero, otherwise a huge delta could cause animation playback issues
-        data.nextFrameTime = Math.max(data.nextFrameTime, 0);
-        //  It's time for a new frame
-        if (data.nextFrameTime === 0) {
-            //  Is this the start of our animation?
-            if (data.pendingStart) {
-                if (data.onStart) {
-                    data.onStart(this, data.currentAnim);
-                }
-                data.pendingStart = false;
-                data.nextFrameTime = data.animSpeed;
-            }
-            else if (data.playingForward) {
-                this.nextFrame();
-            }
-            else {
-                this.prevFrame();
-            }
-        }
-    }
-    get isPlaying() {
-        return this.animData.isPlaying;
-    }
-    get isPlayingForward() {
-        return (this.animData.isPlaying && this.animData.playingForward);
-    }
-    get currentAnimation() {
-        return this.animData.currentAnim;
-    }
-}
-
-class StatsPanel {
-    constructor(name, fg, bg, width, shift = 0) {
+class StatsGraph {
+    constructor(name, fg, bg, width) {
         this.percentage = false;
         this.expanded = false;
         this.min = Number.POSITIVE_INFINITY;
@@ -2067,6 +1864,135 @@ class StatsPanel {
         }
     }
 }
+
+const TreeCSS = `
+.treeContainer {
+    background: white;
+    font: normal normal 13px/1.4 Segoe,"Segoe UI",Calibri,Helmet,FreeSans,Sans-Serif;
+    padding: 50px;
+    position: absolute;
+    display: none;
+    left: 0;
+    top: 0;
+  }
+  
+.tree,
+.tree ul {
+  margin:0 0 0 1em; /* indentation */
+  padding:0;
+  list-style:none;
+  color:#369;
+  position:relative;
+}
+
+.tree ul {margin-left:.5em} /* (indentation/2) */
+
+.tree:before,
+.tree ul:before {
+  content:"";
+  display:block;
+  width:0;
+  position:absolute;
+  top:0;
+  bottom:0;
+  left:0;
+  border-left:1px solid;
+}
+
+.tree li {
+  margin:0;
+  padding:0 1.5em; /* indentation + .5em */
+  line-height:2em; /* default list item's line-height */
+  font-weight:bold;
+  position:relative;
+}
+
+.tree li:before {
+  content:"";
+  display:block;
+  width:10px; /* same with indentation */
+  height:0;
+  border-top:1px solid;
+  margin-top:-1px; /* border top width */
+  position:absolute;
+  top:1em; /* (line-height/2) */
+  left:0;
+}
+
+.tree li:last-child:before {
+  background:white; /* same with body background */
+  height:auto;
+  top:1em; /* (line-height/2) */
+  bottom:0;
+}
+`;
+class StatsTree {
+    constructor(stats) {
+        this.visible = false;
+        this.stats = stats;
+        this.game = stats.game;
+        const style = document.createElement('style');
+        style.type = 'text/css';
+        style.innerHTML = TreeCSS;
+        document.body.appendChild(style);
+        const div = document.createElement('div');
+        div.style.display = 'none;';
+        div.className = 'treeContainer';
+        const title = document.createElement('p');
+        title.innerText = 'World';
+        div.appendChild(title);
+        const root = document.createElement('ul');
+        root.className = 'tree';
+        div.appendChild(root);
+        this.div = div;
+        this.root = root;
+    }
+    buildList(parent, root) {
+        for (let i = 0; i < root.size; i++) {
+            let entity = root.children[i];
+            // let id: string = `#${i} - ${entity.type}`;
+            let texture = '';
+            if (entity.hasTexture) {
+                let textureKey = entity.texture.key;
+                let frameKey = entity.frame.key;
+                if (frameKey === '__BASE') {
+                    texture = textureKey;
+                }
+                else {
+                    texture = textureKey + ' - ' + frameKey;
+                }
+            }
+            let id = `${entity.type} (${texture})`;
+            let li = document.createElement('li');
+            li.innerText = id;
+            parent.appendChild(li);
+            if (entity.size > 0) {
+                let ul = document.createElement('ul');
+                li.appendChild(ul);
+                this.buildList(ul, entity);
+            }
+        }
+    }
+    show() {
+        this.game.pause();
+        const root = this.root;
+        const world = this.game.scene.world;
+        this.buildList(root, world);
+        this.visible = true;
+        this.div.style.display = 'block';
+    }
+    hide() {
+        //  Nuke all current children
+        const root = this.root;
+        while (root.firstChild) {
+            root.removeChild(root.firstChild);
+        }
+        this.game.resume();
+        this.visible = false;
+        this.div.style.display = 'none';
+    }
+}
+
 class Stats {
     constructor(game, align = 'top') {
         this.width = 0;
@@ -2096,9 +2022,10 @@ class Stats {
             div.style.top = `${bounds.bottom}px`;
         }
         this.width = bounds.width;
-        this.fpsPanel = new StatsPanel('FPS', '#0ff', '#002', this.width);
-        this.renderPanel = new StatsPanel('Cached Frames', '#0f0', '#020', this.width);
-        this.cachePanel = new StatsPanel('Cached Sprites', '#f08', '#201', this.width);
+        this.fpsPanel = new StatsGraph('FPS', '#0ff', '#002', this.width);
+        this.renderPanel = new StatsGraph('Cached Frames', '#0f0', '#020', this.width);
+        this.cachePanel = new StatsGraph('Cached Sprites', '#f08', '#201', this.width);
+        this.displayTreePanel = new StatsTree(this);
         this.renderPanel.percentage = true;
         this.cachePanel.percentage = true;
         this.buttons = this.createButtons();
@@ -2107,6 +2034,7 @@ class Stats {
         div.appendChild(this.renderPanel.div);
         div.appendChild(this.cachePanel.div);
         AddToDOM(div);
+        AddToDOM(this.displayTreePanel.div);
         this.parent = div;
         game.on('step', () => {
             this.begin();
@@ -2150,6 +2078,12 @@ class Stats {
         return div;
     }
     toggleDebugPanel() {
+        if (this.displayTreePanel.visible) {
+            this.displayTreePanel.hide();
+        }
+        else {
+            this.displayTreePanel.show();
+        }
     }
     begin() {
         this.beginTime = performance.now();
@@ -2163,13 +2097,16 @@ class Stats {
         else {
             this.totalDirtyRenders++;
         }
-        if (time >= this.prevTime500 + 120) {
-            if (this.game.dirtyFrame === 0) {
+        //  Compute the new exponential moving average with an alpha of 0.25.
+        // this.actualFps = 0.25 * this.framesThisSecond + 0.75 * this.actualFps;
+        if (time >= this.prevTime500 + 500) {
+            const total = this.game.totalFrame;
+            const dirty = this.game.dirtyFrame;
+            const cached = total - dirty;
+            if (cached + dirty === 0) {
                 this.cachePanel.update(100, 100);
             }
             else {
-                const cached = this.renderer.cachedSprites;
-                const dirty = this.renderer.dirtySprites;
                 this.cachePanel.update((cached / (cached + dirty)) * 100, 100);
             }
             const cacheUse = this.totalCachedRenders / (this.totalCachedRenders + this.totalDirtyRenders);
@@ -2187,39 +2124,133 @@ class Stats {
     }
 }
 
+class Box extends Sprite {
+    constructor(scene, x, y, texture, frame, direction = 0, size = 512) {
+        super(scene, x, y, texture, frame);
+        //  0 = left to right
+        //  1 = top to bottom
+        //  2 = right to left
+        //  3 = bottom to top
+        this.direction = 0;
+        this.speed = 2;
+        this.direction = direction;
+        if (direction === 0) {
+            //  Box is in the top-left
+            this.startX = x;
+            this.startY = y;
+            this.endX = x + size;
+            this.endY = y + size;
+        }
+        else if (direction === 1) {
+            //  Box is in the top-right
+            this.startX = x - size;
+            this.startY = y;
+            this.endX = x;
+            this.endY = y + size;
+        }
+        else if (direction === 2) {
+            //  Box is in the bottom-right
+            this.startX = x - size;
+            this.startY = y - size;
+            this.endX = x;
+            this.endY = y;
+        }
+        else if (direction === 3) {
+            //  Box is in the bottom-left
+            this.startX = x;
+            this.startY = y - size;
+            this.endX = x + size;
+            this.endY = y;
+        }
+    }
+    update(dt, now) {
+        super.update(dt, now);
+        switch (this.direction) {
+            case 0:
+                {
+                    this.x += this.speed;
+                    if (this.x >= this.endX) {
+                        this.x = this.endX;
+                        this.direction = 1;
+                    }
+                }
+                break;
+            case 1:
+                {
+                    this.y += this.speed;
+                    if (this.y >= this.endY) {
+                        this.y = this.endY;
+                        this.direction = 2;
+                    }
+                }
+                break;
+            case 2:
+                {
+                    this.x -= this.speed;
+                    if (this.x <= this.startX) {
+                        this.x = this.startX;
+                        this.direction = 3;
+                    }
+                }
+                break;
+            case 3:
+                {
+                    this.y -= this.speed;
+                    if (this.y <= this.startY) {
+                        this.y = this.startY;
+                        this.direction = 0;
+                    }
+                }
+                break;
+        }
+    }
+}
 class Demo extends Scene {
     constructor(game) {
         super(game);
         new Stats(game, 'base');
     }
     preload() {
-        this.load.setPath('../assets/');
-        this.load.atlas('items', 'cartoon-items.png', 'cartoon-items.json');
-    }
-    createItem(key, x, y) {
-        const item = new AnimatedSprite(this, x, y, 'items', key + '-1');
-        this.world.addChild(item);
-        item.addAnimationFromAtlas(key, key + '-', 1, 8);
-        // item.play(key, { speed: 10, repeat: -1 });
-        item.play(key, { speed: 4 + Math.random() * 4, repeat: -1 });
+        this.load.image('checker', '../assets/checker.png');
+        this.load.image('logo', '../assets/logo.png');
+        this.load.image('brain', '../assets/brain.png');
+        this.load.image('clown', '../assets/clown.png');
     }
     create() {
-        this.createItem('coin-silver', 200, 150);
-        this.createItem('cup', 400, 150);
-        this.createItem('gem', 600, 150);
-        this.createItem('heart', 200, 300);
-        this.createItem('lightning', 400, 300);
-        this.createItem('meat', 600, 300);
-        this.createItem('medkit', 200, 450);
-        this.createItem('pouch', 400, 450);
-        this.createItem('star', 600, 450);
+        this.container = new Sprite(this, 400, 300, 'checker');
+        const child1 = new Box(this, -256, -256, 'brain', null, 0);
+        const child2 = new Box(this, 256, -256, 'brain', null, 1);
+        const child3 = new Box(this, 256, 256, 'brain', null, 2);
+        const child4 = new Box(this, -256, 256, 'brain', null, 3);
+        //  Logo stack
+        const child5 = new Sprite(this, 0, 0, 'logo').setScale(0.7);
+        const child6 = new Sprite(this, 0, 0, 'logo').setScale(0.8);
+        const child7 = new Sprite(this, 0, 0, 'logo').setScale(0.9);
+        const child8 = new Sprite(this, 0, 0, 'logo').setScale(1.0);
+        this.logo1 = child5;
+        this.logo2 = child6;
+        this.logo3 = child7;
+        this.logo4 = child8;
+        this.container.addChild(child1, child2, child3, child4, child5, child6, child7, child8);
+        this.world.addChild(this.container);
+        this.world.addChild(new Sprite(this, 100, 100, 'clown'));
+        this.world.addChild(new Sprite(this, 700, 100, 'clown'));
+        this.world.addChild(new Sprite(this, 100, 500, 'clown'));
+        this.world.addChild(new Sprite(this, 700, 500, 'clown'));
+    }
+    update() {
+        this.container.rotation += 0.005;
+        this.logo1.rotation += 0.0137;
+        this.logo2.rotation += 0.038;
+        this.logo3.rotation += 0.039;
+        this.logo4.rotation += 0.040;
     }
 }
-function demo29 () {
+function demo6 () {
     let game = new Game({
         width: 800,
         height: 600,
-        backgroundColor: 0x000033,
+        backgroundColor: 0x000066,
         parent: 'gameParent',
         scene: Demo
     });
@@ -2230,7 +2261,8 @@ function demo29 () {
 // demo26();
 // demo27();
 // demo28();
-demo29();
+// demo29();
+demo6();
 //  Next steps:
 //  * Camera moving needs to dirty the renderer
 //  * Base64 Loader Test

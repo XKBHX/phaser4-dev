@@ -90,7 +90,7 @@ export default class Sprite extends DisplayObjectContainer
         data[20] = frame.u1;
         data[21] = frame.v0;
 
-        this.dirty = true;
+        this.dirtyFrame = this.scene.game.frame;
 
         this.hasTexture = true;
 
@@ -109,7 +109,7 @@ export default class Sprite extends DisplayObjectContainer
         color[2] = PackColor(tint[2], alpha[2]);
         color[3] = PackColor(tint[3], alpha[3]);
 
-        this.dirty = true;
+        this.dirtyFrame = this.scene.game.frame;
 
         return this;
     }

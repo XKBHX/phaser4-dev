@@ -2,6 +2,7 @@ import DisplayObject from './DisplayObject';
 import { Container } from './Container';
 import Scene from './Scene';
 import IInteractiveArea from './IInteractiveArea';
+import Game from './Game';
 
 export default class DisplayObjectContainer extends DisplayObject
 {
@@ -180,9 +181,13 @@ export default class DisplayObjectContainer extends DisplayObject
 
     update (dt: number, now: number)
     {
-        if (this.dirty)
+        const game: Game = this.scene.game;
+
+        game.totalFrame++;
+
+        if (this.dirtyFrame === game.frame)
         {
-            this.scene.game.dirtyFrame++;
+            game.dirtyFrame++;
         }
 
         const children = this.children;
