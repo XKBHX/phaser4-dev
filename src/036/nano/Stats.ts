@@ -206,23 +206,39 @@ export default class Stats
     totalCachedRenders: number = 0;
     playToggle: HTMLButtonElement;
 
-    constructor (game: Game)
+    constructor (game: Game, align: string = 'top')
     {
         this.game = game;
         this.renderer = game.renderer;
 
         const bounds = game.renderer.canvas.getBoundingClientRect();
 
-        this.width = bounds.width;
+        console.log(bounds);
 
         const div = document.createElement('div');
 
         div.style.width = `${bounds.width}px`;
+        div.style.height = '64px';
         div.style.display = 'flex';
-        div.style.position = 'fixed';
-        div.style.top = `${bounds.top}px`;
-        div.style.left = `${bounds.left}px`;
+        div.style.position = 'absolute';
         div.style.zIndex = '10000';
+
+        div.style.left = `${bounds.left}px`;
+
+        if (align === 'top')
+        {
+            div.style.top = `${bounds.top}px`;
+        }
+        else if (align === 'bottom')
+        {
+            div.style.top = (bounds.bottom - 64) + 'px';
+        }
+        else if (align === 'base')
+        {
+            div.style.top = `${bounds.bottom}px`;
+        }
+
+        this.width = bounds.width;
 
         this.fpsPanel = new StatsPanel('FPS', '#0ff', '#002', this.width);
         this.renderPanel = new StatsPanel('Cached Frames', '#0f0', '#020', this.width);

@@ -9,7 +9,7 @@ class Demo extends Scene
     {
         super(game);
 
-        new Stats(game);
+        new Stats(game, 'base');
     }
 
     preload ()
