@@ -132,9 +132,9 @@ class StatsPanel
 
         for (let y: number = 0; y < overlay.height / 32; y++)
         {
-            for (let x: number = 0; x < overlay.width / 32; x++)
+            for (let x: number = 0; x < overlay.width / 64; x++)
             {
-                overlayContext.strokeRect(x * 32, y * 32, 32, 32);
+                overlayContext.strokeRect(x * 64, y * 32, 64, 32);
             }
         }
     }
@@ -198,13 +198,13 @@ export default class Stats
     prevTime500: number = 0;
     frames: number = 0;
 
+    buttons: HTMLDivElement;
     fpsPanel: StatsPanel;
     renderPanel: StatsPanel;
     cachePanel: StatsPanel;
 
     totalDirtyRenders: number = 0;
     totalCachedRenders: number = 0;
-    playToggle: HTMLButtonElement;
 
     constructor (game: Game, align: string = 'top')
     {
@@ -212,8 +212,6 @@ export default class Stats
         this.renderer = game.renderer;
 
         const bounds = game.renderer.canvas.getBoundingClientRect();
-
-        console.log(bounds);
 
         const div = document.createElement('div');
 
@@ -247,9 +245,9 @@ export default class Stats
         this.renderPanel.percentage = true;
         this.cachePanel.percentage = true;
 
-        this.playToggle = this.createButtons();
+        this.buttons = this.createButtons();
 
-        div.appendChild(this.playToggle);
+        div.appendChild(this.buttons);
         div.appendChild(this.fpsPanel.div);
         div.appendChild(this.renderPanel.div);
         div.appendChild(this.cachePanel.div);
@@ -267,33 +265,61 @@ export default class Stats
         });
     }
 
-    createButtons ()
+    createButtons (): HTMLDivElement
     {
-        const div = document.createElement('button');
+        const div = document.createElement('div');
 
         div.style.width = '64px';
         div.style.height = '64px';
         div.style.position = 'relative';
         div.style.cursor = 'pointer';
-        div.innerText = 'pause';
         div.style.flexShrink = '0';
 
-        div.addEventListener('click', () => {
+        const playButton = document.createElement('button');
+
+        playButton.style.width = '64px';
+        playButton.style.height = '32px';
+        playButton.style.cursor = 'pointer';
+        playButton.innerText = '⏸️';
+
+        div.appendChild(playButton);
+
+        playButton.addEventListener('click', () => {
 
             if (this.game.isPaused)
             {
                 this.game.resume();
-                div.innerText = 'pause';
+                playButton.innerText = '⏸️';
             }
             else
             {
                 this.game.pause();
-                div.innerText = 'play';
+                playButton.innerText = '▶️';
             }
 
         });
 
+        const debugButton = document.createElement('button');
+
+        debugButton.style.width = '64px';
+        debugButton.style.height = '32px';
+        debugButton.style.cursor = 'pointer';
+        debugButton.innerText = 'debug';
+
+        div.appendChild(debugButton);
+
+        debugButton.addEventListener('click', () => {
+
+            this.toggleDebugPanel();
+
+        });
+
         return div;
+    }
+
+    toggleDebugPanel ()
+    {
+        
     }
 
     begin ()
