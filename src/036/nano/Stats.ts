@@ -19,12 +19,13 @@ class StatsPanel
 
     min: number = Number.POSITIVE_INFINITY;
     max: number = 0;
+
     pr: number = 1;
 
     bg: string;
     fg: string;
 
-    constructor (name: string, fg: string, bg: string, width: number)
+    constructor (name: string, fg: string, bg: string, width: number, shift: number = 0)
     {
         const pr = Math.round(window.devicePixelRatio || 1);
 
@@ -45,7 +46,7 @@ class StatsPanel
         title.style.margin = '0';
         title.style.color = fg;
         title.style.fontWeight = 'bold';
-        title.style.fontFamily = 'Consolas, Courier, typewriter';
+        title.style.fontFamily = "Consolas, 'Courier New', Courier, monospace";
         title.style.fontSize = '12px';
         title.innerText = name;
 
@@ -162,6 +163,7 @@ class StatsPanel
         graphContext.fillStyle = this.fg;
         graphContext.globalAlpha = 0.4;
         graphContext.fillRect(pointX, graph.height - pointY, pr, pointY);
+
         graphContext.globalAlpha = 1;
         graphContext.fillRect(pointX, graph.height - pointY, pr, pr);
 
@@ -202,6 +204,7 @@ export default class Stats
 
     totalDirtyRenders: number = 0;
     totalCachedRenders: number = 0;
+    playToggle: HTMLButtonElement;
 
     constructor (game: Game)
     {
@@ -228,6 +231,9 @@ export default class Stats
         this.renderPanel.percentage = true;
         this.cachePanel.percentage = true;
 
+        this.playToggle = this.createButtons();
+
+        div.appendChild(this.playToggle);
         div.appendChild(this.fpsPanel.div);
         div.appendChild(this.renderPanel.div);
         div.appendChild(this.cachePanel.div);
@@ -245,6 +251,35 @@ export default class Stats
         });
     }
 
+    createButtons ()
+    {
+        const div = document.createElement('button');
+
+        div.style.width = '64px';
+        div.style.height = '64px';
+        div.style.position = 'relative';
+        div.style.cursor = 'pointer';
+        div.innerText = 'pause';
+        div.style.flexShrink = '0';
+
+        div.addEventListener('click', () => {
+
+            if (this.game.isPaused)
+            {
+                this.game.resume();
+                div.innerText = 'pause';
+            }
+            else
+            {
+                this.game.pause();
+                div.innerText = 'play';
+            }
+
+        });
+
+        return div;
+    }
+
     begin ()
     {
         this.beginTime = performance.now();
@@ -259,21 +294,26 @@ export default class Stats
         if (this.game.dirtyFrame === 0)
         {
             this.totalCachedRenders++;
-
-            this.cachePanel.update(100, 100);
         }
         else
         {
             this.totalDirtyRenders++;
-
-            const cached = this.renderer.cachedSprites;
-            const dirty = this.renderer.dirtySprites;
-
-            this.cachePanel.update((cached / (cached + dirty)) * 100, 100);
         }
 
-        if (time >= this.prevTime500 + 500)
+        if (time >= this.prevTime500 + 120)
         {
+            if (this.game.dirtyFrame === 0)
+            {
+                this.cachePanel.update(100, 100);
+            }
+            else
+            {
+                const cached = this.renderer.cachedSprites;
+                const dirty = this.renderer.dirtySprites;
+    
+                this.cachePanel.update((cached / (cached + dirty)) * 100, 100);
+            }
+
             const cacheUse: number = this.totalCachedRenders / (this.totalCachedRenders + this.totalDirtyRenders);
 
             this.renderPanel.update(cacheUse * 100, 100);

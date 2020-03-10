@@ -55,8 +55,4 @@ export default function ()
         parent: 'gameParent',
         scene: Demo
     });
-
-    document.getElementById('toggle').addEventListener('click', () => {
-        game.isPaused = (game.isPaused) ? false: true;
-    });
 }

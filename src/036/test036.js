@@ -1955,7 +1955,7 @@ class AnimatedSprite extends Sprite {
 }
 
 class StatsPanel {
-    constructor(name, fg, bg, width) {
+    constructor(name, fg, bg, width, shift = 0) {
         this.percentage = false;
         this.expanded = false;
         this.min = Number.POSITIVE_INFINITY;
@@ -1975,7 +1975,7 @@ class StatsPanel {
         title.style.margin = '0';
         title.style.color = fg;
         title.style.fontWeight = 'bold';
-        title.style.fontFamily = 'Consolas, Courier, typewriter';
+        title.style.fontFamily = "Consolas, 'Courier New', Courier, monospace";
         title.style.fontSize = '12px';
         title.innerText = name;
         const graph = document.createElement('canvas');
@@ -2092,6 +2092,8 @@ class Stats {
         this.cachePanel = new StatsPanel('Cached Sprites', '#f08', '#201', this.width);
         this.renderPanel.percentage = true;
         this.cachePanel.percentage = true;
+        this.playToggle = this.createButtons();
+        div.appendChild(this.playToggle);
         div.appendChild(this.fpsPanel.div);
         div.appendChild(this.renderPanel.div);
         div.appendChild(this.cachePanel.div);
@@ -2104,6 +2106,26 @@ class Stats {
             this.end();
         });
     }
+    createButtons() {
+        const div = document.createElement('button');
+        div.style.width = '64px';
+        div.style.height = '64px';
+        div.style.position = 'relative';
+        div.style.cursor = 'pointer';
+        div.innerText = 'pause';
+        div.style.flexShrink = '0';
+        div.addEventListener('click', () => {
+            if (this.game.isPaused) {
+                this.game.resume();
+                div.innerText = 'pause';
+            }
+            else {
+                this.game.pause();
+                div.innerText = 'play';
+            }
+        });
+        return div;
+    }
     begin() {
         this.beginTime = performance.now();
     }
@@ -2112,15 +2134,19 @@ class Stats {
         const time = performance.now();
         if (this.game.dirtyFrame === 0) {
             this.totalCachedRenders++;
-            this.cachePanel.update(100, 100);
         }
         else {
             this.totalDirtyRenders++;
-            const cached = this.renderer.cachedSprites;
-            const dirty = this.renderer.dirtySprites;
-            this.cachePanel.update((cached / (cached + dirty)) * 100, 100);
         }
-        if (time >= this.prevTime500 + 500) {
+        if (time >= this.prevTime500 + 120) {
+            if (this.game.dirtyFrame === 0) {
+                this.cachePanel.update(100, 100);
+            }
+            else {
+                const cached = this.renderer.cachedSprites;
+                const dirty = this.renderer.dirtySprites;
+                this.cachePanel.update((cached / (cached + dirty)) * 100, 100);
+            }
             const cacheUse = this.totalCachedRenders / (this.totalCachedRenders + this.totalDirtyRenders);
             this.renderPanel.update(cacheUse * 100, 100);
             this.prevTime500 = time;
@@ -2171,9 +2197,6 @@ function demo29 () {
         backgroundColor: 0x000033,
         parent: 'gameParent',
         scene: Demo
-    });
-    document.getElementById('toggle').addEventListener('click', () => {
-        game.isPaused = (game.isPaused) ? false : true;
     });
 }
 
