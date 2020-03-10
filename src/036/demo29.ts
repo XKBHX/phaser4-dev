@@ -26,7 +26,8 @@ class Demo extends Scene
 
         item.addAnimationFromAtlas(key, key + '-', 1, 8);
 
-        item.play(key, { speed: 10, repeat: -1 });
+        // item.play(key, { speed: 10, repeat: -1 });
+        item.play(key, { speed: 4 + Math.random() * 4, repeat: -1 });
     }
 
     create ()

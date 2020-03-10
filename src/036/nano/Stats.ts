@@ -4,11 +4,18 @@ import WebGLRenderer from './WebGLRenderer';
 
 class StatsPanel
 {
-    canvas: HTMLCanvasElement;
-    context: CanvasRenderingContext2D;
+    div: HTMLDivElement;
+    title: HTMLParagraphElement;
+
+    graph: HTMLCanvasElement;
+    graphContext: CanvasRenderingContext2D;
+
+    overlay: HTMLCanvasElement;
+    overlayContext: CanvasRenderingContext2D;
 
     name: string;
     percentage: boolean = false;
+    expanded: boolean = false;
 
     min: number = Number.POSITIVE_INFINITY;
     max: number = 0;
@@ -17,60 +24,118 @@ class StatsPanel
     bg: string;
     fg: string;
 
-    width: number;
-    height: number;
-
-    textX: number;
-    textY: number;
-
-    graphX: number;
-    graphY: number;
-
-    graphWidth: number;
-    graphHeight: number;
-
     constructor (name: string, fg: string, bg: string, width: number)
     {
         const pr = Math.round(window.devicePixelRatio || 1);
 
-        const canvas = document.createElement('canvas');
+        this.pr = pr;
+        
+        const div = document.createElement('div');
 
-        canvas.id = name;
-        canvas.width = width;
-        canvas.height = 48 * pr;
-        canvas.style.cssText = `width: ${width}px; height: 48px; display: inline`;
+        div.style.width = '40%';
+        div.style.height = '64px';
+        div.style.backgroundColor = '#222035';
+        div.style.overflow = 'hidden';
+        div.style.position = 'relative';
+        div.style.cursor = 'pointer';
 
-        this.width = pr * width;
-        this.height = pr * 48;
-        this.textX = pr * 3;
-        this.textY = pr * 2;
-        this.graphX = pr * 3;
-        this.graphY = pr * 15;
-        this.graphWidth = pr * (width - 6);
-        this.graphHeight = pr * 30;
+        const title = document.createElement('p');
 
-        const context = canvas.getContext('2d');
+        title.style.padding = '0';
+        title.style.margin = '0';
+        title.style.color = fg;
+        title.style.fontWeight = 'bold';
+        title.style.fontFamily = 'Consolas, Courier, typewriter';
+        title.style.fontSize = '12px';
+        title.innerText = name;
 
-        context.font = 'bold ' + (12 * this.pr) + 'px Consolas, Courier, typewriter';
-        context.textBaseline = 'top';
+        const graph = document.createElement('canvas');
 
-        context.fillStyle = bg;
-        context.fillRect(0, 0, this.width, this.height);
-    
-        context.fillStyle = fg;
-        context.fillText(name, this.textX, this.textY);
-        context.fillRect(this.graphX, this.graphY, this.graphWidth, this.graphHeight);
-    
-        context.fillStyle = bg;
-        context.globalAlpha = 0.9;
-        context.fillRect(this.graphX, this.graphY, this.graphWidth, this.graphHeight);
+        graph.width = width * pr;
+        graph.height = 48 * pr;
+
+        graph.style.width = `${width}px`;
+        graph.style.height = '48px';
+        graph.style.position = 'absolute';
+        graph.style.top = '16px';
+        graph.style.right = '0';
+
+        const overlay = document.createElement('canvas');
+
+        overlay.width = width * pr;
+        overlay.height = 48 * pr;
+
+        overlay.style.width = `${width}px`;
+        overlay.style.height = '48px';
+        overlay.style.position = 'absolute';
+        overlay.style.top = '16px';
+
+        div.appendChild(title);
+        div.appendChild(graph);
+        div.appendChild(overlay);
 
         this.bg = bg;
         this.fg = fg;
 
+        this.div = div;
+        this.title = title;
+
         this.name = name;
-        this.canvas = canvas;
-        this.context = context;
+
+        this.graph = graph;
+        this.graphContext = graph.getContext('2d');
+
+        this.overlay = overlay;
+        this.overlayContext = overlay.getContext('2d');
+
+        this.drawGrid();
+
+        div.addEventListener('click', () => {
+
+            if (this.expanded)
+            {
+                this.collapse();
+            }
+            else
+            {
+                this.expand();
+            }
+
+        });
+    }
+
+    collapse ()
+    {
+        this.div.style.width = '40%';
+
+        this.expanded = false;
+    }
+
+    expand ()
+    {
+        this.div.style.width = '100%';
+
+        this.expanded = true;
+    }
+
+    drawGrid ()
+    {
+        const overlay = this.overlay;
+        const overlayContext = this.overlayContext;
+
+        overlayContext.clearRect(0, 0, overlay.width, overlay.height);
+
+        overlayContext.strokeStyle = '#6a6a6a';
+        overlayContext.globalAlpha = 0.3;
+        overlayContext.lineWidth = this.pr;
+
+        for (let y: number = 0; y < overlay.height / 32; y++)
+        {
+            for (let x: number = 0; x < overlay.width / 32; x++)
+            {
+                overlayContext.strokeRect(x * 32, y * 32, 32, 32);
+            }
+        }
     }
 
     update (value: number, maxValue: number)
@@ -78,15 +143,30 @@ class StatsPanel
         this.min = Math.min(this.min, value);
         this.max = Math.max(this.max, value);
 
-        const context = this.context;
         const pr = this.pr;
-        const bg = this.bg;
 
-        context.fillStyle = bg;
-        context.globalAlpha = 1;
-        context.fillRect(0, 0, this.width, this.graphY);
+        const graph = this.graph;
+        const graphContext = this.graphContext;
 
-        context.fillStyle = this.fg;
+        const pointX = graph.width - pr;
+        const pointY = (value / maxValue) * graph.height;
+
+        graphContext.drawImage(graph, pr, 0, pointX, graph.height, 0, 0, pointX, graph.height);
+
+        //  Clear what was at the right of the graph by filling with bg color
+        graphContext.fillStyle = '#222035';
+        graphContext.globalAlpha = 1;
+        graphContext.fillRect(pointX, 0, pr, graph.height);
+
+        //  Refresh
+        graphContext.fillStyle = this.fg;
+        graphContext.globalAlpha = 0.4;
+        graphContext.fillRect(pointX, graph.height - pointY, pr, pointY);
+        graphContext.globalAlpha = 1;
+        graphContext.fillRect(pointX, graph.height - pointY, pr, pr);
+
+        //  Title
+        const title = this.title;
 
         let displayValue: string = Math.round(value).toString();
 
@@ -94,25 +174,12 @@ class StatsPanel
         {
             displayValue = displayValue.padStart(3, ' ');
 
-            context.fillText(this.name + ' ' + displayValue + '%', this.textX, this.textY);
+            title.innerText = this.name + ' ' + displayValue + '%';
         }
         else
         {
-            context.fillText(displayValue + ' ' + this.name + ' (' + Math.round(this.min) + '-' + Math.round(this.max) + ')', this.textX, this.textY);
+            title.innerText = displayValue + ' ' + this.name + ' (' + Math.round(this.min) + '-' + Math.round(this.max) + ')';
         }
-
-        const graphX = this.graphX;
-        const graphY = this.graphY;
-        const graphWidth = this.graphWidth;
-        const graphHeight = this.graphHeight;
-
-        context.drawImage(this.canvas, graphX + pr, graphY, graphWidth - pr, graphHeight, graphX, graphY, graphWidth - pr, graphHeight);
-
-        context.fillRect(graphX + graphWidth - pr, graphY, pr, graphHeight);
-
-        context.fillStyle = bg;
-        context.globalAlpha = 0.9;
-        context.fillRect(graphX + graphWidth - pr, graphY, pr, Math.round((1 - (value / maxValue)) * graphHeight));
     }
 }
 
@@ -141,26 +208,33 @@ export default class Stats
         this.game = game;
         this.renderer = game.renderer;
 
-        this.parent = document.createElement('div');
-
         const bounds = game.renderer.canvas.getBoundingClientRect();
 
         this.width = bounds.width;
 
-        this.parent.style.cssText = `position: fixed; top: ${bounds.bottom}px; left: 0; cursor: pointer; opacity: 1.0; z-index: 10000`;
+        const div = document.createElement('div');
 
-        this.fpsPanel = new StatsPanel('FPS', '#0ff', '#002', this.width / 3);
-        this.renderPanel = new StatsPanel('Cached Frames', '#0f0', '#020', this.width / 3);
-        this.cachePanel = new StatsPanel('Cached Sprites', '#f08', '#201', this.width / 3);
+        div.style.width = `${bounds.width}px`;
+        div.style.display = 'flex';
+        div.style.position = 'fixed';
+        div.style.top = `${bounds.top}px`;
+        div.style.left = `${bounds.left}px`;
+        div.style.zIndex = '10000';
+
+        this.fpsPanel = new StatsPanel('FPS', '#0ff', '#002', this.width);
+        this.renderPanel = new StatsPanel('Cached Frames', '#0f0', '#020', this.width);
+        this.cachePanel = new StatsPanel('Cached Sprites', '#f08', '#201', this.width);
 
         this.renderPanel.percentage = true;
         this.cachePanel.percentage = true;
 
-        this.parent.appendChild(this.fpsPanel.canvas);
-        this.parent.appendChild(this.renderPanel.canvas);
-        this.parent.appendChild(this.cachePanel.canvas);
+        div.appendChild(this.fpsPanel.div);
+        div.appendChild(this.renderPanel.div);
+        div.appendChild(this.cachePanel.div);
 
-        AddToDOM(this.parent);
+        AddToDOM(div);
+
+        this.parent = div;
 
         game.on('step', () => {
             this.begin();
@@ -214,15 +288,8 @@ export default class Stats
         {
             this.fpsPanel.update((this.frames * 1000) / (time - this.prevTime), 100);
 
-            // const cacheUse: number = this.totalCachedRenders / (this.totalCachedRenders + this.totalDirtyRenders);
-
-            // this.renderPanel.update(cacheUse * 100, 100);
-
             this.prevTime = time;
             this.frames = 0;
-
-            // this.totalDirtyRenders = 0;
-            // this.totalCachedRenders = 0;
         }
 
         return time;

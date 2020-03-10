@@ -1620,24 +1620,6 @@ class Game extends EventEmitter {
     }
 }
 
-class Scene$1 {
-    constructor(game) {
-        this.game = game;
-        this.load = game.loader;
-        this.textures = game.textures;
-        this.world = new DisplayObjectContainer(this, 0, 0);
-        this.camera = new Camera(this, 0, 0);
-    }
-    init() {
-    }
-    preload() {
-    }
-    create() {
-    }
-    update(delta, time) {
-    }
-}
-
 function PackColor (rgb, alpha) {
     let ua = ((alpha * 255) | 0) & 0xFF;
     return ((ua << 24) | rgb) >>> 0;
@@ -1975,67 +1957,114 @@ class AnimatedSprite extends Sprite {
 class StatsPanel {
     constructor(name, fg, bg, width) {
         this.percentage = false;
+        this.expanded = false;
         this.min = Number.POSITIVE_INFINITY;
         this.max = 0;
         this.pr = 1;
         const pr = Math.round(window.devicePixelRatio || 1);
-        const canvas = document.createElement('canvas');
-        canvas.id = name;
-        canvas.width = width;
-        canvas.height = 48 * pr;
-        canvas.style.cssText = `width: ${width}px; height: 48px; display: inline`;
-        this.width = pr * width;
-        this.height = pr * 48;
-        this.textX = pr * 3;
-        this.textY = pr * 2;
-        this.graphX = pr * 3;
-        this.graphY = pr * 15;
-        this.graphWidth = pr * (width - 6);
-        this.graphHeight = pr * 30;
-        const context = canvas.getContext('2d');
-        context.font = 'bold ' + (12 * this.pr) + 'px Consolas, Courier, typewriter';
-        context.textBaseline = 'top';
-        context.fillStyle = bg;
-        context.fillRect(0, 0, this.width, this.height);
-        context.fillStyle = fg;
-        context.fillText(name, this.textX, this.textY);
-        context.fillRect(this.graphX, this.graphY, this.graphWidth, this.graphHeight);
-        context.fillStyle = bg;
-        context.globalAlpha = 0.9;
-        context.fillRect(this.graphX, this.graphY, this.graphWidth, this.graphHeight);
+        this.pr = pr;
+        const div = document.createElement('div');
+        div.style.width = '40%';
+        div.style.height = '64px';
+        div.style.backgroundColor = '#222035';
+        div.style.overflow = 'hidden';
+        div.style.position = 'relative';
+        div.style.cursor = 'pointer';
+        const title = document.createElement('p');
+        title.style.padding = '0';
+        title.style.margin = '0';
+        title.style.color = fg;
+        title.style.fontWeight = 'bold';
+        title.style.fontFamily = 'Consolas, Courier, typewriter';
+        title.style.fontSize = '12px';
+        title.innerText = name;
+        const graph = document.createElement('canvas');
+        graph.width = width * pr;
+        graph.height = 48 * pr;
+        graph.style.width = `${width}px`;
+        graph.style.height = '48px';
+        graph.style.position = 'absolute';
+        graph.style.top = '16px';
+        graph.style.right = '0';
+        const overlay = document.createElement('canvas');
+        overlay.width = width * pr;
+        overlay.height = 48 * pr;
+        overlay.style.width = `${width}px`;
+        overlay.style.height = '48px';
+        overlay.style.position = 'absolute';
+        overlay.style.top = '16px';
+        div.appendChild(title);
+        div.appendChild(graph);
+        div.appendChild(overlay);
         this.bg = bg;
         this.fg = fg;
+        this.div = div;
+        this.title = title;
         this.name = name;
-        this.canvas = canvas;
-        this.context = context;
+        this.graph = graph;
+        this.graphContext = graph.getContext('2d');
+        this.overlay = overlay;
+        this.overlayContext = overlay.getContext('2d');
+        this.drawGrid();
+        div.addEventListener('click', () => {
+            if (this.expanded) {
+                this.collapse();
+            }
+            else {
+                this.expand();
+            }
+        });
+    }
+    collapse() {
+        this.div.style.width = '40%';
+        this.expanded = false;
+    }
+    expand() {
+        this.div.style.width = '100%';
+        this.expanded = true;
+    }
+    drawGrid() {
+        const overlay = this.overlay;
+        const overlayContext = this.overlayContext;
+        overlayContext.clearRect(0, 0, overlay.width, overlay.height);
+        overlayContext.strokeStyle = '#6a6a6a';
+        overlayContext.globalAlpha = 0.3;
+        overlayContext.lineWidth = this.pr;
+        for (let y = 0; y < overlay.height / 32; y++) {
+            for (let x = 0; x < overlay.width / 32; x++) {
+                overlayContext.strokeRect(x * 32, y * 32, 32, 32);
+            }
+        }
     }
     update(value, maxValue) {
         this.min = Math.min(this.min, value);
         this.max = Math.max(this.max, value);
-        const context = this.context;
         const pr = this.pr;
-        const bg = this.bg;
-        context.fillStyle = bg;
-        context.globalAlpha = 1;
-        context.fillRect(0, 0, this.width, this.graphY);
-        context.fillStyle = this.fg;
+        const graph = this.graph;
+        const graphContext = this.graphContext;
+        const pointX = graph.width - pr;
+        const pointY = (value / maxValue) * graph.height;
+        graphContext.drawImage(graph, pr, 0, pointX, graph.height, 0, 0, pointX, graph.height);
+        //  Clear what was at the right of the graph by filling with bg color
+        graphContext.fillStyle = '#222035';
+        graphContext.globalAlpha = 1;
+        graphContext.fillRect(pointX, 0, pr, graph.height);
+        //  Refresh
+        graphContext.fillStyle = this.fg;
+        graphContext.globalAlpha = 0.4;
+        graphContext.fillRect(pointX, graph.height - pointY, pr, pointY);
+        graphContext.globalAlpha = 1;
+        graphContext.fillRect(pointX, graph.height - pointY, pr, pr);
+        //  Title
+        const title = this.title;
         let displayValue = Math.round(value).toString();
         if (this.percentage) {
             displayValue = displayValue.padStart(3, ' ');
-            context.fillText(this.name + ' ' + displayValue + '%', this.textX, this.textY);
+            title.innerText = this.name + ' ' + displayValue + '%';
         }
         else {
-            context.fillText(displayValue + ' ' + this.name + ' (' + Math.round(this.min) + '-' + Math.round(this.max) + ')', this.textX, this.textY);
+            title.innerText = displayValue + ' ' + this.name + ' (' + Math.round(this.min) + '-' + Math.round(this.max) + ')';
         }
-        const graphX = this.graphX;
-        const graphY = this.graphY;
-        const graphWidth = this.graphWidth;
-        const graphHeight = this.graphHeight;
-        context.drawImage(this.canvas, graphX + pr, graphY, graphWidth - pr, graphHeight, graphX, graphY, graphWidth - pr, graphHeight);
-        context.fillRect(graphX + graphWidth - pr, graphY, pr, graphHeight);
-        context.fillStyle = bg;
-        context.globalAlpha = 0.9;
-        context.fillRect(graphX + graphWidth - pr, graphY, pr, Math.round((1 - (value / maxValue)) * graphHeight));
     }
 }
 class Stats {
@@ -2049,19 +2078,25 @@ class Stats {
         this.totalCachedRenders = 0;
         this.game = game;
         this.renderer = game.renderer;
-        this.parent = document.createElement('div');
         const bounds = game.renderer.canvas.getBoundingClientRect();
         this.width = bounds.width;
-        this.parent.style.cssText = `position: fixed; top: ${bounds.bottom}px; left: 0; cursor: pointer; opacity: 1.0; z-index: 10000`;
-        this.fpsPanel = new StatsPanel('FPS', '#0ff', '#002', this.width / 3);
-        this.renderPanel = new StatsPanel('Cached Frames', '#0f0', '#020', this.width / 3);
-        this.cachePanel = new StatsPanel('Cached Sprites', '#f08', '#201', this.width / 3);
+        const div = document.createElement('div');
+        div.style.width = `${bounds.width}px`;
+        div.style.display = 'flex';
+        div.style.position = 'fixed';
+        div.style.top = `${bounds.top}px`;
+        div.style.left = `${bounds.left}px`;
+        div.style.zIndex = '10000';
+        this.fpsPanel = new StatsPanel('FPS', '#0ff', '#002', this.width);
+        this.renderPanel = new StatsPanel('Cached Frames', '#0f0', '#020', this.width);
+        this.cachePanel = new StatsPanel('Cached Sprites', '#f08', '#201', this.width);
         this.renderPanel.percentage = true;
         this.cachePanel.percentage = true;
-        this.parent.appendChild(this.fpsPanel.canvas);
-        this.parent.appendChild(this.renderPanel.canvas);
-        this.parent.appendChild(this.cachePanel.canvas);
-        AddToDOM(this.parent);
+        div.appendChild(this.fpsPanel.div);
+        div.appendChild(this.renderPanel.div);
+        div.appendChild(this.cachePanel.div);
+        AddToDOM(div);
+        this.parent = div;
         game.on('step', () => {
             this.begin();
         });
@@ -2094,18 +2129,14 @@ class Stats {
         }
         if (time >= this.prevTime + 1000) {
             this.fpsPanel.update((this.frames * 1000) / (time - this.prevTime), 100);
-            // const cacheUse: number = this.totalCachedRenders / (this.totalCachedRenders + this.totalDirtyRenders);
-            // this.renderPanel.update(cacheUse * 100, 100);
             this.prevTime = time;
             this.frames = 0;
-            // this.totalDirtyRenders = 0;
-            // this.totalCachedRenders = 0;
         }
         return time;
     }
 }
 
-class Demo extends Scene$1 {
+class Demo extends Scene {
     constructor(game) {
         super(game);
         new Stats(game);
@@ -2118,7 +2149,8 @@ class Demo extends Scene$1 {
         const item = new AnimatedSprite(this, x, y, 'items', key + '-1');
         this.world.addChild(item);
         item.addAnimationFromAtlas(key, key + '-', 1, 8);
-        item.play(key, { speed: 10, repeat: -1 });
+        // item.play(key, { speed: 10, repeat: -1 });
+        item.play(key, { speed: 4 + Math.random() * 4, repeat: -1 });
     }
     create() {
         this.createItem('coin-silver', 200, 150);
