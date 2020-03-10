@@ -101,8 +101,8 @@ export default class Game extends EventEmitter
 
         });
 
-        window.addEventListener('blur', () => this.pause());
-        window.addEventListener('focus', () => this.resume());
+        // window.addEventListener('blur', () => this.pause());
+        // window.addEventListener('focus', () => this.resume());
 
         const scene = this.scene;
 
@@ -209,9 +209,6 @@ export default class Game extends EventEmitter
         //  The frame always advances by 1 each step (even when paused)
         this.frame++;
     
-        this.dirtyFrame = 0;
-        this.totalFrame = 0;
-
         this.emit('step', dt, now);
 
         if (!this.isPaused)
@@ -223,9 +220,19 @@ export default class Game extends EventEmitter
 
         this.emit('update', dt, now);
 
+        this.dirtyFrame = 0;
+        this.totalFrame = 0;
+
+        this.scene.world.preRender(dt, now);
+
         this.renderer.render(this.scene, this.dirtyFrame);
 
         this.emit('render');
+
+        // if (this.frame < 200)
+        // {
+        //     console.log(this.frame, this.totalFrame, this.dirtyFrame);
+        // }
 
         requestAnimationFrame(() => this.step());
     }

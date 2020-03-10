@@ -423,7 +423,6 @@ class WebGLRenderer {
         const maxTextures = this.maxTextures;
         const activeTextures = this.activeTextures;
         const startActiveTexture = this.startActiveTexture;
-        let currentActiveTexture = this.currentActiveTexture;
         const children = container.children;
         for (let i = 0; i < children.length; i++) {
             let entity = children[i];
@@ -434,14 +433,13 @@ class WebGLRenderer {
                 let texture = entity.texture;
                 if (texture.glIndexCounter < startActiveTexture) {
                     texture.glIndexCounter = startActiveTexture;
-                    if (currentActiveTexture < maxTextures) {
+                    if (this.currentActiveTexture < maxTextures) {
                         //  Make this texture active
-                        activeTextures[currentActiveTexture] = texture;
-                        texture.glIndex = currentActiveTexture;
-                        gl.activeTexture(gl.TEXTURE0 + currentActiveTexture);
+                        activeTextures[this.currentActiveTexture] = texture;
+                        texture.glIndex = this.currentActiveTexture;
+                        gl.activeTexture(gl.TEXTURE0 + this.currentActiveTexture);
                         gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
-                        currentActiveTexture++;
-                        this.currentActiveTexture = currentActiveTexture;
+                        this.currentActiveTexture++;
                     }
                 }
                 shader.batchSprite(entity);
@@ -757,6 +755,7 @@ class DisplayObject {
         return this;
     }
     updateTransform() {
+        this.dirty = true;
         this.dirtyFrame = this.scene.game.frame;
         const parent = this.parent;
         const lt = this.localTransform;
@@ -1018,14 +1017,20 @@ class DisplayObjectContainer extends DisplayObject {
         }
     }
     update(dt, now) {
+        const children = this.children;
+        for (let i = 0; i < children.length; i++) {
+            children[i].update(dt, now);
+        }
+    }
+    preRender(dt, now) {
         const game = this.scene.game;
         game.totalFrame++;
-        if (this.dirtyFrame === game.frame) {
+        if (this.dirtyFrame >= game.frame) {
             game.dirtyFrame++;
         }
         const children = this.children;
         for (let i = 0; i < children.length; i++) {
-            children[i].update(dt, now);
+            children[i].preRender(dt, now);
         }
     }
     updateTransform() {
@@ -1049,7 +1054,7 @@ class Camera extends DisplayObject {
         this.setSize(this.renderer.width, this.renderer.height);
     }
     updateTransform() {
-        this.dirty = true;
+        this.dirtyFrame = this.scene.game.frame;
         const lt = this.localTransform;
         const wt = this.worldTransform;
         lt.tx = this.x;
@@ -1522,8 +1527,8 @@ class Game extends EventEmitter {
                 this.resume();
             }
         });
-        window.addEventListener('blur', () => this.pause());
-        window.addEventListener('focus', () => this.resume());
+        // window.addEventListener('blur', () => this.pause());
+        // window.addEventListener('focus', () => this.resume());
         const scene = this.scene;
         if (scene instanceof Scene) {
             this.scene = this.createSceneFromInstance(scene);
@@ -1585,16 +1590,21 @@ class Game extends EventEmitter {
         this.lastTick = now;
         //  The frame always advances by 1 each step (even when paused)
         this.frame++;
-        this.dirtyFrame = 0;
-        this.totalFrame = 0;
         this.emit('step', dt, now);
         if (!this.isPaused) {
             this.scene.update(dt, now);
             this.scene.world.update(dt, now);
         }
         this.emit('update', dt, now);
+        this.dirtyFrame = 0;
+        this.totalFrame = 0;
+        this.scene.world.preRender(dt, now);
         this.renderer.render(this.scene, this.dirtyFrame);
         this.emit('render');
+        // if (this.frame < 200)
+        // {
+        //     console.log(this.frame, this.totalFrame, this.dirtyFrame);
+        // }
         requestAnimationFrame(() => this.step());
     }
 }
@@ -1688,6 +1698,7 @@ class Sprite extends DisplayObjectContainer {
         const data = this.vertexData;
         //  Skip all of this if not dirty
         if (this.dirty) {
+            this.dirty = false;
             const frame = this.frame;
             const origin = this._origin;
             let w0;
@@ -2240,7 +2251,7 @@ class Demo extends Scene {
     }
     update() {
         this.container.rotation += 0.005;
-        this.logo1.rotation += 0.0137;
+        this.logo1.rotation += 0.037;
         this.logo2.rotation += 0.038;
         this.logo3.rotation += 0.039;
         this.logo4.rotation += 0.040;

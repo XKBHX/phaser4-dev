@@ -145,6 +145,8 @@ export default class Sprite extends DisplayObjectContainer
         //  Skip all of this if not dirty
         if (this.dirty)
         {
+            this.dirty = false;
+
             const frame = this.frame;
             const origin = this._origin;
     

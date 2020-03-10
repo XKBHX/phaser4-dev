@@ -11,6 +11,7 @@ export default class DisplayObject
 
     dirty: boolean = true;
     dirtyFrame: number = 0;
+
     visible: boolean = true;
     renderable: boolean = true;
     hasTexture: boolean = false;
@@ -50,6 +51,7 @@ export default class DisplayObject
 
     updateTransform ()
     {
+        this.dirty = true;
         this.dirtyFrame = this.scene.game.frame;
 
         const parent = this.parent;

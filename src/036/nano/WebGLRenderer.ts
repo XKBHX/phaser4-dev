@@ -266,8 +266,6 @@ export default class WebGLRenderer
         const activeTextures = this.activeTextures;
         const startActiveTexture = this.startActiveTexture;
 
-        let currentActiveTexture = this.currentActiveTexture;
-
         const children = container.children;
 
         for (let i: number = 0; i < children.length; i++)
@@ -287,19 +285,17 @@ export default class WebGLRenderer
                 {
                     texture.glIndexCounter = startActiveTexture;
     
-                    if (currentActiveTexture < maxTextures)
+                    if (this.currentActiveTexture < maxTextures)
                     {
                         //  Make this texture active
-                        activeTextures[currentActiveTexture] = texture;
+                        activeTextures[this.currentActiveTexture] = texture;
     
-                        texture.glIndex = currentActiveTexture;
+                        texture.glIndex = this.currentActiveTexture;
     
-                        gl.activeTexture(gl.TEXTURE0 + currentActiveTexture);
+                        gl.activeTexture(gl.TEXTURE0 + this.currentActiveTexture);
                         gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
     
-                        currentActiveTexture++;
-
-                        this.currentActiveTexture = currentActiveTexture;
+                        this.currentActiveTexture++;
                     }
                     else
                     {
@@ -307,6 +303,7 @@ export default class WebGLRenderer
                         //  TODO
                     }
                 }
+
                 shader.batchSprite(entity as Sprite);
             }
 

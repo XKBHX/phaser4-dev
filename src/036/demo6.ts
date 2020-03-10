@@ -167,7 +167,7 @@ class Demo extends Scene
     {
         this.container.rotation += 0.005;
 
-        this.logo1.rotation += 0.0137;
+        this.logo1.rotation += 0.037;
         this.logo2.rotation += 0.038;
         this.logo3.rotation += 0.039;
         this.logo4.rotation += 0.040;

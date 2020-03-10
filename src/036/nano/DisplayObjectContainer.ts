@@ -181,11 +181,21 @@ export default class DisplayObjectContainer extends DisplayObject
 
     update (dt: number, now: number)
     {
+        const children = this.children;
+
+        for (let i = 0; i < children.length; i++)
+        {
+            children[i].update(dt, now);
+        }
+    }
+
+    preRender (dt: number, now: number)
+    {
         const game: Game = this.scene.game;
 
         game.totalFrame++;
 
-        if (this.dirtyFrame === game.frame)
+        if (this.dirtyFrame >= game.frame)
         {
             game.dirtyFrame++;
         }
@@ -194,7 +204,7 @@ export default class DisplayObjectContainer extends DisplayObject
 
         for (let i = 0; i < children.length; i++)
         {
-            children[i].update(dt, now);
+            children[i].preRender(dt, now);
         }
     }
 

@@ -239,7 +239,12 @@ export default class SpriteBuffer
 
     update ()
     {
-        this.game.dirtyFrame++;
+        // this.game.dirtyFrame++;
+    }
+
+    preRender ()
+    {
+        // this.game.dirtyFrame++;
     }
 
     updateTransform ()
