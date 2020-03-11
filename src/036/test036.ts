@@ -27,6 +27,7 @@ import demo26 from './demo26'; // Mouse Input - Ellipse hit area
 import demo27 from './demo27'; // Mouse Input - Rectangle hit area
 import demo28 from './demo28'; // Mouse Input - Polygon hit area
 import demo29 from './demo29'; // Rotating items
+import demo30 from './demo30'; // Mixin Test
 
 // demo13();
 // demo25();
@@ -34,7 +35,8 @@ import demo29 from './demo29'; // Rotating items
 // demo27();
 // demo28();
 // demo29();
-demo6();
+// demo6();
+demo30();
 
 //  Next steps:
 
