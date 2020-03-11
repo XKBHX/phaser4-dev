@@ -655,14 +655,6 @@ class Loader {
     }
 }
 
-function ApplyMixins(baseClass, mixins) {
-    let newClass = baseClass;
-    mixins.forEach((mixin) => {
-        newClass = mixin(newClass);
-    });
-    return newClass;
-}
-
 class Vec2 {
     /**
      * Creates an instance of a Vector2.
@@ -738,33 +730,357 @@ function GlobalToLocal(transform, x, y, outPoint = new Vec2()) {
     return outPoint;
 }
 
-class BaseDisplayObject {
+function Install(baseClass, components) {
+    let newClass = baseClass;
+    components.forEach(component => {
+        newClass = component(newClass);
+    });
+    return newClass;
+}
+
+function AlphaComponent(Base) {
+    return class AlphaComponent extends Base {
+        constructor() {
+            super(...arguments);
+            this._alpha = 1;
+        }
+        setAlpha(alpha = 1) {
+            if (alpha !== this._alpha) {
+                this._alpha = alpha;
+                this.dirtyFrame = this.scene.game.frame;
+            }
+            return this;
+        }
+        get alpha() {
+            return this._alpha;
+        }
+        set alpha(value) {
+            if (value !== this._alpha) {
+                this._alpha = value;
+                this.dirtyFrame = this.scene.game.frame;
+            }
+        }
+    };
+}
+
+function DirtyComponent(Base) {
+    return class DirtyComponent extends Base {
+        constructor() {
+            super(...arguments);
+            this.dirty = true;
+            this.dirtyFrame = 0;
+        }
+        setDirty(setFrame = true) {
+            this.dirty = true;
+            if (setFrame) {
+                this.dirtyFrame = this.scene.game.frame;
+            }
+            return this;
+        }
+    };
+}
+
+function OriginComponent(Base) {
+    return class OriginComponent extends Base {
+        constructor() {
+            super(...arguments);
+            this._origin = new Vec2(0.5, 0.5);
+        }
+        setOrigin(originX, originY = originX) {
+            this._origin.set(originX, originY);
+            return this;
+        }
+        get originX() {
+            return this._origin.x;
+        }
+        set originX(value) {
+            this._origin.x = value;
+        }
+        get originY() {
+            return this._origin.y;
+        }
+        set originY(value) {
+            this._origin.y = value;
+        }
+    };
+}
+
+function PositionComponent(Base) {
+    return class PositionComponent extends Base {
+        constructor() {
+            super(...arguments);
+            this._position = new Vec2(1, 1);
+        }
+        setPosition(x, y = x) {
+            this._position.set(x, y);
+            return this.updateCache();
+        }
+        set x(value) {
+            this._position.x = value;
+            this.updateTransform();
+        }
+        get x() {
+            return this._position.x;
+        }
+        set y(value) {
+            this._position.y = value;
+            this.updateTransform();
+        }
+        get y() {
+            return this._position.y;
+        }
+    };
+}
+
+function RenderableComponent(Base) {
+    return class RenderableComponent extends Base {
+        constructor() {
+            super(...arguments);
+            this.renderable = true;
+        }
+        setRenderable(value) {
+            this.renderable = value;
+            return this;
+        }
+    };
+}
+
+function RotationComponent(Base) {
+    return class RotationComponent extends Base {
+        constructor() {
+            super(...arguments);
+            this._rotation = 0;
+        }
+        setRotation(rotation) {
+            if (rotation !== this._rotation) {
+                this._rotation = rotation;
+                this.updateCache();
+            }
+            return this;
+        }
+        set rotation(value) {
+            if (value !== this._rotation) {
+                this._rotation = value;
+                this.updateCache();
+            }
+        }
+        get rotation() {
+            return this._rotation;
+        }
+    };
+}
+
+function ScaleComponent(Base) {
+    return class ScaleComponent extends Base {
+        constructor() {
+            super(...arguments);
+            this._scale = new Vec2(1, 1);
+        }
+        setScale(scaleX, scaleY = scaleX) {
+            this._scale.set(scaleX, scaleY);
+            return this.updateCache();
+        }
+        set scaleX(value) {
+            if (value !== this._scale.x) {
+                this._scale.x = value;
+                this.updateCache();
+            }
+        }
+        get scaleX() {
+            return this._scale.x;
+        }
+        set scaleY(value) {
+            if (value !== this._scale.y) {
+                this._scale.y = value;
+                this.updateCache();
+            }
+        }
+        get scaleY() {
+            return this._scale.y;
+        }
+    };
+}
+
+function SceneComponent(Base) {
+    return class SceneComponent extends Base {
+        setScene(scene) {
+            this.scene = scene;
+            return this;
+        }
+    };
+}
+
+function SizeComponent(Base) {
+    return class SizeComponent extends Base {
+        setSize(width, height) {
+            this.width = width;
+            this.height = height;
+            return this;
+        }
+    };
+}
+
+function SkewComponent(Base) {
+    return class SkewComponent extends Base {
+        constructor() {
+            super(...arguments);
+            this._skew = new Vec2();
+        }
+        setSkew(skewX, skewY = skewX) {
+            this._skew.set(skewX, skewY);
+            return this.updateCache();
+        }
+        set skewX(value) {
+            if (value !== this._skew.x) {
+                this._skew.x = value;
+                this.updateCache();
+            }
+        }
+        get skewX() {
+            return this._skew.x;
+        }
+        set skewY(value) {
+            if (value !== this._skew.y) {
+                this._skew.y = value;
+                this.updateCache();
+            }
+        }
+    };
+}
+
+class Frame {
+    constructor(texture, key, x, y, width, height) {
+        this.trimmed = false;
+        this.texture = texture;
+        this.key = key;
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.sourceSizeWidth = width;
+        this.sourceSizeHeight = height;
+        this.updateUVs();
+    }
+    setPivot(x, y) {
+        this.pivot = { x, y };
+    }
+    setSourceSize(width, height) {
+        this.sourceSizeWidth = width;
+        this.sourceSizeHeight = height;
+    }
+    setTrim(width, height, x, y, w, h) {
+        this.trimmed = true;
+        this.sourceSizeWidth = width;
+        this.sourceSizeHeight = height;
+        this.spriteSourceSizeX = x;
+        this.spriteSourceSizeY = y;
+        this.spriteSourceSizeWidth = w;
+        this.spriteSourceSizeHeight = h;
+    }
+    updateUVs() {
+        const { x, y, width, height } = this;
+        const baseTextureWidth = this.texture.width;
+        const baseTextureHeight = this.texture.height;
+        this.u0 = x / baseTextureWidth;
+        this.v0 = y / baseTextureHeight;
+        this.u1 = (x + width) / baseTextureWidth;
+        this.v1 = (y + height) / baseTextureHeight;
+    }
+}
+
+class Texture {
+    constructor(key, image) {
+        this.glIndex = 0;
+        this.glIndexCounter = -1;
+        this.key = key;
+        this.image = image;
+        this.width = image.width;
+        this.height = image.height;
+        this.frames = new Map();
+        this.add('__BASE', 0, 0, image.width, image.height);
+    }
+    add(key, x, y, width, height) {
+        if (this.frames.has(key)) {
+            return null;
+        }
+        let frame = new Frame(this, key, x, y, width, height);
+        this.frames.set(key, frame);
+        if (!this.firstFrame || this.firstFrame.key === '__BASE') {
+            this.firstFrame = frame;
+        }
+        return frame;
+    }
+    get(key) {
+        //  null, undefined, empty string, zero
+        if (!key) {
+            return this.firstFrame;
+        }
+        if (key instanceof Frame) {
+            key = key.key;
+        }
+        let frame = this.frames.get(key);
+        if (!frame) {
+            console.warn('Texture.frame missing: ' + key);
+            frame = this.firstFrame;
+        }
+        return frame;
+    }
+    getFrames(frames) {
+        const output = [];
+        frames.forEach((key) => {
+            output.push(this.get(key));
+        });
+        return output;
+    }
+    getFramesInRange(prefix, start, end, zeroPad = 0, suffix = '') {
+        const frameKeys = [];
+        const diff = (start < end) ? 1 : -1;
+        //  Adjust because we use i !== end in the for loop
+        end += diff;
+        for (let i = start; i !== end; i += diff) {
+            frameKeys.push(prefix + i.toString().padStart(zeroPad, '0') + suffix);
+        }
+        return this.getFrames(frameKeys);
+    }
+}
+
+function VisibleComponent(Base) {
+    return class VisibleComponent extends Base {
+        constructor() {
+            super(...arguments);
+            this.visible = true;
+        }
+        setVisible(value) {
+            this.visible = value;
+            return this;
+        }
+    };
+}
+
+class DisplayObject extends Install(class {
+}, [
+    AlphaComponent,
+    DirtyComponent,
+    OriginComponent,
+    PositionComponent,
+    RenderableComponent,
+    RotationComponent,
+    ScaleComponent,
+    SceneComponent,
+    SizeComponent,
+    SkewComponent,
+    VisibleComponent
+]) {
     constructor(scene, x = 0, y = 0) {
-        this.dirty = true;
-        this.dirtyFrame = 0;
-        this.visible = true;
-        this.renderable = true;
+        super();
         this.hasTexture = false;
-        this.width = 0;
-        this.height = 0;
-        this._position = new Vec2();
-        this._scale = new Vec2(1, 1);
-        this._skew = new Vec2();
-        this._origin = new Vec2(0.5, 0.5);
-        this._rotation = 0;
-        this._alpha = 1;
         this.localTransform = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
         this.worldTransform = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
         this._position.set(x, y);
         this.setScene(scene);
     }
-    setScene(scene) {
-        this.scene = scene;
-        return this;
-    }
     updateTransform() {
-        this.dirty = true;
-        this.dirtyFrame = this.scene.game.frame;
+        this.setDirty();
         const parent = this.parent;
         const lt = this.localTransform;
         const wt = this.worldTransform;
@@ -789,50 +1105,6 @@ class BaseDisplayObject {
         wt.ty = tx * pt.b + ty * pt.d + pt.ty;
         return this;
     }
-    localToGlobal(x, y, outPoint = new Vec2()) {
-        return LocalToGlobal(this.worldTransform, x, y, outPoint);
-    }
-    globalToLocal(x, y, outPoint = new Vec2()) {
-        return GlobalToLocal(this.worldTransform, x, y, outPoint);
-    }
-    willRender() {
-        return (this.visible && this.renderable && this._alpha > 0);
-    }
-    setAlpha(alpha = 1) {
-        if (alpha !== this._alpha) {
-            this._alpha = alpha;
-            this.dirtyFrame = this.scene.game.frame;
-        }
-        return this;
-    }
-    setSize(width, height) {
-        this.width = width;
-        this.height = height;
-        return this;
-    }
-    setPosition(x, y) {
-        this._position.set(x, y);
-        return this.updateTransform();
-    }
-    setScale(scaleX, scaleY = scaleX) {
-        this._scale.set(scaleX, scaleY);
-        return this.updateCache();
-    }
-    setSkew(skewX, skewY) {
-        this._skew.set(skewX, skewY);
-        return this.updateCache();
-    }
-    setOrigin(originX, originY = originX) {
-        this._origin.set(originX, originY);
-        return this;
-    }
-    setRotation(rotation) {
-        if (rotation !== this._rotation) {
-            this._rotation = rotation;
-            this.updateCache();
-        }
-        return this;
-    }
     updateCache() {
         const transform = this.localTransform;
         const { _rotation, _skew, _scale } = this;
@@ -842,137 +1114,16 @@ class BaseDisplayObject {
         transform.d = Math.cos(_rotation - _skew.x) * _scale.y;
         return this.updateTransform();
     }
-    set x(value) {
-        this._position.x = value;
-        this.updateTransform();
+    localToGlobal(x, y, outPoint = new Vec2()) {
+        return LocalToGlobal(this.worldTransform, x, y, outPoint);
     }
-    get x() {
-        return this._position.x;
+    globalToLocal(x, y, outPoint = new Vec2()) {
+        return GlobalToLocal(this.worldTransform, x, y, outPoint);
     }
-    set y(value) {
-        this._position.y = value;
-        this.updateTransform();
-    }
-    get y() {
-        return this._position.y;
-    }
-    set rotation(value) {
-        if (value !== this._rotation) {
-            this._rotation = value;
-            this.updateCache();
-        }
-    }
-    get rotation() {
-        return this._rotation;
-    }
-    set scaleX(value) {
-        if (value !== this._scale.x) {
-            this._scale.x = value;
-            this.updateCache();
-        }
-    }
-    get scaleX() {
-        return this._scale.x;
-    }
-    set scaleY(value) {
-        if (value !== this._scale.y) {
-            this._scale.y = value;
-            this.updateCache();
-        }
-    }
-    get scaleY() {
-        return this._scale.y;
-    }
-    set skewX(value) {
-        if (value !== this._skew.x) {
-            this._skew.x = value;
-            this.updateCache();
-        }
-    }
-    get skewX() {
-        return this._skew.x;
-    }
-    set skewY(value) {
-        if (value !== this._skew.y) {
-            this._skew.y = value;
-            this.updateCache();
-        }
-    }
-    get originX() {
-        return this._origin.x;
-    }
-    set originX(value) {
-        this._origin.x = value;
-    }
-    get originY() {
-        return this._origin.y;
-    }
-    set originY(value) {
-        this._origin.y = value;
-    }
-    get alpha() {
-        return this._alpha;
-    }
-    set alpha(value) {
-        if (value !== this._alpha) {
-            this._alpha = value;
-            this.dirtyFrame = this.scene.game.frame;
-        }
+    willRender() {
+        return (this.visible && this.renderable && this._alpha > 0);
     }
 }
-
-function Wibble(Base) {
-    return class Wibble extends Base {
-        constructor() {
-            super(...arguments);
-            this._wibble = 1;
-        }
-        setWibble(value = 1) {
-            if (value !== this._wibble) {
-                this._wibble = value;
-                this.setScale(value);
-            }
-            return this;
-        }
-        get wibble() {
-            return this._wibble;
-        }
-        set wibble(value) {
-            if (value !== this._wibble) {
-                this._wibble = value;
-            }
-        }
-    };
-}
-
-function Wobble(Base) {
-    return class Wobble extends Base {
-        constructor() {
-            super(...arguments);
-            this._wobble = 1;
-        }
-        setWobble(value = 1) {
-            if (value !== this._wobble) {
-                this._wobble = value;
-                this.setSkew(value, value);
-            }
-            return this;
-        }
-        get wobble() {
-            return this._wobble;
-        }
-        set wobble(value) {
-            if (value !== this._wobble) {
-                this._wobble = value;
-            }
-        }
-    };
-}
-
-var DisplayObject = ApplyMixins(BaseDisplayObject, [
-    Wibble,
-    Wobble
-]);
 
 class DisplayObjectContainer extends DisplayObject {
     constructor(scene, x = 0, y = 0) {
@@ -1161,102 +1312,6 @@ class Scene {
     create() {
     }
     update(delta, time) {
-    }
-}
-
-class Frame {
-    constructor(texture, key, x, y, width, height) {
-        this.trimmed = false;
-        this.texture = texture;
-        this.key = key;
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-        this.sourceSizeWidth = width;
-        this.sourceSizeHeight = height;
-        this.updateUVs();
-    }
-    setPivot(x, y) {
-        this.pivot = { x, y };
-    }
-    setSourceSize(width, height) {
-        this.sourceSizeWidth = width;
-        this.sourceSizeHeight = height;
-    }
-    setTrim(width, height, x, y, w, h) {
-        this.trimmed = true;
-        this.sourceSizeWidth = width;
-        this.sourceSizeHeight = height;
-        this.spriteSourceSizeX = x;
-        this.spriteSourceSizeY = y;
-        this.spriteSourceSizeWidth = w;
-        this.spriteSourceSizeHeight = h;
-    }
-    updateUVs() {
-        const { x, y, width, height } = this;
-        const baseTextureWidth = this.texture.width;
-        const baseTextureHeight = this.texture.height;
-        this.u0 = x / baseTextureWidth;
-        this.v0 = y / baseTextureHeight;
-        this.u1 = (x + width) / baseTextureWidth;
-        this.v1 = (y + height) / baseTextureHeight;
-    }
-}
-
-class Texture {
-    constructor(key, image) {
-        this.glIndex = 0;
-        this.glIndexCounter = -1;
-        this.key = key;
-        this.image = image;
-        this.width = image.width;
-        this.height = image.height;
-        this.frames = new Map();
-        this.add('__BASE', 0, 0, image.width, image.height);
-    }
-    add(key, x, y, width, height) {
-        if (this.frames.has(key)) {
-            return null;
-        }
-        let frame = new Frame(this, key, x, y, width, height);
-        this.frames.set(key, frame);
-        if (!this.firstFrame || this.firstFrame.key === '__BASE') {
-            this.firstFrame = frame;
-        }
-        return frame;
-    }
-    get(key) {
-        //  null, undefined, empty string, zero
-        if (!key) {
-            return this.firstFrame;
-        }
-        if (key instanceof Frame) {
-            key = key.key;
-        }
-        let frame = this.frames.get(key);
-        if (!frame) {
-            console.warn('Texture.frame missing: ' + key);
-            frame = this.firstFrame;
-        }
-        return frame;
-    }
-    getFrames(frames) {
-        const output = [];
-        frames.forEach((key) => {
-            output.push(this.get(key));
-        });
-        return output;
-    }
-    getFramesInRange(prefix, start, end, zeroPad = 0, suffix = '') {
-        const frameKeys = [];
-        const diff = (start < end) ? 1 : -1;
-        //  Adjust because we use i !== end in the for loop
-        end += diff;
-        for (let i = start; i !== end; i += diff) {
-            frameKeys.push(prefix + i.toString().padStart(zeroPad, '0') + suffix);
-        }
-        return this.getFrames(frameKeys);
     }
 }
 
@@ -1666,160 +1721,94 @@ class Game extends EventEmitter {
     }
 }
 
-function PackColor (rgb, alpha) {
-    let ua = ((alpha * 255) | 0) & 0xFF;
-    return ((ua << 24) | rgb) >>> 0;
+class Scene$1 {
+    constructor(game) {
+        this.game = game;
+        this.load = game.loader;
+        this.textures = game.textures;
+        this.world = new DisplayObjectContainer(this, 0, 0);
+        this.camera = new Camera(this, 0, 0);
+    }
+    init() {
+    }
+    preload() {
+    }
+    create() {
+    }
+    update(delta, time) {
+    }
 }
 
-class Sprite extends DisplayObjectContainer {
-    constructor(scene, x, y, texture, frame) {
-        super(scene, x, y);
-        this.type = 'Sprite';
-        this._tint = 0xffffff;
-        this._prevTextureID = -1;
-        this.vertexData = new Float32Array(24).fill(0);
-        this.vertexTint = new Uint32Array(4).fill(0xffffff);
-        this.vertexAlpha = new Float32Array(4).fill(1);
-        this.vertexColor = new Uint32Array(4).fill(4294967295);
-        this.setTexture(texture, frame);
-        this.updateTransform();
+class DisplayObject$1 extends Install(class {
+}, [
+    AlphaComponent,
+    DirtyComponent,
+    OriginComponent,
+    PositionComponent,
+    RenderableComponent,
+    RotationComponent,
+    ScaleComponent,
+    SceneComponent,
+    SizeComponent,
+    SkewComponent,
+    VisibleComponent
+]) {
+    constructor(scene, x = 0, y = 0) {
+        super();
+        this.hasTexture = false;
+        this.localTransform = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
+        this.worldTransform = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
+        this._position.set(x, y);
+        this.setScene(scene);
     }
-    setTexture(key, frame) {
-        if (key instanceof Texture) {
-            this.texture = key;
-        }
-        else {
-            this.texture = this.scene.textures.get(key);
-        }
-        if (!this.texture) {
-            console.warn('Invalid Texture key: ' + key);
-        }
-        else {
-            this.setFrame(frame);
-        }
-        return this;
-    }
-    setFrame(key) {
-        const frame = this.texture.get(key);
-        if (frame === this.frame) {
+    updateTransform() {
+        this.setDirty();
+        const parent = this.parent;
+        const lt = this.localTransform;
+        const wt = this.worldTransform;
+        lt.tx = this.x;
+        lt.ty = this.y;
+        if (!parent) {
+            wt.a = lt.a;
+            wt.b = lt.b;
+            wt.c = lt.c;
+            wt.d = lt.d;
+            wt.tx = lt.tx;
+            wt.ty = lt.ty;
             return this;
         }
-        this.frame = frame;
-        this.setSize(frame.sourceSizeWidth, frame.sourceSizeHeight);
-        if (frame.pivot) {
-            this.setOrigin(frame.pivot.x, frame.pivot.y);
-        }
-        const data = this.vertexData;
-        //  This rarely changes, so we'll set it here, rather than every frame:
-        data[2] = frame.u0;
-        data[3] = frame.v0;
-        data[8] = frame.u0;
-        data[9] = frame.v1;
-        data[14] = frame.u1;
-        data[15] = frame.v1;
-        data[20] = frame.u1;
-        data[21] = frame.v0;
-        this.dirtyFrame = this.scene.game.frame;
-        this.hasTexture = true;
+        const pt = parent.worldTransform;
+        let { a, b, c, d, tx, ty } = lt;
+        wt.a = a * pt.a + b * pt.c;
+        wt.b = a * pt.b + b * pt.d;
+        wt.c = c * pt.a + d * pt.c;
+        wt.d = c * pt.b + d * pt.d;
+        wt.tx = tx * pt.a + ty * pt.c + pt.tx;
+        wt.ty = tx * pt.b + ty * pt.d + pt.ty;
         return this;
     }
-    packColors() {
-        const alpha = this.vertexAlpha;
-        const tint = this.vertexTint;
-        const color = this.vertexColor;
-        //  In lots of cases, this *never* changes, so cache it here:
-        color[0] = PackColor(tint[0], alpha[0]);
-        color[1] = PackColor(tint[1], alpha[1]);
-        color[2] = PackColor(tint[2], alpha[2]);
-        color[3] = PackColor(tint[3], alpha[3]);
-        this.dirtyFrame = this.scene.game.frame;
-        return this;
+    updateCache() {
+        const transform = this.localTransform;
+        const { _rotation, _skew, _scale } = this;
+        transform.a = Math.cos(_rotation + _skew.y) * _scale.x;
+        transform.b = Math.sin(_rotation + _skew.y) * _scale.x;
+        transform.c = -Math.sin(_rotation - _skew.x) * _scale.y;
+        transform.d = Math.cos(_rotation - _skew.x) * _scale.y;
+        return this.updateTransform();
     }
-    setAlpha(topLeft = 1, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
-        const alpha = this.vertexAlpha;
-        alpha[0] = topLeft;
-        alpha[1] = topRight;
-        alpha[2] = bottomLeft;
-        alpha[3] = bottomRight;
-        return this.packColors();
+    localToGlobal(x, y, outPoint = new Vec2()) {
+        return LocalToGlobal(this.worldTransform, x, y, outPoint);
     }
-    setTint(topLeft = 0xffffff, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
-        const tint = this.vertexTint;
-        tint[0] = topLeft;
-        tint[1] = topRight;
-        tint[2] = bottomLeft;
-        tint[3] = bottomRight;
-        return this.packColors();
+    globalToLocal(x, y, outPoint = new Vec2()) {
+        return GlobalToLocal(this.worldTransform, x, y, outPoint);
     }
-    updateVertices(F32, U32, offset) {
-        const data = this.vertexData;
-        //  Skip all of this if not dirty
-        if (this.dirty) {
-            this.dirty = false;
-            const frame = this.frame;
-            const origin = this._origin;
-            let w0;
-            let w1;
-            let h0;
-            let h1;
-            const { a, b, c, d, tx, ty } = this.worldTransform;
-            if (frame.trimmed) {
-                w1 = frame.spriteSourceSizeX - (origin.x * frame.sourceSizeWidth);
-                w0 = w1 + frame.spriteSourceSizeWidth;
-                h1 = frame.spriteSourceSizeY - (origin.y * frame.sourceSizeHeight);
-                h0 = h1 + frame.spriteSourceSizeHeight;
-            }
-            else {
-                w1 = -origin.x * frame.sourceSizeWidth;
-                w0 = w1 + frame.sourceSizeWidth;
-                h1 = -origin.y * frame.sourceSizeHeight;
-                h0 = h1 + frame.sourceSizeHeight;
-            }
-            //  top left
-            data[0] = (w1 * a) + (h1 * c) + tx;
-            data[1] = (w1 * b) + (h1 * d) + ty;
-            //  bottom left
-            data[6] = (w1 * a) + (h0 * c) + tx;
-            data[7] = (w1 * b) + (h0 * d) + ty;
-            //  bottom right
-            data[12] = (w0 * a) + (h0 * c) + tx;
-            data[13] = (w0 * b) + (h0 * d) + ty;
-            //  top right
-            data[18] = (w0 * a) + (h1 * c) + tx;
-            data[19] = (w0 * b) + (h1 * d) + ty;
-        }
-        const textureIndex = this.texture.glIndex;
-        //  Do we have a different texture ID?
-        if (textureIndex !== this._prevTextureID) {
-            this._prevTextureID = textureIndex;
-            data[4] = textureIndex;
-            data[10] = textureIndex;
-            data[16] = textureIndex;
-            data[22] = textureIndex;
-        }
-        //  Copy the data to the array buffer
-        F32.set(data, offset);
-        const color = this.vertexColor;
-        //  Copy the vertex colors to the Uint32 view (as the data copy above overwrites them)
-        U32[offset + 5] = color[0];
-        U32[offset + 11] = color[2];
-        U32[offset + 17] = color[3];
-        U32[offset + 23] = color[1];
-    }
-    set alpha(value) {
-        this._alpha = value;
-        this.setAlpha(value);
-    }
-    get tint() {
-        return this._tint;
-    }
-    set tint(value) {
-        this._tint = value;
-        this.setTint(value);
+    willRender() {
+        return (this.visible && this.renderable && this._alpha > 0);
     }
 }
 
-class Demo extends Scene {
+class Demo extends Scene$1 {
+    // sprite;
     constructor(game) {
         super(game);
     }
@@ -1828,16 +1817,24 @@ class Demo extends Scene {
         this.load.image('logo', 'logo.png');
     }
     create() {
-        const sprite = new Sprite(this, 400, 300, 'logo');
-        console.log(sprite);
-        sprite.setWibble(2);
-        sprite.setWobble(0.5);
-        console.log(sprite.wibble);
-        this.world.addChild(sprite);
-        this.sprite = sprite;
+        const test = new DisplayObject$1(this, 200, 100);
+        test.setAlpha(2);
+        test.setScale(3, 4);
+        console.log(test);
+        const test2 = new DisplayObject$1(this, 400, 300);
+        test2.setAlpha(0.5);
+        test2.setScale(2, 2);
+        console.log(test2);
+        // const sprite = new Sprite(this, 400, 300, 'logo');
+        // console.log(sprite);
+        // sprite.setWibble(2);
+        // sprite.setWobble(0.5);
+        // console.log(sprite.wibble);
+        // this.world.addChild(sprite);
+        // this.sprite = sprite;
     }
     update() {
-        this.sprite.rotation += 0.01;
+        // this.sprite.rotation += 0.01;
     }
 }
 function demo30 () {

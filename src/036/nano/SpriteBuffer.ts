@@ -232,6 +232,8 @@ export default class SpriteBuffer
         this.dirty = true;
     }
 
+    numChildren: number = 0;
+
     willRender (): boolean
     {
         return (this.visible && this.renderable);

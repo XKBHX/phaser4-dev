@@ -1,10 +1,10 @@
 import Game from 'nano/Game';
 import Scene from 'nano/Scene';
-import Sprite from 'nano/Sprite';
+import DisplayObject from 'nano/DisplayObject';
 
 class Demo extends Scene
 {
-    sprite;
+    // sprite;
 
     constructor (game: Game)
     {
@@ -19,23 +19,37 @@ class Demo extends Scene
 
     create ()
     {
-        const sprite = new Sprite(this, 400, 300, 'logo');
+        const test = new DisplayObject(this, 200, 100);
 
-        console.log(sprite);
+        test.setAlpha(2);
+        test.setScale(3, 4);
 
-        sprite.setWibble(2);
-        sprite.setWobble(0.5);
+        console.log(test);
 
-        console.log(sprite.wibble);
+        const test2 = new DisplayObject(this, 400, 300);
 
-        this.world.addChild(sprite);
+        test2.setAlpha(0.5);
+        test2.setScale(2, 2);
 
-        this.sprite = sprite;
+        console.log(test2);
+
+        // const sprite = new Sprite(this, 400, 300, 'logo');
+
+        // console.log(sprite);
+
+        // sprite.setWibble(2);
+        // sprite.setWobble(0.5);
+
+        // console.log(sprite.wibble);
+
+        // this.world.addChild(sprite);
+
+        // this.sprite = sprite;
     }
 
     update ()
     {
-        this.sprite.rotation += 0.01;
+        // this.sprite.rotation += 0.01;
     }
 }
 

@@ -3,7 +3,8 @@ import MultiTextureQuadShader from './MultiTextureQuadShader';
 import Texture from './Texture';
 import DisplayObjectContainer from './DisplayObjectContainer';
 import Sprite from './Sprite';
-import { Container } from './Container';
+import { IContainerComponent } from './components/ContainerComponent';
+import { IContainerChild } from './IContainerChild';
 import Camera from './Camera';
 import SpriteBuffer from './SpriteBuffer';
 import Scene from './Scene';
@@ -257,7 +258,7 @@ export default class WebGLRenderer
         shader.flush();
     }
 
-    renderChildren (container: Container)
+    renderChildren (container: IContainerComponent)
     {
         const gl = this.gl;
         const shader = this.shader;
@@ -316,7 +317,7 @@ export default class WebGLRenderer
                     this.startActiveTexture++;
                 }
             }
-            else if (entity.size)
+            else if (entity.numChildren)
             {
                 // Render the children, if it has any
                 this.renderChildren(entity);
