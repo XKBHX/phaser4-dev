@@ -1,4 +1,4 @@
-import WebGLRenderer from './WebGLRenderer';
+import WebGLRenderer from '../renderer/WebGLRenderer';
 import Frame from './Frame';
 
 export default class Texture

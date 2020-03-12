@@ -1,6 +1,6 @@
 import Game from 'nano/Game';
 import Sprite from 'nano/Sprite';
-import SpriteBuffer from 'nano/SpriteBuffer';
+import SpriteBuffer from 'nano/gameobjects/SpriteBuffer';
 import Scene from 'nano/Scene';
 
 class Demo extends Scene

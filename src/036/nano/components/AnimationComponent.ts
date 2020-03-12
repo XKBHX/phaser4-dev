@@ -1,6 +1,6 @@
 import IAnimationData from './IAnimationData';
 import IAnimationPlayConfig from './IAnimationPlayConfig';
-import Frame from '../Frame';
+import Frame from '../textures/Frame';
 import { ITextureComponent } from './TextureComponent';
 import { IParentComponent } from './ParentComponent';
 

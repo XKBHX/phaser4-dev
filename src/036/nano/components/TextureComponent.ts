@@ -1,5 +1,5 @@
-import Texture from '../Texture';
-import Frame from '../Frame';
+import Texture from '../textures/Texture';
+import Frame from '../textures/Frame';
 import ISprite from '../gameobjects/ISprite';
 
 type Constructor<T = {}> = new (...args: any[]) => T;

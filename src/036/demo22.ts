@@ -1,8 +1,8 @@
 import Game from 'nano/Game';
-import Sprite from 'nano/Sprite';
+import Sprite from 'nano/gameobjects/Sprite';
 import Scene from 'nano/Scene';
-import Mouse from 'nano/Mouse';
-import Stats from 'nano/Stats';
+import Mouse from 'nano/input/Mouse';
+import Stats from 'nano/stats/Stats';
 
 class Demo extends Scene
 {

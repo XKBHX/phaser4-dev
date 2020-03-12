@@ -1,8 +1,8 @@
 import Game from 'nano/Game';
 import Sprite from 'nano/Sprite';
 import Scene from 'nano/Scene';
-import Mouse from 'nano/Mouse';
-import Circle from 'nano/Circle';
+import Mouse from 'nano/input/Mouse';
+import Circle from 'nano/geom/Circle';
 
 class Demo extends Scene
 {

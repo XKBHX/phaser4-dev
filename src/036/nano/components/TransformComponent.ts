@@ -4,10 +4,10 @@ import { IRotationComponent } from './RotationComponent';
 import { IScaleComponent } from './ScaleComponent';
 import { ISkewComponent } from './SkewComponent';
 import IContainerChild from '../gameobjects/IContainerChild';
-import IMatrix2d from '../IMatrix2d';
-import Vec2 from '../Vec2';
-import LocalToGlobal from '../LocalToGlobal';
-import GlobalToLocal from '../GlobalToLocal';
+import IMatrix2d from '../math/IMatrix2d';
+import Vec2 from '../math/Vec2';
+import LocalToGlobal from '../math/LocalToGlobal';
+import GlobalToLocal from '../math/GlobalToLocal';
 
 type Constructor<T = {}> = new (...args: any[]) => T;
 type Transformable = Constructor<IDirtyComponent & IContainerChild & IPositionComponent & IRotationComponent & IScaleComponent & ISkewComponent>

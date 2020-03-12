@@ -1,8 +1,8 @@
 import Game from './Game';
-import Loader from './Loader';
-import TextureManager from './TextureManager';
+import Loader from './loader/Loader';
+import TextureManager from './textures/TextureManager';
 import Container from './gameobjects/Container';
-import Camera from './Camera';
+import Camera from './gameobjects/Camera';
 
 export default class Scene
 {

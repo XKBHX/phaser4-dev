@@ -1,7 +1,7 @@
 import Game from 'nano/Game';
-import Sprite from 'nano/Sprite';
+import Sprite from 'nano/gameobjects/Sprite';
 import Scene from 'nano/Scene';
-import EventEmitter from 'nano/EventEmitter';
+import EventEmitter from 'nano/core/EventEmitter';
 
 class Demo extends Scene
 {

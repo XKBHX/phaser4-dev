@@ -1,5 +1,5 @@
 import Texture from './Texture';
-import Game from './Game';
+import Game from '../Game';
 import SpriteSheetParser from './SpriteSheetParser';
 import IFrameConfig from './IFrameConfig';
 import AtlasParser from './AtlasParser';

@@ -1,7 +1,7 @@
 import Game from 'nano/Game';
-import Sprite from 'nano/Sprite';
+import Sprite from 'nano/gameobjects/Sprite';
 import Scene from 'nano/Scene';
-import Ease from 'nano/Ease';
+import Ease from 'nano/math/Ease';
 
 class Demo extends Scene
 {

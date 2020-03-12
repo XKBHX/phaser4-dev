@@ -1,7 +1,7 @@
 import Game from 'nano/Game';
 import Sprite from 'nano/Sprite';
 import Scene from 'nano/Scene';
-import Keyboard from 'nano/Keyboard';
+import Keyboard from 'nano/input/Keyboard';
 
 class Demo extends Scene
 {

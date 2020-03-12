@@ -1,11 +1,11 @@
-import DOMContentLoaded from './DOMContentLoaded';
-import AddToDOM from './AddToDOM';
-import WebGLRenderer from './WebGLRenderer';
-import Loader from './Loader';
+import DOMContentLoaded from './core/DOMContentLoaded';
+import AddToDOM from './core/AddToDOM';
+import WebGLRenderer from './renderer/WebGLRenderer';
+import Loader from './loader/Loader';
 import Scene from './Scene';
-import TextureManager from './TextureManager';
+import TextureManager from './textures/TextureManager';
 import IGameConfig from './IGameConfig';
-import EventEmitter from './EventEmitter';
+import EventEmitter from './core/EventEmitter';
 
 export default class Game extends EventEmitter
 {

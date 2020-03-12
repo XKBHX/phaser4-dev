@@ -1,4 +1,4 @@
-import Vec2 from '../Vec2';
+import Vec2 from '../math/Vec2';
 import { ITransformComponent } from './TransformComponent';
 
 type Constructor<T = {}> = new (...args: any[]) => T;

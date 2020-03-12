@@ -1,9 +1,9 @@
 import Game from 'nano/Game';
 import Sprite from 'nano/Sprite';
 import Scene from 'nano/Scene';
-import Mouse from 'nano/Mouse';
+import Mouse from 'nano/input/Mouse';
 import DisplayObjectContainer from 'nano/DisplayObjectContainer';
-import Rectangle from 'nano/Rectangle';
+import Rectangle from 'nano/geom/Rectangle';
 
 class Demo extends Scene
 {

@@ -1,7 +1,7 @@
 import Stats from './Stats';
-import Game from './Game';
-import DisplayObjectContainer from './DisplayObjectContainer';
-import Sprite from './Sprite';
+import Game from '../Game';
+import Container from '../gameobjects/Container';
+import Sprite from '../gameobjects/Sprite';
 
 const TreeCSS = `
 .treeContainer {
@@ -108,7 +108,7 @@ export default class StatsTree
         this.root = root;
     }
 
-    buildList (parent: HTMLUListElement, root: DisplayObjectContainer)
+    buildList (parent: HTMLUListElement, root: Container)
     {
         for (let i: number = 0; i < root.size; i++)
         {
@@ -147,7 +147,7 @@ export default class StatsTree
 
                 li.appendChild(ul);
 
-                this.buildList(ul, entity as DisplayObjectContainer);
+                this.buildList(ul, entity as Container);
             }
         }
     }

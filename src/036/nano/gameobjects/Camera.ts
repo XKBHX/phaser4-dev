@@ -1,6 +1,6 @@
-import WebGLRenderer from './WebGLRenderer';
-import GameObject from './gameobjects/GameObject';
-import Scene from './Scene';
+import WebGLRenderer from '../renderer/WebGLRenderer';
+import GameObject from './GameObject';
+import Scene from '../Scene';
 
 export default class Camera extends GameObject
 {

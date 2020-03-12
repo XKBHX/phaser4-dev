@@ -1,8 +1,8 @@
 import WebGLRenderer from './WebGLRenderer';
 // import Sprite from './Sprite';
 import ISpriteMultiShader from './ISpriteMultiShader';
-import SpriteBuffer from './SpriteBuffer';
-import Camera from './Camera';
+import SpriteBuffer from '../gameobjects/SpriteBuffer';
+import Camera from '../gameobjects/Camera';
 
 const shaderSource = {
 

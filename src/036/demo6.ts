@@ -1,7 +1,7 @@
 import Game from 'nano/Game';
-import Sprite from 'nano/Sprite';
+import Sprite from 'nano/gameobjects/Sprite';
 import Scene from 'nano/Scene';
-import Stats from 'nano/Stats';
+import Stats from 'nano/stats/Stats';
 
 class Box extends Sprite
 {

@@ -1,4 +1,4 @@
-import EventEmitter from './EventEmitter';
+import EventEmitter from '../core/EventEmitter';
 
 export default class Keyboard extends EventEmitter
 {

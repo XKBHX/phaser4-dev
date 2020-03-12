@@ -1,13 +1,13 @@
 import CheckShaderMaxIfStatements from './CheckShaderMaxIfStatements';
 import MultiTextureQuadShader from './MultiTextureQuadShader';
-import Texture from './Texture';
+import Texture from '../textures/Texture';
 // import DisplayObjectContainer from './DisplayObjectContainer';
 // import Sprite from './Sprite';
 // import { IContainerComponent } from './components/ContainerComponent';
 // import { IContainerChild } from './IContainerChild';
-import Camera from './Camera';
-import SpriteBuffer from './SpriteBuffer';
-import Scene from './Scene';
+import Camera from '../gameobjects/Camera';
+import SpriteBuffer from '../gameobjects/SpriteBuffer';
+import Scene from '../Scene';
 
 export default class WebGLRenderer
 {

@@ -1,4 +1,4 @@
-import IMatrix2d from '../IMatrix2d';
+import IMatrix2d from '../math/IMatrix2d';
 import IContainerChild from '../gameobjects/IContainerChild';
 import { ITransformComponent } from './TransformComponent';
 

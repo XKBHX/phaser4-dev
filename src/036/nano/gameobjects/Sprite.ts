@@ -1,6 +1,6 @@
 import Scene from '../Scene';
 import GameObject from './GameObject';
-import PackColor from '../PackColor';
+import PackColor from '../renderer/PackColor';
 import * as Components from '../components';
 import Install from '../components/Install';
 import ISprite from './ISprite';
