@@ -2,7 +2,7 @@ import DOMContentLoaded from './core/DOMContentLoaded';
 import AddToDOM from './core/AddToDOM';
 import WebGLRenderer from './renderer/WebGLRenderer';
 import Loader from './loader/Loader';
-import Scene from './Scene';
+import SceneManager from './scenes/SceneManager';
 import TextureManager from './textures/TextureManager';
 import IGameConfig from './IGameConfig';
 import EventEmitter from './core/EventEmitter';
@@ -12,15 +12,15 @@ export default class Game extends EventEmitter
 {
     VERSION: string = '4.0.0-beta2';
 
-    renderer: WebGLRenderer;
+    config: IGameConfig;
 
     isPaused: boolean = false;
     isBooted: boolean = false;
 
     loader: Loader;
+    scenes: SceneManager;
     textures: TextureManager;
-
-    scene: Scene;
+    renderer: WebGLRenderer;
 
     private lastTick: number;
     lifetime: number = 0;
@@ -44,12 +44,12 @@ export default class Game extends EventEmitter
             height = 600,
             backgroundColor = 0x00000,
             parent = document.body,
-            scene = new Scene(this)
+            scene = null
         } = config;
 
-        this.scene = scene;
+        this.config = { width, height, backgroundColor, parent, scene };
 
-        DOMContentLoaded(() => this.boot(width, height, backgroundColor, parent));
+        DOMContentLoaded(() => this.boot());
     }
 
     pause ()
@@ -68,7 +68,7 @@ export default class Game extends EventEmitter
         this.emit('resume');
     }
 
-    boot (width: number, height: number, backgroundColor: number, parent: string | HTMLElement)
+    boot ()
     {
         this.isBooted = true;
         this.lastTick = Date.now();
@@ -76,11 +76,13 @@ export default class Game extends EventEmitter
         this.textures = new TextureManager(this);
         this.loader = new Loader(this);
 
-        const renderer = new WebGLRenderer(width, height);
+        const config = this.config;
 
-        renderer.setBackgroundColor(backgroundColor);
+        const renderer = new WebGLRenderer(config.width, config.height);
 
-        AddToDOM(renderer.canvas, parent);
+        renderer.setBackgroundColor(config.backgroundColor);
+
+        AddToDOM(renderer.canvas, config.parent);
 
         this.renderer = renderer;
 
@@ -105,20 +107,8 @@ export default class Game extends EventEmitter
         // window.addEventListener('blur', () => this.pause());
         // window.addEventListener('focus', () => this.resume());
 
+        /*
         const scene = this.scene;
-
-        if (scene instanceof Scene)
-        {
-            this.scene = this.createSceneFromInstance(scene);
-        }
-        else if (typeof scene === 'object')
-        {
-            this.scene = this.createSceneFromObject(scene);
-        }
-        else if (typeof scene === 'function')
-        {
-            this.scene = this.createSceneFromFunction(scene);
-        }
 
         this.scene.init();
 
@@ -134,53 +124,12 @@ export default class Game extends EventEmitter
         {
             this.start();
         }
-    }
-
-    createSceneFromInstance (newScene: Scene): Scene
-    {
-        newScene.game = this;
-        newScene.load = this.loader;
-
-        return newScene;
-    }
-
-    createSceneFromObject (scene: any): Scene
-    {
-        let newScene = new Scene(this);
-
-        //  Extract callbacks
-
-        const defaults = [ 'init', 'preload', 'create', 'update', 'render' ];
-
-        defaults.forEach((method) => {
-
-            if (scene.hasOwnProperty(method))
-            {
-                newScene[method] = scene[method];
-            }
-
-        });
-
-        return newScene;
-    }
-
-    createSceneFromFunction (scene: any): Scene
-    {
-        var newScene = new scene(this);
-
-        if (newScene instanceof Scene)
-        {
-            return this.createSceneFromInstance(newScene);
-        }
-        else
-        {
-            return newScene;
-        }
+        */
     }
 
     start ()
     {
-        this.scene.create();
+        // this.scene.create();
 
         requestAnimationFrame(() => this.step());
     }
@@ -211,19 +160,23 @@ export default class Game extends EventEmitter
 
         if (!this.isPaused)
         {
-            this.scene.update(dt, now);
-            
-            this.scene.world.update(dt, now);
+            this.scenes.update(dt, now);
         }
 
         this.emit('update', dt, now);
 
+        //  These should probably be moved to the Scene Manager
+        //  so each Scene is classed as being dirty or not?
         this.dirtyFrame = 0;
         this.totalFrame = 0;
 
-        const renderList: IRenderable[] = this.scene.world.preRender();
+        //  Each Scene calls 'render' on the Renderer, that way we could cache
+        //  the Scene display, if it was paused or something
+        this.scenes.render();
 
-        this.renderer.render(renderList, this.scene.camera, this.dirtyFrame);
+        // const renderList: IRenderable[] = this.scene.world.preRender();
+
+        // this.renderer.render(renderList, this.scene.camera, this.dirtyFrame);
 
         this.emit('render', dt, now);
 
@@ -231,6 +184,11 @@ export default class Game extends EventEmitter
         this.frame++;
 
         requestAnimationFrame(() => this.step());
+    }
+
+    destroy ()
+    {
+        //  TODO
     }
 
 }
