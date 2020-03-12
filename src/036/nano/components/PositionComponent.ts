@@ -1,20 +1,20 @@
 import Vec2 from '../Vec2';
-import IDisplayObject from 'nano/IDisplayObject';
+import { ITransformComponent } from './TransformComponent';
 
 type Constructor<T = {}> = new (...args: any[]) => T;
-type DisplayObject = Constructor<IDisplayObject>
+type Positionable = Constructor<ITransformComponent>
 
-export function PositionComponent<TBase extends DisplayObject>(Base: TBase)
+export function PositionComponent<TBase extends Positionable>(Base: TBase)
 {
     return class PositionComponent extends Base
     {
-        private _position: Vec2 = new Vec2(1, 1);
+        private _position: Vec2 = new Vec2();
 
         setPosition (x: number, y: number = x)
         {
             this._position.set(x, y);
     
-            return this.updateCache();
+            return this.updateTransform();
         }
     
         set x (value: number)

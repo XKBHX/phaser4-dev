@@ -1,6 +1,6 @@
 import Texture from '../Texture';
 import Frame from '../Frame';
-import ISprite from '../ISprite';
+import ISprite from '../gameobjects/ISprite';
 
 type Constructor<T = {}> = new (...args: any[]) => T;
 type Sprite = Constructor<ISprite>
@@ -12,6 +12,8 @@ export function TextureComponent<TBase extends Sprite>(Base: TBase)
         texture: Texture;
         frame: Frame;
         hasTexture: boolean = false;
+
+        private _prevTextureID: number = -1;
 
         setTexture (key: string | Texture, frame?: string | number)
         {

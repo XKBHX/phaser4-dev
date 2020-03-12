@@ -1,32 +1,32 @@
-import demo1 from './demo1'; // test single sprite
-import demo2 from './demo2'; // test multiple images with multiple sprites
-import demo3 from './demo3'; // test sprite sheet loader and display
-import demo4 from './demo4'; // sprite tint + alpha back in the shader
-import demo5 from './demo5'; // test skew
-import demo6 from './demo6'; // test container children
-import demo7 from './demo7'; // Camera class (position, scale, rotation)
-import demo8 from './demo8'; // Event Emitter
-import demo9 from './demo9'; // Ease function
-import demo10 from './demo10'; // Sprite Buffer
-import demo11 from './demo11'; // Keyboard
-import demo12 from './demo12'; // Texture Atlas Loader (array + hash + tp3 + trimmed)
-import demo13 from './demo13'; // Cache test
-import demo14 from './demo14'; // TextureManager.addColor
-import demo15 from './demo15'; // Animated Sprite via Texture Atlas
-import demo16 from './demo16'; // Animated Sprite - start delay
-import demo17 from './demo17'; // Animated Sprite - repeat delay
-import demo18 from './demo18'; // Animated Sprite - onComplete callback
-import demo19 from './demo19'; // Mouse Input
-import demo20 from './demo20'; // Mouse Input - Hit Test
-import demo21 from './demo21'; // Mouse Input - Hit Test with a translated Camera
-import demo22 from './demo22'; // Mouse Input - Hit Test container children
-import demo23 from './demo23'; // Mouse Input - Hit Test local point
-import demo24 from './demo24'; // Mouse Input - Drag Sprite
-import demo25 from './demo25'; // Mouse Input - Circle hit area
-import demo26 from './demo26'; // Mouse Input - Ellipse hit area
-import demo27 from './demo27'; // Mouse Input - Rectangle hit area
-import demo28 from './demo28'; // Mouse Input - Polygon hit area
-import demo29 from './demo29'; // Rotating items
+// import demo1 from './demo1'; // test single sprite
+// import demo2 from './demo2'; // test multiple images with multiple sprites
+// import demo3 from './demo3'; // test sprite sheet loader and display
+// import demo4 from './demo4'; // sprite tint + alpha back in the shader
+// import demo5 from './demo5'; // test skew
+// import demo6 from './demo6'; // test container children
+// import demo7 from './demo7'; // Camera class (position, scale, rotation)
+// import demo8 from './demo8'; // Event Emitter
+// import demo9 from './demo9'; // Ease function
+// import demo10 from './demo10'; // Sprite Buffer
+// import demo11 from './demo11'; // Keyboard
+// import demo12 from './demo12'; // Texture Atlas Loader (array + hash + tp3 + trimmed)
+// import demo13 from './demo13'; // Cache test
+// import demo14 from './demo14'; // TextureManager.addColor
+// import demo15 from './demo15'; // Animated Sprite via Texture Atlas
+// import demo16 from './demo16'; // Animated Sprite - start delay
+// import demo17 from './demo17'; // Animated Sprite - repeat delay
+// import demo18 from './demo18'; // Animated Sprite - onComplete callback
+// import demo19 from './demo19'; // Mouse Input
+// import demo20 from './demo20'; // Mouse Input - Hit Test
+// import demo21 from './demo21'; // Mouse Input - Hit Test with a translated Camera
+// import demo22 from './demo22'; // Mouse Input - Hit Test container children
+// import demo23 from './demo23'; // Mouse Input - Hit Test local point
+// import demo24 from './demo24'; // Mouse Input - Drag Sprite
+// import demo25 from './demo25'; // Mouse Input - Circle hit area
+// import demo26 from './demo26'; // Mouse Input - Ellipse hit area
+// import demo27 from './demo27'; // Mouse Input - Rectangle hit area
+// import demo28 from './demo28'; // Mouse Input - Polygon hit area
+// import demo29 from './demo29'; // Rotating items
 import demo30 from './demo30'; // Mixin Test
 
 // demo13();

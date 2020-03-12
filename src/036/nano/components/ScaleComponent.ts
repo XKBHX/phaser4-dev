@@ -1,10 +1,10 @@
 import Vec2 from '../Vec2';
-import IDisplayObject from 'nano/IDisplayObject';
+import { ITransformComponent } from './TransformComponent';
 
 type Constructor<T = {}> = new (...args: any[]) => T;
-type DisplayObject = Constructor<IDisplayObject>
+type Scaleable = Constructor<ITransformComponent>
 
-export function ScaleComponent<TBase extends DisplayObject>(Base: TBase)
+export function ScaleComponent<TBase extends Scaleable>(Base: TBase)
 {
     return class ScaleComponent extends Base
     {

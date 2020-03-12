@@ -248,13 +248,19 @@ class MultiTextureQuadShader {
         }
         return false;
     }
-    batchSprite(sprite) {
-        if (this.count === this.batchSize) {
+    /*
+    batchSprite (sprite: Sprite)
+    {
+        if (this.count === this.batchSize)
+        {
             this.flush();
         }
+
         sprite.updateVertices(this.vertexViewF32, this.vertexViewU32, this.count * this.quadElementSize);
+
         this.count++;
     }
+    */
     flush() {
         const count = this.count;
         if (count === 0) {
@@ -391,71 +397,6 @@ class WebGLRenderer {
             gl.generateMipmap(gl.TEXTURE_2D);
         }
         return glTexture;
-    }
-    render(scene, dirtyFrame) {
-        if (this.contextLost) {
-            return;
-        }
-        const gl = this.gl;
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        if (this.optimizeRedraw && dirtyFrame === 0) {
-            return;
-        }
-        this.currentActiveTexture = 0;
-        this.startActiveTexture++;
-        const shader = this.shader;
-        //  CLS
-        gl.viewport(0, 0, this.width, this.height);
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-        const cls = this.clearColor;
-        if (this.clearBeforeRender) {
-            gl.clearColor(cls[0], cls[1], cls[2], cls[3]);
-            gl.clear(gl.COLOR_BUFFER_BIT);
-        }
-        shader.bind(scene.camera);
-        this.renderChildren(scene.world);
-        shader.flush();
-    }
-    renderChildren(container) {
-        const gl = this.gl;
-        const shader = this.shader;
-        const maxTextures = this.maxTextures;
-        const activeTextures = this.activeTextures;
-        const startActiveTexture = this.startActiveTexture;
-        const children = container.children;
-        for (let i = 0; i < children.length; i++) {
-            let entity = children[i];
-            if (!entity.willRender()) {
-                continue;
-            }
-            if (entity.hasTexture) {
-                let texture = entity.texture;
-                if (texture.glIndexCounter < startActiveTexture) {
-                    texture.glIndexCounter = startActiveTexture;
-                    if (this.currentActiveTexture < maxTextures) {
-                        //  Make this texture active
-                        activeTextures[this.currentActiveTexture] = texture;
-                        texture.glIndex = this.currentActiveTexture;
-                        gl.activeTexture(gl.TEXTURE0 + this.currentActiveTexture);
-                        gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
-                        this.currentActiveTexture++;
-                    }
-                }
-                shader.batchSprite(entity);
-            }
-            if (entity.type === 'SpriteBuffer') {
-                if (shader.batchSpriteBuffer(entity)) {
-                    //  Reset active textures
-                    this.currentActiveTexture = 0;
-                    this.startActiveTexture++;
-                }
-            }
-            else if (entity.size) {
-                // Render the children, if it has any
-                this.renderChildren(entity);
-            }
-        }
     }
 }
 
@@ -655,6 +596,161 @@ class Loader {
     }
 }
 
+function Install(baseClass, components) {
+    let newClass = baseClass;
+    components.forEach(component => {
+        newClass = component(newClass);
+    });
+    return newClass;
+}
+
+function AlphaComponent(Base) {
+    return class AlphaComponent extends Base {
+        constructor() {
+            super(...arguments);
+            this._alpha = 1;
+        }
+        setAlpha(value = 1) {
+            if (value !== this._alpha) {
+                this._alpha = value;
+                this.setDirty();
+            }
+            return this;
+        }
+        get alpha() {
+            return this._alpha;
+        }
+        set alpha(value) {
+            if (value !== this._alpha) {
+                this._alpha = value;
+                this.setDirty();
+            }
+        }
+    };
+}
+
+function ContainerComponent(Base) {
+    return class ContainerComponent extends Base {
+        constructor(...args) {
+            super(args);
+            this.children = [];
+        }
+        addChild(...child) {
+            child.forEach((entity) => {
+                this.addChildAt(entity, this.children.length);
+            });
+            return this;
+        }
+        addChildAt(child, index) {
+            if (index >= 0 && index <= this.children.length) {
+                child.setParent(this);
+                this.children.splice(index, 0, child);
+                child.updateTransform();
+            }
+            return child;
+        }
+        swapChildren(child1, child2) {
+            if (child1 === child2) {
+                return this;
+            }
+            const index1 = this.getChildIndex(child1);
+            const index2 = this.getChildIndex(child2);
+            if (index1 < 0 || index2 < 0) {
+                throw new Error('swap: Both children must belong to the same parent');
+            }
+            this.children[index1] = child2;
+            this.children[index2] = child1;
+            return this;
+        }
+        getChildIndex(child) {
+            const index = this.children.indexOf(child);
+            if (index === -1) {
+                throw new Error('Supplied DisplayObject not child of the caller');
+            }
+            return index;
+        }
+        setChildIndex(child, index) {
+            const children = this.children;
+            if (index < 0 || index >= children.length) {
+                throw new Error('Index ' + index + ' out of bounds');
+            }
+            const currentIndex = this.getChildIndex(child);
+            children.splice(currentIndex, 1);
+            children.splice(index, 0, child);
+            return this;
+        }
+        getChildAt(index) {
+            if (index < 0 || index >= this.numChildren) {
+                throw new Error('Index ' + index + ' out of bounds');
+            }
+            return this.children[index];
+        }
+        removeChild(child) {
+            const index = this.children.indexOf(child);
+            if (index === -1) {
+                return;
+            }
+            return this.removeChildAt(index);
+        }
+        removeChildAt(index) {
+            const child = this.getChildAt(index);
+            if (child) {
+                child.parent = undefined;
+                child.updateTransform();
+                this.children.splice(index, 1);
+            }
+            return child;
+        }
+        removeChildren(beginIndex = 0, endIndex) {
+            const children = this.children;
+            if (endIndex === undefined) {
+                endIndex = children.length;
+            }
+            const range = endIndex - beginIndex;
+            if (range > 0 && range <= endIndex) {
+                const removed = children.splice(beginIndex, range);
+                removed.forEach((child) => {
+                    child.parent = undefined;
+                    child.updateTransform();
+                });
+                return removed;
+            }
+            else if (range === 0 && children.length === 0) {
+                return [];
+            }
+            else {
+                throw new Error('Range Error. Values out of bounds');
+            }
+        }
+        update(dt, now) {
+            const children = this.children;
+            for (let i = 0; i < children.length; i++) {
+                children[i].update(dt, now);
+            }
+        }
+        get numChildren() {
+            return this.children.length;
+        }
+    };
+}
+
+function DirtyComponent(Base) {
+    return class DirtyComponent extends Base {
+        constructor() {
+            super(...arguments);
+            this.dirty = true;
+            this.dirtyFrame = 0;
+        }
+        setDirty(setFrame = true) {
+            this.dirty = true;
+            if (setFrame) {
+                this.dirtyFrame = this.scene.game.frame;
+            }
+            return this;
+        }
+    };
+}
+
 class Vec2 {
     /**
      * Creates an instance of a Vector2.
@@ -715,71 +811,6 @@ class Vec2 {
     }
 }
 
-function LocalToGlobal(transform, x, y, outPoint = new Vec2()) {
-    const { a, b, c, d, tx, ty } = transform;
-    outPoint.x = (a * x) + (c * y) + tx;
-    outPoint.y = (b * x) + (d * y) + ty;
-    return outPoint;
-}
-
-function GlobalToLocal(transform, x, y, outPoint = new Vec2()) {
-    const { a, b, c, d, tx, ty } = transform;
-    const id = 1 / ((a * d) + (c * -b));
-    outPoint.x = (d * id * x) + (-c * id * y) + (((ty * c) - (tx * d)) * id);
-    outPoint.y = (a * id * y) + (-b * id * x) + (((-ty * a) + (tx * b)) * id);
-    return outPoint;
-}
-
-function Install(baseClass, components) {
-    let newClass = baseClass;
-    components.forEach(component => {
-        newClass = component(newClass);
-    });
-    return newClass;
-}
-
-function AlphaComponent(Base) {
-    return class AlphaComponent extends Base {
-        constructor() {
-            super(...arguments);
-            this._alpha = 1;
-        }
-        setAlpha(alpha = 1) {
-            if (alpha !== this._alpha) {
-                this._alpha = alpha;
-                this.dirtyFrame = this.scene.game.frame;
-            }
-            return this;
-        }
-        get alpha() {
-            return this._alpha;
-        }
-        set alpha(value) {
-            if (value !== this._alpha) {
-                this._alpha = value;
-                this.dirtyFrame = this.scene.game.frame;
-            }
-        }
-    };
-}
-
-function DirtyComponent(Base) {
-    return class DirtyComponent extends Base {
-        constructor() {
-            super(...arguments);
-            this.dirty = true;
-            this.dirtyFrame = 0;
-        }
-        setDirty(setFrame = true) {
-            this.dirty = true;
-            if (setFrame) {
-                this.dirtyFrame = this.scene.game.frame;
-            }
-            return this;
-        }
-    };
-}
-
 function OriginComponent(Base) {
     return class OriginComponent extends Base {
         constructor() {
@@ -805,15 +836,32 @@ function OriginComponent(Base) {
     };
 }
 
+function ParentComponent(Base) {
+    return class ParentComponent extends Base {
+        setParent(parent) {
+            if (parent !== this.parent) {
+                if (this.parent) {
+                    this.parent.removeChild(this);
+                }
+                this.parent = parent;
+            }
+            return this;
+        }
+        update(dt, now) {
+            //  Left blank to be overridden by custom classes
+        }
+    };
+}
+
 function PositionComponent(Base) {
     return class PositionComponent extends Base {
         constructor() {
             super(...arguments);
-            this._position = new Vec2(1, 1);
+            this._position = new Vec2();
         }
         setPosition(x, y = x) {
             this._position.set(x, y);
-            return this.updateCache();
+            return this.updateTransform();
         }
         set x(value) {
             this._position.x = value;
@@ -832,6 +880,56 @@ function PositionComponent(Base) {
     };
 }
 
+function QuadAlphaComponent(Base) {
+    return class QuadAlphaComponent extends Base {
+        constructor(...args) {
+            super(args);
+            this._alpha = 1;
+            this.vertexAlpha = new Float32Array(4).fill(1);
+        }
+        setAlpha(topLeft = 1, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
+            const alpha = this.vertexAlpha;
+            alpha[0] = topLeft;
+            alpha[1] = topRight;
+            alpha[2] = bottomLeft;
+            alpha[3] = bottomRight;
+            return this.packColors();
+        }
+        get alpha() {
+            return this._alpha;
+        }
+        set alpha(value) {
+            this._alpha = value;
+            this.setAlpha(value);
+        }
+    };
+}
+
+function QuadTintComponent(Base) {
+    return class QuadTintComponent extends Base {
+        constructor(...args) {
+            super(args);
+            this._tint = 0xffffff;
+            this.vertexTint = new Uint32Array(4).fill(0xffffff);
+        }
+        setTint(topLeft = 0xffffff, topRight = topLeft, bottomLeft = topLeft, bottomRight = topLeft) {
+            const tint = this.vertexTint;
+            tint[0] = topLeft;
+            tint[1] = topRight;
+            tint[2] = bottomLeft;
+            tint[3] = bottomRight;
+            return this.packColors();
+        }
+        get tint() {
+            return this._tint;
+        }
+        set tint(value) {
+            this._tint = value;
+            this.setTint(value);
+        }
+    };
+}
+
 function RenderableComponent(Base) {
     return class RenderableComponent extends Base {
         constructor() {
@@ -841,6 +939,9 @@ function RenderableComponent(Base) {
         setRenderable(value) {
             this.renderable = value;
             return this;
+        }
+        willRender() {
+            return (this.visible && this.renderable && this.alpha > 0 && this.hasTexture);
         }
     };
 }
@@ -924,7 +1025,7 @@ function SkewComponent(Base) {
     return class SkewComponent extends Base {
         constructor() {
             super(...arguments);
-            this._skew = new Vec2();
+            this._skew = new Vec2(0, 0);
         }
         setSkew(skewX, skewY = skewX) {
             this._skew.set(skewX, skewY);
@@ -944,6 +1045,9 @@ function SkewComponent(Base) {
                 this._skew.y = value;
                 this.updateCache();
             }
+        }
+        get skewY() {
+            return this._skew.y;
         }
     };
 }
@@ -1044,6 +1148,121 @@ class Texture {
     }
 }
 
+function TextureComponent(Base) {
+    return class TextureComponent extends Base {
+        constructor() {
+            super(...arguments);
+            this.hasTexture = false;
+            this._prevTextureID = -1;
+        }
+        setTexture(key, frame) {
+            if (key instanceof Texture) {
+                this.texture = key;
+            }
+            else {
+                this.texture = this.scene.textures.get(key);
+            }
+            if (!this.texture) {
+                console.warn('Invalid Texture key: ' + key);
+            }
+            else {
+                this.setFrame(frame);
+            }
+            return this;
+        }
+        setFrame(key) {
+            const frame = this.texture.get(key);
+            if (frame === this.frame) {
+                return this;
+            }
+            this.frame = frame;
+            this.setSize(frame.sourceSizeWidth, frame.sourceSizeHeight);
+            if (frame.pivot) {
+                this.setOrigin(frame.pivot.x, frame.pivot.y);
+            }
+            const data = this.vertexData;
+            //  This rarely changes, so we'll set it here, rather than every game step:
+            data[2] = frame.u0;
+            data[3] = frame.v0;
+            data[8] = frame.u0;
+            data[9] = frame.v1;
+            data[14] = frame.u1;
+            data[15] = frame.v1;
+            data[20] = frame.u1;
+            data[21] = frame.v0;
+            this.setDirty();
+            this.hasTexture = true;
+            return this;
+        }
+    };
+}
+
+function LocalToGlobal(transform, x, y, outPoint = new Vec2()) {
+    const { a, b, c, d, tx, ty } = transform;
+    outPoint.x = (a * x) + (c * y) + tx;
+    outPoint.y = (b * x) + (d * y) + ty;
+    return outPoint;
+}
+
+function GlobalToLocal(transform, x, y, outPoint = new Vec2()) {
+    const { a, b, c, d, tx, ty } = transform;
+    const id = 1 / ((a * d) + (c * -b));
+    outPoint.x = (d * id * x) + (-c * id * y) + (((ty * c) - (tx * d)) * id);
+    outPoint.y = (a * id * y) + (-b * id * x) + (((-ty * a) + (tx * b)) * id);
+    return outPoint;
+}
+
+function TransformComponent(Base) {
+    return class TransformComponent extends Base {
+        constructor(...args) {
+            super(args);
+            this.localTransform = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
+            this.worldTransform = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
+        }
+        updateCache() {
+            const transform = this.localTransform;
+            const { rotation, skewX, skewY, scaleX, scaleY } = this;
+            transform.a = Math.cos(rotation + skewY) * scaleX;
+            transform.b = Math.sin(rotation + skewY) * scaleX;
+            transform.c = -Math.sin(rotation - skewX) * scaleY;
+            transform.d = Math.cos(rotation - skewX) * scaleY;
+            return this.updateTransform();
+        }
+        updateTransform() {
+            this.setDirty();
+            const parent = this.parent;
+            const lt = this.localTransform;
+            const wt = this.worldTransform;
+            lt.tx = this.x;
+            lt.ty = this.y;
+            if (!parent) {
+                wt.a = lt.a;
+                wt.b = lt.b;
+                wt.c = lt.c;
+                wt.d = lt.d;
+                wt.tx = lt.tx;
+                wt.ty = lt.ty;
+                return this;
+            }
+            const pt = parent.worldTransform;
+            let { a, b, c, d, tx, ty } = lt;
+            wt.a = a * pt.a + b * pt.c;
+            wt.b = a * pt.b + b * pt.d;
+            wt.c = c * pt.a + d * pt.c;
+            wt.d = c * pt.b + d * pt.d;
+            wt.tx = tx * pt.a + ty * pt.c + pt.tx;
+            wt.ty = tx * pt.b + ty * pt.d + pt.ty;
+            return this;
+        }
+        localToGlobal(x, y, outPoint = new Vec2()) {
+            return LocalToGlobal(this.worldTransform, x, y, outPoint);
+        }
+        globalToLocal(x, y, outPoint = new Vec2()) {
+            return GlobalToLocal(this.worldTransform, x, y, outPoint);
+        }
+    };
+}
+
 function VisibleComponent(Base) {
     return class VisibleComponent extends Base {
         constructor() {
@@ -1057,10 +1276,11 @@ function VisibleComponent(Base) {
     };
 }
 
-class DisplayObject extends Install(class {
+class GameObject extends Install(class {
 }, [
     AlphaComponent,
     DirtyComponent,
+    ParentComponent,
     OriginComponent,
     PositionComponent,
     RenderableComponent,
@@ -1069,164 +1289,24 @@ class DisplayObject extends Install(class {
     SceneComponent,
     SizeComponent,
     SkewComponent,
+    TransformComponent,
     VisibleComponent
 ]) {
     constructor(scene, x = 0, y = 0) {
         super();
-        this.hasTexture = false;
-        this.localTransform = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
-        this.worldTransform = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
+        this.scene = scene;
         this._position.set(x, y);
-        this.setScene(scene);
-    }
-    updateTransform() {
-        this.setDirty();
-        const parent = this.parent;
-        const lt = this.localTransform;
-        const wt = this.worldTransform;
-        lt.tx = this.x;
-        lt.ty = this.y;
-        if (!parent) {
-            wt.a = lt.a;
-            wt.b = lt.b;
-            wt.c = lt.c;
-            wt.d = lt.d;
-            wt.tx = lt.tx;
-            wt.ty = lt.ty;
-            return this;
-        }
-        const pt = parent.worldTransform;
-        let { a, b, c, d, tx, ty } = lt;
-        wt.a = a * pt.a + b * pt.c;
-        wt.b = a * pt.b + b * pt.d;
-        wt.c = c * pt.a + d * pt.c;
-        wt.d = c * pt.b + d * pt.d;
-        wt.tx = tx * pt.a + ty * pt.c + pt.tx;
-        wt.ty = tx * pt.b + ty * pt.d + pt.ty;
-        return this;
-    }
-    updateCache() {
-        const transform = this.localTransform;
-        const { _rotation, _skew, _scale } = this;
-        transform.a = Math.cos(_rotation + _skew.y) * _scale.x;
-        transform.b = Math.sin(_rotation + _skew.y) * _scale.x;
-        transform.c = -Math.sin(_rotation - _skew.x) * _scale.y;
-        transform.d = Math.cos(_rotation - _skew.x) * _scale.y;
-        return this.updateTransform();
-    }
-    localToGlobal(x, y, outPoint = new Vec2()) {
-        return LocalToGlobal(this.worldTransform, x, y, outPoint);
-    }
-    globalToLocal(x, y, outPoint = new Vec2()) {
-        return GlobalToLocal(this.worldTransform, x, y, outPoint);
-    }
-    willRender() {
-        return (this.visible && this.renderable && this._alpha > 0);
+        this.dirty = true;
     }
 }
 
-class DisplayObjectContainer extends DisplayObject {
+class Container extends Install(GameObject, [
+    ContainerComponent
+]) {
     constructor(scene, x = 0, y = 0) {
-        super(scene, x, y);
-        this.type = 'DisplayObjectContainer';
-        this.children = [];
-        this.inputEnabled = false;
-        this.inputEnabledChildren = true;
-        this.updateTransform();
-    }
-    setInteractive(hitArea) {
-        this.inputEnabled = true;
-        this.inputHitArea = hitArea;
-        this.inputEnabledChildren = true;
-        return this;
-    }
-    addChild(...child) {
-        child.forEach((entity) => {
-            this.addChildAt(entity, this.children.length);
-        });
-        return this;
-    }
-    addChildAt(child, index) {
-        if (index >= 0 && index <= this.children.length) {
-            if (child.parent) {
-                child.parent.removeChild(child);
-            }
-            child.parent = this;
-            this.children.splice(index, 0, child);
-            child.updateTransform();
-        }
-        return child;
-    }
-    swapChildren(child1, child2) {
-        if (child1 !== child2) {
-            return;
-        }
-        let index1 = this.getChildIndex(child1);
-        let index2 = this.getChildIndex(child2);
-        if (index1 < 0 || index2 < 0) {
-            throw new Error('swap: Both children must belong to the same parent');
-        }
-        this.children[index1] = child2;
-        this.children[index2] = child1;
-    }
-    getChildIndex(child) {
-        const index = this.children.indexOf(child);
-        if (index === -1) {
-            throw new Error('Supplied DisplayObject not child of the caller');
-        }
-        return index;
-    }
-    setChildIndex(child, index) {
-        const children = this.children;
-        if (index < 0 || index >= children.length) {
-            throw new Error('Index ' + index + ' out of bounds');
-        }
-        const currentIndex = this.getChildIndex(child);
-        children.splice(currentIndex, 1);
-        children.splice(index, 0, child);
-    }
-    getChildAt(index) {
-        if (index < 0 || index >= this.size) {
-            throw new Error('Index ' + index + ' out of bounds');
-        }
-        return this.children[index];
-    }
-    removeChild(child) {
-        const index = this.children.indexOf(child);
-        if (index === -1) {
-            return;
-        }
-        return this.removeChildAt(index);
-    }
-    removeChildAt(index) {
-        const child = this.getChildAt(index);
-        if (child) {
-            child.parent = undefined;
-            child.updateTransform();
-            this.children.splice(index, 1);
-        }
-        return child;
-    }
-    removeChildren(beginIndex = 0, endIndex) {
-        const children = this.children;
-        if (endIndex === undefined) {
-            endIndex = children.length;
-        }
-        const range = endIndex - beginIndex;
-        if (range > 0 && range <= endIndex) {
-            const removed = children.splice(beginIndex, range);
-            removed.forEach((child) => {
-                child.parent = undefined;
-                child.updateTransform();
-            });
-            return removed;
-        }
-        else if (range === 0 && children.length === 0) {
-            return [];
-        }
-        else {
-            throw new Error('Range Error. Values out of bounds');
-        }
+        super();
+        this.setScene(scene);
+        this.setPosition(x, y);
     }
     update(dt, now) {
         const children = this.children;
@@ -1242,7 +1322,7 @@ class DisplayObjectContainer extends DisplayObject {
         }
         const children = this.children;
         for (let i = 0; i < children.length; i++) {
-            children[i].preRender(dt, now);
+            // children[i].preRender(dt, now);
         }
     }
     updateTransform() {
@@ -1253,12 +1333,9 @@ class DisplayObjectContainer extends DisplayObject {
         }
         return this;
     }
-    get size() {
-        return this.children.length;
-    }
 }
 
-class Camera extends DisplayObject {
+class Camera extends GameObject {
     constructor(scene, x = 0, y = 0) {
         super(scene, x, y);
         this.renderer = scene.game.renderer;
@@ -1302,7 +1379,7 @@ class Scene {
         this.game = game;
         this.load = game.loader;
         this.textures = game.textures;
-        this.world = new DisplayObjectContainer(this, 0, 0);
+        this.world = new Container(this, 0, 0);
         this.camera = new Camera(this, 0, 0);
     }
     init() {
@@ -1599,7 +1676,7 @@ class EventEmitter {
 class Game extends EventEmitter {
     constructor(config) {
         super();
-        this.VERSION = '4.0.0-beta1';
+        this.VERSION = '4.0.0-beta2';
         this.isPaused = false;
         this.isBooted = false;
         this.lifetime = 0;
@@ -1715,99 +1792,132 @@ class Game extends EventEmitter {
         this.dirtyFrame = 0;
         this.totalFrame = 0;
         this.scene.world.preRender(dt, now);
-        this.renderer.render(this.scene, this.dirtyFrame);
+        // this.renderer.render(this.scene, this.dirtyFrame);
         this.emit('render', dt, now);
         requestAnimationFrame(() => this.step());
     }
 }
 
-class Scene$1 {
-    constructor(game) {
-        this.game = game;
-        this.load = game.loader;
-        this.textures = game.textures;
-        this.world = new DisplayObjectContainer(this, 0, 0);
-        this.camera = new Camera(this, 0, 0);
-    }
-    init() {
-    }
-    preload() {
-    }
-    create() {
-    }
-    update(delta, time) {
-    }
+function PackColor (rgb, alpha) {
+    let ua = ((alpha * 255) | 0) & 0xFF;
+    return ((ua << 24) | rgb) >>> 0;
 }
 
-class DisplayObject$1 extends Install(class {
-}, [
-    AlphaComponent,
-    DirtyComponent,
-    OriginComponent,
-    PositionComponent,
-    RenderableComponent,
-    RotationComponent,
-    ScaleComponent,
-    SceneComponent,
-    SizeComponent,
-    SkewComponent,
-    VisibleComponent
+class Sprite extends Install(GameObject, [
+    ContainerComponent,
+    QuadAlphaComponent,
+    QuadTintComponent,
+    TextureComponent
 ]) {
-    constructor(scene, x = 0, y = 0) {
+    constructor(scene, x, y, texture, frame) {
         super();
-        this.hasTexture = false;
-        this.localTransform = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
-        this.worldTransform = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
-        this._position.set(x, y);
+        this.vertexData = new Float32Array(24).fill(0);
+        this.vertexColor = new Uint32Array(4).fill(4294967295);
         this.setScene(scene);
+        this.setTexture(texture, frame);
+        this.setPosition(x, y);
     }
-    updateTransform() {
+    packColors() {
+        const alpha = this.vertexAlpha;
+        const tint = this.vertexTint;
+        const color = this.vertexColor;
+        //  In lots of cases, this *never* changes, so cache it here:
+        color[0] = PackColor(tint[0], alpha[0]);
+        color[1] = PackColor(tint[1], alpha[1]);
+        color[2] = PackColor(tint[2], alpha[2]);
+        color[3] = PackColor(tint[3], alpha[3]);
         this.setDirty();
-        const parent = this.parent;
-        const lt = this.localTransform;
-        const wt = this.worldTransform;
-        lt.tx = this.x;
-        lt.ty = this.y;
-        if (!parent) {
-            wt.a = lt.a;
-            wt.b = lt.b;
-            wt.c = lt.c;
-            wt.d = lt.d;
-            wt.tx = lt.tx;
-            wt.ty = lt.ty;
-            return this;
-        }
-        const pt = parent.worldTransform;
-        let { a, b, c, d, tx, ty } = lt;
-        wt.a = a * pt.a + b * pt.c;
-        wt.b = a * pt.b + b * pt.d;
-        wt.c = c * pt.a + d * pt.c;
-        wt.d = c * pt.b + d * pt.d;
-        wt.tx = tx * pt.a + ty * pt.c + pt.tx;
-        wt.ty = tx * pt.b + ty * pt.d + pt.ty;
         return this;
     }
-    updateCache() {
-        const transform = this.localTransform;
-        const { _rotation, _skew, _scale } = this;
-        transform.a = Math.cos(_rotation + _skew.y) * _scale.x;
-        transform.b = Math.sin(_rotation + _skew.y) * _scale.x;
-        transform.c = -Math.sin(_rotation - _skew.x) * _scale.y;
-        transform.d = Math.cos(_rotation - _skew.x) * _scale.y;
-        return this.updateTransform();
-    }
-    localToGlobal(x, y, outPoint = new Vec2()) {
-        return LocalToGlobal(this.worldTransform, x, y, outPoint);
-    }
-    globalToLocal(x, y, outPoint = new Vec2()) {
-        return GlobalToLocal(this.worldTransform, x, y, outPoint);
-    }
-    willRender() {
-        return (this.visible && this.renderable && this._alpha > 0);
+    updateVertices(F32, U32, offset) {
+        const data = this.vertexData;
+        //  Skip all of this if not dirty
+        if (this.dirty) {
+            this.dirty = false;
+            const frame = this.frame;
+            const origin = this._origin;
+            let w0;
+            let w1;
+            let h0;
+            let h1;
+            const { a, b, c, d, tx, ty } = this.worldTransform;
+            if (frame.trimmed) {
+                w1 = frame.spriteSourceSizeX - (origin.x * frame.sourceSizeWidth);
+                w0 = w1 + frame.spriteSourceSizeWidth;
+                h1 = frame.spriteSourceSizeY - (origin.y * frame.sourceSizeHeight);
+                h0 = h1 + frame.spriteSourceSizeHeight;
+            }
+            else {
+                w1 = -origin.x * frame.sourceSizeWidth;
+                w0 = w1 + frame.sourceSizeWidth;
+                h1 = -origin.y * frame.sourceSizeHeight;
+                h0 = h1 + frame.sourceSizeHeight;
+            }
+            //  top left
+            data[0] = (w1 * a) + (h1 * c) + tx;
+            data[1] = (w1 * b) + (h1 * d) + ty;
+            //  bottom left
+            data[6] = (w1 * a) + (h0 * c) + tx;
+            data[7] = (w1 * b) + (h0 * d) + ty;
+            //  bottom right
+            data[12] = (w0 * a) + (h0 * c) + tx;
+            data[13] = (w0 * b) + (h0 * d) + ty;
+            //  top right
+            data[18] = (w0 * a) + (h1 * c) + tx;
+            data[19] = (w0 * b) + (h1 * d) + ty;
+        }
+        const textureIndex = this.texture.glIndex;
+        //  Do we have a different texture ID?
+        if (textureIndex !== this._prevTextureID) {
+            this._prevTextureID = textureIndex;
+            data[4] = textureIndex;
+            data[10] = textureIndex;
+            data[16] = textureIndex;
+            data[22] = textureIndex;
+        }
+        //  Copy the data to the array buffer
+        F32.set(data, offset);
+        const color = this.vertexColor;
+        //  Copy the vertex colors to the Uint32 view (as the data copy above overwrites them)
+        U32[offset + 5] = color[0];
+        U32[offset + 11] = color[2];
+        U32[offset + 17] = color[3];
+        U32[offset + 23] = color[1];
     }
 }
+/*
+    vertexData array structure:
 
-class Demo extends Scene$1 {
+    0 = topLeft.x
+    1 = topLeft.y
+    2 = frame.u0
+    3 = frame.v0
+    4 = textureIndex
+    5 = topLeft.packedColor
+
+    6 = bottomLeft.x
+    7 = bottomLeft.y
+    8 = frame.u0
+    9 = frame.v1
+    10 = textureIndex
+    11 = bottomLeft.packedColor
+
+    12 = bottomRight.x
+    13 = bottomRight.y
+    14 = frame.u1
+    15 = frame.v1
+    16 = textureIndex
+    17 = bottomRight.packedColor
+
+    18 = topRight.x
+    19 = topRight.y
+    20 = frame.u1
+    21 = frame.v0
+    22 = textureIndex
+    23 = topRight.packedColor
+*/
+
+class Demo extends Scene {
     // sprite;
     constructor(game) {
         super(game);
@@ -1817,14 +1927,21 @@ class Demo extends Scene$1 {
         this.load.image('logo', 'logo.png');
     }
     create() {
-        const test = new DisplayObject$1(this, 200, 100);
-        test.setAlpha(2);
-        test.setScale(3, 4);
-        console.log(test);
-        const test2 = new DisplayObject$1(this, 400, 300);
-        test2.setAlpha(0.5);
-        test2.setScale(2, 2);
-        console.log(test2);
+        const bob = new GameObject(this, 400, 300);
+        bob.setRotation(1.2);
+        console.log(bob);
+        window['bob'] = bob;
+        const ben = new Sprite(this, 123, 456, 'logo');
+        console.log(ben);
+        window['ben'] = ben;
+        // const test = new DisplayObject(this, 200, 100);
+        // test.setAlpha(2);
+        // test.setScale(3, 4);
+        // console.log(test);
+        // const test2 = new DisplayObject(this, 400, 300);
+        // test2.setAlpha(0.5);
+        // test2.setScale(2, 2);
+        // console.log(test2);
         // const sprite = new Sprite(this, 400, 300, 'logo');
         // console.log(sprite);
         // sprite.setWibble(2);
@@ -1847,6 +1964,7 @@ function demo30 () {
     });
 }
 
+// import demo1 from './demo1'; // test single sprite
 // demo13();
 // demo25();
 // demo26();

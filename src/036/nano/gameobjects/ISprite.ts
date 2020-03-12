@@ -1,9 +1,10 @@
-import * as Components from './components';
+import * as Components from '../components';
 
 export default interface ISprite extends
     Components.IContainerComponent,
     Components.IDirtyComponent,
     Components.IOriginComponent,
+    Components.IParentComponent,
     Components.IPositionComponent,
     Components.IQuadAlphaComponent,
     Components.IQuadTintComponent,
@@ -14,14 +15,10 @@ export default interface ISprite extends
     Components.ISizeComponent,
     Components.ISkewComponent,
     Components.ITextureComponent,
+    Components.ITransformComponent,
     Components.IVisibleComponent
     {
-        type: string;
-
         vertexData: Float32Array;
-        vertexTint: Uint32Array;
-        vertexAlpha: Float32Array;
         vertexColor: Uint32Array;
-        _prevTextureID: number;
-        packColors: () => this;
+        packColors (): this;
     }

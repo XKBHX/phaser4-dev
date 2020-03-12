@@ -9,7 +9,7 @@ import EventEmitter from './EventEmitter';
 
 export default class Game extends EventEmitter
 {
-    VERSION: string = '4.0.0-beta1';
+    VERSION: string = '4.0.0-beta2';
 
     renderer: WebGLRenderer;
 
@@ -225,7 +225,7 @@ export default class Game extends EventEmitter
 
         this.scene.world.preRender(dt, now);
 
-        this.renderer.render(this.scene, this.dirtyFrame);
+        // this.renderer.render(this.scene, this.dirtyFrame);
 
         this.emit('render', dt, now);
 

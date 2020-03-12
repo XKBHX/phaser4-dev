@@ -1,10 +1,10 @@
 import CheckShaderMaxIfStatements from './CheckShaderMaxIfStatements';
 import MultiTextureQuadShader from './MultiTextureQuadShader';
 import Texture from './Texture';
-import DisplayObjectContainer from './DisplayObjectContainer';
-import Sprite from './Sprite';
-import { IContainerComponent } from './components/ContainerComponent';
-import { IContainerChild } from './IContainerChild';
+// import DisplayObjectContainer from './DisplayObjectContainer';
+// import Sprite from './Sprite';
+// import { IContainerComponent } from './components/ContainerComponent';
+// import { IContainerChild } from './IContainerChild';
 import Camera from './Camera';
 import SpriteBuffer from './SpriteBuffer';
 import Scene from './Scene';
@@ -215,6 +215,7 @@ export default class WebGLRenderer
         return glTexture;
     }
 
+    /*
     render (scene: Scene, dirtyFrame: number)
     {
         if (this.contextLost)
@@ -324,4 +325,5 @@ export default class WebGLRenderer
             }
         }
     }
+    */
 }

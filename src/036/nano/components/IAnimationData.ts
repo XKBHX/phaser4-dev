@@ -1,5 +1,5 @@
-import Frame from "./Frame";
-import AnimatedSprite from "./AnimatedSprite";
+import Frame from '../Frame';
+import { IAnimationComponent } from './AnimationComponent';
 
 export default interface IAnimationData
 {
@@ -15,7 +15,7 @@ export default interface IAnimationData
     playingForward: boolean;
     delay: number;
     repeatDelay: number;
-    onStart?: (sprite: AnimatedSprite, animation: string) => void;
-    onRepeat?: (sprite: AnimatedSprite, animation: string) => void;
-    onComplete?: (sprite: AnimatedSprite, animation: string) => void;
+    onStart?: (sprite: IAnimationComponent, animation: string) => void;
+    onRepeat?: (sprite: IAnimationComponent, animation: string) => void;
+    onComplete?: (sprite: IAnimationComponent, animation: string) => void;
 }

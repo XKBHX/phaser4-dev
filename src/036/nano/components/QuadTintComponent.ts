@@ -1,14 +1,14 @@
-import IDisplayObject from 'nano/IDisplayObject';
+import ISprite from '../gameobjects/ISprite';
 
 type Constructor<T = {}> = new (...args: any[]) => T;
-type DisplayObject = Constructor<IDisplayObject>
+type Tintable = Constructor<ISprite>
 
-export function QuadTintComponent<TBase extends DisplayObject>(Base: TBase)
+export function QuadTintComponent<TBase extends Tintable>(Base: TBase)
 {
     return class QuadTintComponent extends Base
     {
         private _tint: number = 0xffffff;
-        private vertexTint: Uint32Array;
+        vertexTint: Uint32Array;
 
         constructor (...args: any[])
         {
@@ -26,7 +26,7 @@ export function QuadTintComponent<TBase extends DisplayObject>(Base: TBase)
             tint[2] = bottomLeft;
             tint[3] = bottomRight;
     
-            // return this.packColors();
+            return this.packColors();
         }
     
         get tint (): number
@@ -46,5 +46,6 @@ export function QuadTintComponent<TBase extends DisplayObject>(Base: TBase)
 export interface IQuadTintComponent
 {
     tint: number;
+    vertexTint: Uint32Array;
     setTint (topLeft: number, topRight?: number, bottomLeft?: number, bottomRight?: number): this;
 }

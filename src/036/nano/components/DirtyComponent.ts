@@ -1,9 +1,9 @@
-import IDisplayObject from 'nano/IDisplayObject';
+import { ISceneComponent } from './SceneComponent';
 
 type Constructor<T = {}> = new (...args: any[]) => T;
-type DisplayObject = Constructor<IDisplayObject>
+type SceneChild = Constructor<ISceneComponent>
 
-export function DirtyComponent<TBase extends DisplayObject>(Base: TBase)
+export function DirtyComponent<TBase extends SceneChild>(Base: TBase)
 {
     return class DirtyComponent extends Base
     {

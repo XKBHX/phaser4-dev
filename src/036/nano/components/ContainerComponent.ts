@@ -1,12 +1,22 @@
-import { IContainerChild } from '../IContainerChild';
+import IMatrix2d from '../IMatrix2d';
+import IContainerChild from '../gameobjects/IContainerChild';
+import { ITransformComponent } from './TransformComponent';
 
 type Constructor<T = {}> = new (...args: any[]) => T;
+type Transformable = Constructor<ITransformComponent>;
 
-export function ContainerComponent<TBase extends Constructor>(Base: TBase)
+export function ContainerComponent<TBase extends Transformable>(Base: TBase)
 {
     return class ContainerComponent extends Base
     {
-        children: IContainerChild[] = [];
+        children: IContainerChild[];
+
+        constructor (...args: any[])
+        {
+            super(args);
+
+            this.children = [];
+        }
 
         addChild (...child: IContainerChild[])
         {
@@ -23,12 +33,7 @@ export function ContainerComponent<TBase extends Constructor>(Base: TBase)
         {
             if (index >= 0 && index <= this.children.length)
             {
-                if (child.parent)
-                {
-                    child.parent.removeChild(child);
-                }
-        
-                child.parent = this;
+                child.setParent(this);
         
                 this.children.splice(index, 0, child);
     
@@ -182,14 +187,15 @@ export interface IContainerComponent
 {
     children: IContainerChild[];
     numChildren: number;
-    addChild: (...child: IContainerChild[]) => this;
-    addChildAt: (child: IContainerChild, index: number) => IContainerChild;
-    swapChildren: (child1: IContainerChild, child2: IContainerChild) => this;
-    getChildIndex: (child: IContainerChild) => number;
-    setChildIndex: (child: IContainerChild, index: number) => this;
-    getChildAt: (index: number) => IContainerChild;
-    removeChild: (child: IContainerChild) => IContainerChild;
-    removeChildAt: (index: number) => IContainerChild;
-    removeChildren: (beginIndex: number, endIndex?: number) => IContainerChild[];
-    update: (dt: number, now: number) => void;
+    worldTransform: IMatrix2d;
+    addChild (...child: IContainerChild[]): this;
+    addChildAt (child: IContainerChild, index: number): IContainerChild;
+    swapChildren (child1: IContainerChild, child2: IContainerChild): this;
+    getChildIndex (child: IContainerChild): number;
+    setChildIndex (child: IContainerChild, index: number): this;
+    getChildAt (index: number): IContainerChild;
+    removeChild (child: IContainerChild): IContainerChild;
+    removeChildAt (index: number): IContainerChild;
+    removeChildren (beginIndex: number, endIndex?: number): IContainerChild[];
+    update (dt?: number, now?: number): void;
 }

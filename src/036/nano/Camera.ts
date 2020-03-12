@@ -1,8 +1,8 @@
 import WebGLRenderer from './WebGLRenderer';
-import DisplayObject from './DisplayObject';
+import GameObject from './gameobjects/GameObject';
 import Scene from './Scene';
 
-export default class Camera extends DisplayObject
+export default class Camera extends GameObject
 {
     matrix: Float32Array;
     renderer: WebGLRenderer;

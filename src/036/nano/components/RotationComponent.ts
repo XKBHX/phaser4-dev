@@ -1,9 +1,9 @@
-import IDisplayObject from 'nano/IDisplayObject';
+import { ITransformComponent } from './TransformComponent';
 
 type Constructor<T = {}> = new (...args: any[]) => T;
-type DisplayObject = Constructor<IDisplayObject>
+type Rotateable = Constructor<ITransformComponent>
 
-export function RotationComponent<TBase extends DisplayObject>(Base: TBase)
+export function RotationComponent<TBase extends Rotateable>(Base: TBase)
 {
     return class RotationComponent extends Base
     {

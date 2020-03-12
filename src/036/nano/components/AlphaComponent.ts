@@ -1,21 +1,21 @@
-import IDisplayObject from 'nano/IDisplayObject';
+import { IDirtyComponent } from './DirtyComponent';
 
 type Constructor<T = {}> = new (...args: any[]) => T;
-type DisplayObject = Constructor<IDisplayObject>
+type Dirtyable = Constructor<IDirtyComponent>
 
-export function AlphaComponent<TBase extends DisplayObject>(Base: TBase)
+export function AlphaComponent<TBase extends Dirtyable>(Base: TBase)
 {
     return class AlphaComponent extends Base
     {
         private _alpha: number = 1;
     
-        setAlpha (alpha: number = 1)
+        setAlpha (value: number = 1)
         {
-            if (alpha !== this._alpha)
+            if (value !== this._alpha)
             {
-                this._alpha = alpha;
-    
-                this.dirtyFrame = this.scene.game.frame;
+                this._alpha = value;
+
+                this.setDirty();
             }
     
             return this;
@@ -32,7 +32,7 @@ export function AlphaComponent<TBase extends DisplayObject>(Base: TBase)
             {
                 this._alpha = value;
     
-                this.dirtyFrame = this.scene.game.frame;
+                this.setDirty();
             }
         }
     };
@@ -41,5 +41,5 @@ export function AlphaComponent<TBase extends DisplayObject>(Base: TBase)
 export interface IAlphaComponent
 {
     alpha: number;
-    setAlpha (value: number): this;
+    setAlpha (value?: number): this;
 }

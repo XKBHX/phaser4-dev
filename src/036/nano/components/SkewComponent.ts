@@ -1,14 +1,14 @@
 import Vec2 from '../Vec2';
-import IDisplayObject from 'nano/IDisplayObject';
+import { ITransformComponent } from './TransformComponent';
 
 type Constructor<T = {}> = new (...args: any[]) => T;
-type DisplayObject = Constructor<IDisplayObject>
+type Skewable = Constructor<ITransformComponent>
 
-export function SkewComponent<TBase extends DisplayObject>(Base: TBase)
+export function SkewComponent<TBase extends Skewable>(Base: TBase)
 {
     return class SkewComponent extends Base
     {
-        private _skew: Vec2 = new Vec2();
+        private _skew: Vec2 = new Vec2(0, 0);
 
         setSkew (skewX: number, skewY: number = skewX)
         {
@@ -40,6 +40,11 @@ export function SkewComponent<TBase extends DisplayObject>(Base: TBase)
     
                 this.updateCache();
             }
+        }
+
+        get skewY (): number
+        {
+            return this._skew.y;
         }
     };
 }

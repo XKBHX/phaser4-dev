@@ -1,6 +1,7 @@
 import Game from 'nano/Game';
 import Scene from 'nano/Scene';
-import DisplayObject from 'nano/DisplayObject';
+import GameObject from 'nano/gameobjects/GameObject';
+import Sprite from 'nano/gameobjects/Sprite';
 
 class Demo extends Scene
 {
@@ -19,19 +20,33 @@ class Demo extends Scene
 
     create ()
     {
-        const test = new DisplayObject(this, 200, 100);
+        const bob = new GameObject(this, 400, 300);
 
-        test.setAlpha(2);
-        test.setScale(3, 4);
+        bob.setRotation(1.2);
 
-        console.log(test);
+        console.log(bob);
 
-        const test2 = new DisplayObject(this, 400, 300);
+        window['bob'] = bob;
 
-        test2.setAlpha(0.5);
-        test2.setScale(2, 2);
+        const ben = new Sprite(this, 123, 456, 'logo');
 
-        console.log(test2);
+        console.log(ben);
+
+        window['ben'] = ben;
+
+        // const test = new DisplayObject(this, 200, 100);
+
+        // test.setAlpha(2);
+        // test.setScale(3, 4);
+
+        // console.log(test);
+
+        // const test2 = new DisplayObject(this, 400, 300);
+
+        // test2.setAlpha(0.5);
+        // test2.setScale(2, 2);
+
+        // console.log(test2);
 
         // const sprite = new Sprite(this, 400, 300, 'logo');
 
