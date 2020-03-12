@@ -6,6 +6,7 @@ import Scene from './Scene';
 import TextureManager from './textures/TextureManager';
 import IGameConfig from './IGameConfig';
 import EventEmitter from './core/EventEmitter';
+import IRenderable from './gameobjects/IRenderable';
 
 export default class Game extends EventEmitter
 {
@@ -205,9 +206,6 @@ export default class Game extends EventEmitter
         this.lifetime += dt;
         this.elapsed = dt;
         this.lastTick = now;
-
-        //  The frame always advances by 1 each step (even when paused)
-        this.frame++;
     
         this.emit('step', dt, now);
 
@@ -223,11 +221,14 @@ export default class Game extends EventEmitter
         this.dirtyFrame = 0;
         this.totalFrame = 0;
 
-        this.scene.world.preRender(dt, now);
+        const renderList: IRenderable[] = this.scene.world.preRender();
 
-        // this.renderer.render(this.scene, this.dirtyFrame);
+        this.renderer.render(renderList, this.scene.camera, this.dirtyFrame);
 
         this.emit('render', dt, now);
+
+        //  The frame always advances by 1 each step (even when paused)
+        this.frame++;
 
         requestAnimationFrame(() => this.step());
     }

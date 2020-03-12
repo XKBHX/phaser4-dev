@@ -1,9 +1,10 @@
 import IMatrix2d from '../math/IMatrix2d';
 import IContainerChild from '../gameobjects/IContainerChild';
+import { IParentComponent } from './ParentComponent';
 import { ITransformComponent } from './TransformComponent';
 
 type Constructor<T = {}> = new (...args: any[]) => T;
-type Transformable = Constructor<ITransformComponent>;
+type Transformable = Constructor<ITransformComponent & IParentComponent>;
 
 export function ContainerComponent<TBase extends Transformable>(Base: TBase)
 {
@@ -16,6 +17,12 @@ export function ContainerComponent<TBase extends Transformable>(Base: TBase)
             super(args);
 
             this.children = [];
+            this.isParent = true;
+        }
+
+        getChildren (): IContainerChild[]
+        {
+            return this.children;
         }
 
         addChild (...child: IContainerChild[])
@@ -33,6 +40,11 @@ export function ContainerComponent<TBase extends Transformable>(Base: TBase)
         {
             if (index >= 0 && index <= this.children.length)
             {
+                if (child.parent)
+                {
+                    child.parent.removeChild(child);
+                }
+
                 child.setParent(this);
         
                 this.children.splice(index, 0, child);
@@ -186,8 +198,10 @@ export function ContainerComponent<TBase extends Transformable>(Base: TBase)
 export interface IContainerComponent
 {
     children: IContainerChild[];
+    isParent: boolean;
     numChildren: number;
     worldTransform: IMatrix2d;
+    getChildren (): IContainerChild[];
     addChild (...child: IContainerChild[]): this;
     addChildAt (child: IContainerChild, index: number): IContainerChild;
     swapChildren (child1: IContainerChild, child2: IContainerChild): this;

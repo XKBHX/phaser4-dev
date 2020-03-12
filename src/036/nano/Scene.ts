@@ -1,8 +1,8 @@
 import Game from './Game';
 import Loader from './loader/Loader';
 import TextureManager from './textures/TextureManager';
-import Container from './gameobjects/Container';
 import Camera from './gameobjects/Camera';
+import World from './gameobjects/World';
 
 export default class Scene
 {
@@ -10,14 +10,14 @@ export default class Scene
     game: Game;
     load: Loader;
     textures: TextureManager;
-    world: Container;
+    world: World;
 
     constructor (game: Game)
     {
         this.game = game;
         this.load = game.loader;
         this.textures = game.textures;
-        this.world = new Container(this, 0, 0);
+        this.world = new World(this);
         this.camera = new Camera(this, 0, 0);
     }
 

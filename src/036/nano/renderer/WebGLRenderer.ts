@@ -1,13 +1,9 @@
 import CheckShaderMaxIfStatements from './CheckShaderMaxIfStatements';
 import MultiTextureQuadShader from './MultiTextureQuadShader';
 import Texture from '../textures/Texture';
-// import DisplayObjectContainer from './DisplayObjectContainer';
-// import Sprite from './Sprite';
-// import { IContainerComponent } from './components/ContainerComponent';
-// import { IContainerChild } from './IContainerChild';
 import Camera from '../gameobjects/Camera';
-import SpriteBuffer from '../gameobjects/SpriteBuffer';
-import Scene from '../Scene';
+import IRenderable from 'nano/gameobjects/IRenderable';
+import ISprite from 'nano/gameobjects/ISprite';
 
 export default class WebGLRenderer
 {
@@ -215,8 +211,7 @@ export default class WebGLRenderer
         return glTexture;
     }
 
-    /*
-    render (scene: Scene, dirtyFrame: number)
+    render (list: IRenderable[], camera: Camera, dirtyFrame: number)
     {
         if (this.contextLost)
         {
@@ -252,63 +247,43 @@ export default class WebGLRenderer
             gl.clear(gl.COLOR_BUFFER_BIT);
         }
 
-        shader.bind(scene.camera);
+        shader.bind(camera);
 
-        this.renderChildren(scene.world);
-
-        shader.flush();
-    }
-
-    renderChildren (container: IContainerComponent)
-    {
-        const gl = this.gl;
-        const shader = this.shader;
-
+        //  Process the render list
         const maxTextures = this.maxTextures;
         const activeTextures = this.activeTextures;
         const startActiveTexture = this.startActiveTexture;
 
-        const children = container.children;
-
-        for (let i: number = 0; i < children.length; i++)
+        for (let i: number = 0; i < list.length; i++)
         {
-            let entity = children[i];
+            let entity = list[i];
 
-            if (!entity.willRender())
+            let texture = entity.texture;
+
+            if (texture.glIndexCounter < startActiveTexture)
             {
-                continue;
-            }
+                texture.glIndexCounter = startActiveTexture;
 
-            if (entity.hasTexture)
-            {
-                let texture = (entity as Sprite).texture;
-
-                if (texture.glIndexCounter < startActiveTexture)
+                if (this.currentActiveTexture < maxTextures)
                 {
-                    texture.glIndexCounter = startActiveTexture;
-    
-                    if (this.currentActiveTexture < maxTextures)
-                    {
-                        //  Make this texture active
-                        activeTextures[this.currentActiveTexture] = texture;
-    
-                        texture.glIndex = this.currentActiveTexture;
-    
-                        gl.activeTexture(gl.TEXTURE0 + this.currentActiveTexture);
-                        gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
-    
-                        this.currentActiveTexture++;
-                    }
-                    else
-                    {
-                        //  We've run out, flush + recycle the oldest one
-                        //  TODO
-                    }
-                }
+                    //  Make this texture active
+                    activeTextures[this.currentActiveTexture] = texture;
 
-                shader.batchSprite(entity as Sprite);
+                    texture.glIndex = this.currentActiveTexture;
+
+                    gl.activeTexture(gl.TEXTURE0 + this.currentActiveTexture);
+                    gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
+
+                    this.currentActiveTexture++;
+                }
+                else
+                {
+                    //  We've run out, flush + recycle the oldest one
+                    //  TODO
+                }
             }
 
+            /*
             if (entity.type === 'SpriteBuffer')
             {
                 if (shader.batchSpriteBuffer(entity as SpriteBuffer))
@@ -318,12 +293,11 @@ export default class WebGLRenderer
                     this.startActiveTexture++;
                 }
             }
-            else if (entity.numChildren)
-            {
-                // Render the children, if it has any
-                this.renderChildren(entity);
-            }
+            */
+
+            shader.batchSprite(entity as ISprite);
         }
+
+        shader.flush();
     }
-    */
 }

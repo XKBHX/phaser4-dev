@@ -1,5 +1,5 @@
 import WebGLRenderer from './WebGLRenderer';
-// import Sprite from './Sprite';
+import ISprite from '../gameobjects/ISprite';
 import ISpriteMultiShader from './ISpriteMultiShader';
 import SpriteBuffer from '../gameobjects/SpriteBuffer';
 import Camera from '../gameobjects/Camera';
@@ -394,8 +394,7 @@ export default class MultiTextureQuadShader
         return false;
     }
 
-    /*
-    batchSprite (sprite: Sprite)
+    batchSprite (sprite: ISprite)
     {
         if (this.count === this.batchSize)
         {
@@ -406,7 +405,6 @@ export default class MultiTextureQuadShader
 
         this.count++;
     }
-    */
 
     flush ()
     {

@@ -1,11 +1,10 @@
 import Game from 'nano/Game';
 import Scene from 'nano/Scene';
-import GameObject from 'nano/gameobjects/GameObject';
 import Sprite from 'nano/gameobjects/Sprite';
 
 class Demo extends Scene
 {
-    // sprite;
+    sprite;
 
     constructor (game: Game)
     {
@@ -16,55 +15,32 @@ class Demo extends Scene
     {
         this.load.setPath('../assets/');
         this.load.image('logo', 'logo.png');
+        this.load.image('clown', 'clown.png');
     }
 
     create ()
     {
-        const bob = new GameObject(this, 400, 300);
+        const ben = new Sprite(this, 400, 300, 'logo');
 
-        bob.setRotation(1.2);
-
-        console.log(bob);
-
-        window['bob'] = bob;
-
-        const ben = new Sprite(this, 123, 456, 'logo');
+        this.world.addChild(ben);
 
         console.log(ben);
 
-        window['ben'] = ben;
+        this.sprite = ben;
 
-        // const test = new DisplayObject(this, 200, 100);
+        document.body.addEventListener('click', () => {
 
-        // test.setAlpha(2);
-        // test.setScale(3, 4);
+            let x = 50 + Math.random() * 700;
+            let y = 50 + Math.random() * 500;
 
-        // console.log(test);
-
-        // const test2 = new DisplayObject(this, 400, 300);
-
-        // test2.setAlpha(0.5);
-        // test2.setScale(2, 2);
-
-        // console.log(test2);
-
-        // const sprite = new Sprite(this, 400, 300, 'logo');
-
-        // console.log(sprite);
-
-        // sprite.setWibble(2);
-        // sprite.setWobble(0.5);
-
-        // console.log(sprite.wibble);
-
-        // this.world.addChild(sprite);
-
-        // this.sprite = sprite;
+            this.world.addChild(new Sprite(this, x, y, 'clown'));
+    
+        });
     }
 
     update ()
     {
-        // this.sprite.rotation += 0.01;
+        this.sprite.rotation += 0.01;
     }
 }
 

@@ -8,19 +8,12 @@ export function ParentComponent<TBase extends Transformable>(Base: TBase)
 {
     return class ParentComponent extends Base
     {
-        parent: IContainerComponent;
+        parent?: IContainerComponent;
+        isParent: boolean = false;
     
-        setParent (parent: IContainerComponent)
+        setParent (parent?: IContainerComponent)
         {
-            if (parent !== this.parent)
-            {
-                if (this.parent)
-                {
-                    this.parent.removeChild(this);
-                }
-
-                this.parent = parent;
-            }
+            this.parent = parent;
     
             return this;
         }
@@ -34,7 +27,8 @@ export function ParentComponent<TBase extends Transformable>(Base: TBase)
 
 export interface IParentComponent
 {
-    parent: IContainerComponent;
-    setParent (parent: IContainerComponent): this;
+    parent?: IContainerComponent;
+    isParent: boolean;
+    setParent (parent?: IContainerComponent): this;
     update (dt?: number, now?: number): void;
 }

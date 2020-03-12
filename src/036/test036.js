@@ -248,19 +248,13 @@ class MultiTextureQuadShader {
         }
         return false;
     }
-    /*
-    batchSprite (sprite: Sprite)
-    {
-        if (this.count === this.batchSize)
-        {
+    batchSprite(sprite) {
+        if (this.count === this.batchSize) {
             this.flush();
         }
-
         sprite.updateVertices(this.vertexViewF32, this.vertexViewU32, this.count * this.quadElementSize);
-
         this.count++;
     }
-    */
     flush() {
         const count = this.count;
         if (count === 0) {
@@ -397,6 +391,61 @@ class WebGLRenderer {
             gl.generateMipmap(gl.TEXTURE_2D);
         }
         return glTexture;
+    }
+    render(list, camera, dirtyFrame) {
+        if (this.contextLost) {
+            return;
+        }
+        const gl = this.gl;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        if (this.optimizeRedraw && dirtyFrame === 0) {
+            return;
+        }
+        this.currentActiveTexture = 0;
+        this.startActiveTexture++;
+        const shader = this.shader;
+        //  CLS
+        gl.viewport(0, 0, this.width, this.height);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        const cls = this.clearColor;
+        if (this.clearBeforeRender) {
+            gl.clearColor(cls[0], cls[1], cls[2], cls[3]);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+        }
+        shader.bind(camera);
+        //  Process the render list
+        const maxTextures = this.maxTextures;
+        const activeTextures = this.activeTextures;
+        const startActiveTexture = this.startActiveTexture;
+        for (let i = 0; i < list.length; i++) {
+            let entity = list[i];
+            let texture = entity.texture;
+            if (texture.glIndexCounter < startActiveTexture) {
+                texture.glIndexCounter = startActiveTexture;
+                if (this.currentActiveTexture < maxTextures) {
+                    //  Make this texture active
+                    activeTextures[this.currentActiveTexture] = texture;
+                    texture.glIndex = this.currentActiveTexture;
+                    gl.activeTexture(gl.TEXTURE0 + this.currentActiveTexture);
+                    gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
+                    this.currentActiveTexture++;
+                }
+            }
+            /*
+            if (entity.type === 'SpriteBuffer')
+            {
+                if (shader.batchSpriteBuffer(entity as SpriteBuffer))
+                {
+                    //  Reset active textures
+                    this.currentActiveTexture = 0;
+                    this.startActiveTexture++;
+                }
+            }
+            */
+            shader.batchSprite(entity);
+        }
+        shader.flush();
     }
 }
 
@@ -634,6 +683,10 @@ function ContainerComponent(Base) {
         constructor(...args) {
             super(args);
             this.children = [];
+            this.isParent = true;
+        }
+        getChildren() {
+            return this.children;
         }
         addChild(...child) {
             child.forEach((entity) => {
@@ -643,6 +696,9 @@ function ContainerComponent(Base) {
         }
         addChildAt(child, index) {
             if (index >= 0 && index <= this.children.length) {
+                if (child.parent) {
+                    child.parent.removeChild(child);
+                }
                 child.setParent(this);
                 this.children.splice(index, 0, child);
                 child.updateTransform();
@@ -838,13 +894,12 @@ function OriginComponent(Base) {
 
 function ParentComponent(Base) {
     return class ParentComponent extends Base {
+        constructor() {
+            super(...arguments);
+            this.isParent = false;
+        }
         setParent(parent) {
-            if (parent !== this.parent) {
-                if (this.parent) {
-                    this.parent.removeChild(this);
-                }
-                this.parent = parent;
-            }
+            this.parent = parent;
             return this;
         }
         update(dt, now) {
@@ -1300,41 +1355,6 @@ class GameObject extends Install(class {
     }
 }
 
-class Container extends Install(GameObject, [
-    ContainerComponent
-]) {
-    constructor(scene, x = 0, y = 0) {
-        super();
-        this.setScene(scene);
-        this.setPosition(x, y);
-    }
-    update(dt, now) {
-        const children = this.children;
-        for (let i = 0; i < children.length; i++) {
-            children[i].update(dt, now);
-        }
-    }
-    preRender(dt, now) {
-        const game = this.scene.game;
-        game.totalFrame++;
-        if (this.dirtyFrame >= game.frame) {
-            game.dirtyFrame++;
-        }
-        const children = this.children;
-        for (let i = 0; i < children.length; i++) {
-            // children[i].preRender(dt, now);
-        }
-    }
-    updateTransform() {
-        super.updateTransform();
-        const children = this.children;
-        for (let i = 0; i < children.length; i++) {
-            children[i].updateTransform();
-        }
-        return this;
-    }
-}
-
 class Camera extends GameObject {
     constructor(scene, x = 0, y = 0) {
         super(scene, x, y);
@@ -1374,12 +1394,83 @@ class Camera extends GameObject {
     }
 }
 
+class Container extends Install(GameObject, [
+    ContainerComponent
+]) {
+    constructor(scene, x = 0, y = 0) {
+        super();
+        this.setScene(scene);
+        this.setPosition(x, y);
+    }
+    update(dt, now) {
+        const children = this.children;
+        for (let i = 0; i < children.length; i++) {
+            children[i].update(dt, now);
+        }
+    }
+    preRender(dt, now) {
+        const game = this.scene.game;
+        game.totalFrame++;
+        if (this.dirtyFrame >= game.frame) {
+            game.dirtyFrame++;
+        }
+        const children = this.children;
+        for (let i = 0; i < children.length; i++) {
+            // children[i].preRender(dt, now);
+        }
+    }
+    updateTransform() {
+        super.updateTransform();
+        const children = this.children;
+        for (let i = 0; i < children.length; i++) {
+            children[i].updateTransform();
+        }
+        return this;
+    }
+}
+
+class World extends Container {
+    constructor(scene) {
+        super(scene);
+        this.renderList = [];
+    }
+    scanChildren(root) {
+        const children = root.getChildren();
+        for (let i = 0; i < children.length; i++) {
+            this.buildRenderList(children[i]);
+        }
+    }
+    buildRenderList(root) {
+        const game = this.scene.game;
+        if (root.willRender()) {
+            this.renderList.push(root);
+            if (root.dirtyFrame >= game.frame) {
+                game.dirtyFrame++;
+            }
+        }
+        if (root.isParent) {
+            this.scanChildren(root);
+        }
+    }
+    preRender() {
+        this.renderList = [];
+        this.scanChildren(this);
+        return this.renderList;
+    }
+    update(dt, now) {
+        const children = this.children;
+        for (let i = 0; i < children.length; i++) {
+            children[i].update(dt, now);
+        }
+    }
+}
+
 class Scene {
     constructor(game) {
         this.game = game;
         this.load = game.loader;
         this.textures = game.textures;
-        this.world = new Container(this, 0, 0);
+        this.world = new World(this);
         this.camera = new Camera(this, 0, 0);
     }
     init() {
@@ -1781,8 +1872,6 @@ class Game extends EventEmitter {
         this.lifetime += dt;
         this.elapsed = dt;
         this.lastTick = now;
-        //  The frame always advances by 1 each step (even when paused)
-        this.frame++;
         this.emit('step', dt, now);
         if (!this.isPaused) {
             this.scene.update(dt, now);
@@ -1791,9 +1880,11 @@ class Game extends EventEmitter {
         this.emit('update', dt, now);
         this.dirtyFrame = 0;
         this.totalFrame = 0;
-        this.scene.world.preRender(dt, now);
-        // this.renderer.render(this.scene, this.dirtyFrame);
+        const renderList = this.scene.world.preRender();
+        this.renderer.render(renderList, this.scene.camera, this.dirtyFrame);
         this.emit('render', dt, now);
+        //  The frame always advances by 1 each step (even when paused)
+        this.frame++;
         requestAnimationFrame(() => this.step());
     }
 }
@@ -1918,40 +2009,27 @@ class Sprite extends Install(GameObject, [
 */
 
 class Demo extends Scene {
-    // sprite;
     constructor(game) {
         super(game);
     }
     preload() {
         this.load.setPath('../assets/');
         this.load.image('logo', 'logo.png');
+        this.load.image('clown', 'clown.png');
     }
     create() {
-        const bob = new GameObject(this, 400, 300);
-        bob.setRotation(1.2);
-        console.log(bob);
-        window['bob'] = bob;
-        const ben = new Sprite(this, 123, 456, 'logo');
+        const ben = new Sprite(this, 400, 300, 'logo');
+        this.world.addChild(ben);
         console.log(ben);
-        window['ben'] = ben;
-        // const test = new DisplayObject(this, 200, 100);
-        // test.setAlpha(2);
-        // test.setScale(3, 4);
-        // console.log(test);
-        // const test2 = new DisplayObject(this, 400, 300);
-        // test2.setAlpha(0.5);
-        // test2.setScale(2, 2);
-        // console.log(test2);
-        // const sprite = new Sprite(this, 400, 300, 'logo');
-        // console.log(sprite);
-        // sprite.setWibble(2);
-        // sprite.setWobble(0.5);
-        // console.log(sprite.wibble);
-        // this.world.addChild(sprite);
-        // this.sprite = sprite;
+        this.sprite = ben;
+        document.body.addEventListener('click', () => {
+            let x = 50 + Math.random() * 700;
+            let y = 50 + Math.random() * 500;
+            this.world.addChild(new Sprite(this, x, y, 'clown'));
+        });
     }
     update() {
-        // this.sprite.rotation += 0.01;
+        this.sprite.rotation += 0.01;
     }
 }
 function demo30 () {

@@ -21,4 +21,5 @@ export default interface ISprite extends
         vertexData: Float32Array;
         vertexColor: Uint32Array;
         packColors (): this;
+        updateVertices (F32: Float32Array, U32: Uint32Array, offset: number): void;
     }
