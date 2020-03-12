@@ -282,7 +282,14 @@ export default class Loader
             url = key + extension;
         }
 
-        return this.baseURL + this.path + url;
+        if (url.match(/^(?:blob:|data:|http:\/\/|https:\/\/|\/\/)/))
+        {
+            return url;
+        }
+        else
+        {
+            return this.baseURL + this.path + url;
+        }
     }
 
     setBaseURL (url: string)

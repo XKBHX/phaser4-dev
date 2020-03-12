@@ -2,6 +2,7 @@ import resolve from 'rollup-plugin-node-resolve';
 import typescript from 'rollup-plugin-typescript2';
 import { terser } from 'rollup-plugin-terser';
 import sourcemaps from 'rollup-plugin-sourcemaps';
+import image from '@rollup/plugin-image';
 
 const extensions = [
     '.js', '.jsx', '.ts', '.tsx'
@@ -26,6 +27,12 @@ export default {
     ],
 
     plugins: [
+
+        image({
+            //  If true, instructs the plugin to generate an ES Module which exports a DOM Image
+            //  If false, plugin generates base64 data
+            dom: false
+        }),
 
         sourcemaps(),
 

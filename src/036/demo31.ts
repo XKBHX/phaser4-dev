@@ -12,7 +12,7 @@ class Demo extends Scene
         super(game);
 
         //  PNG imported via '@rollup/plugin-image'
-        //  with: plugins: [ image({ dom: true })]
+        //  with: plugins: [ image({ dom: false })] (forcing it to be base64)
 
         //  Also requires global.d.ts with:
         //  declare module "*.png" {
@@ -22,8 +22,11 @@ class Demo extends Scene
 
         //  Warning: The asset gets bundled into your JS code!
         //  Which can make it insanely huge. So, be careful.
+    }
 
-        this.textures.addImage('logo', LogoPNG);
+    preload ()
+    {
+        this.load.image('logo', LogoPNG);
     }
 
     create ()

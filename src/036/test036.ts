@@ -27,16 +27,10 @@
 // import demo27 from './demo27'; // Mouse Input - Rectangle hit area
 // import demo28 from './demo28'; // Mouse Input - Polygon hit area
 // import demo29 from './demo29'; // Rotating items
-import demo30 from './demo30'; // Mixin Test
+// import demo30 from './demo30'; // PNG import via Rollup images plugin
+import demo31 from './demo31'; // Loader using a base64 png
 
-// demo13();
-// demo25();
-// demo26();
-// demo27();
-// demo28();
-// demo29();
-// demo6();
-demo30();
+demo31();
 
 //  Next steps:
 
